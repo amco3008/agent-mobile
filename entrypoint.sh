@@ -36,13 +36,18 @@ fi
 echo "Tailscale status:"
 tailscale status || echo "Tailscale not yet authenticated"
 
-# Setup git credentials if GITHUB_TOKEN is provided
+# Setup git credentials and export GITHUB_TOKEN for Claude
 if [ -n "$GITHUB_TOKEN" ]; then
     echo "Configuring git with GITHUB_TOKEN..."
     git config --global credential.helper store
     echo "https://oauth2:${GITHUB_TOKEN}@github.com" > /home/agent/.git-credentials
     chown agent:agent /home/agent/.git-credentials
     chmod 600 /home/agent/.git-credentials
+
+    # Export GITHUB_TOKEN for SSH sessions (Claude needs this)
+    if ! grep -q "GITHUB_TOKEN" /home/agent/.bashrc 2>/dev/null; then
+        echo "export GITHUB_TOKEN='${GITHUB_TOKEN}'" >> /home/agent/.bashrc
+    fi
 fi
 
 # Set git config
