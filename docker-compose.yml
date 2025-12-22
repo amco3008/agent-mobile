@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  agent-mobile:
+    build: .
+    container_name: agent-mobile
+    hostname: agent-mobile
+
+    # Required for Tailscale
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+
+    volumes:
+      # Persist Tailscale state (so you don't re-auth every restart)
+      - tailscale-state:/var/lib/tailscale
+
+      # Persist Claude config and auth
+      - claude-config:/home/agent/.claude
+
+      # Persist user home for projects
+      - agent-home:/home/agent/projects
+
+      # Git credentials
+      - git-config:/home/agent/.config/git
+
+      # TUN device for Tailscale
+      - /dev/net/tun:/dev/net/tun
+
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}
+
+    # Not strictly needed with Tailscale, but useful for local testing
+    ports:
+      - "2222:22"
+
+    restart: unless-stopped
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  tailscale-state:
+  claude-config:
+  agent-home:
+  git-config:
