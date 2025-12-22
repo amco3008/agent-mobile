@@ -3,6 +3,17 @@ set -e
 
 echo "Starting agent-mobile container..."
 
+# Persist SSH host keys across rebuilds
+SSH_KEY_DIR="/etc/ssh/ssh_host_keys"
+if [ -f "$SSH_KEY_DIR/ssh_host_rsa_key" ]; then
+    echo "Restoring SSH host keys from volume..."
+    cp $SSH_KEY_DIR/ssh_host_* /etc/ssh/
+else
+    echo "Saving SSH host keys to volume..."
+    mkdir -p $SSH_KEY_DIR
+    cp /etc/ssh/ssh_host_* $SSH_KEY_DIR/
+fi
+
 # Start Tailscale daemon
 echo "Starting Tailscale daemon..."
 tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &

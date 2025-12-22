@@ -28,6 +28,9 @@ services:
       # Git credentials
       - git-config:/home/agent/.config/git
 
+      # SSH host keys (persist so clients don't need to re-accept)
+      - ssh-keys:/etc/ssh/ssh_host_keys
+
       # TUN device for Tailscale
       - /dev/net/tun:/dev/net/tun
 
@@ -54,3 +57,4 @@ volumes:
   claude-config:
   agent-home:
   git-config:
+  ssh-keys:
