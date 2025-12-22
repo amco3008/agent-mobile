@@ -19,6 +19,9 @@ services:
       # Persist Claude config and auth
       - claude-config:/home/agent/.claude
 
+      # Skills folder (optional - add skills here)
+      - ./skills:/home/agent/.claude/skills
+
       # Persist user home for projects
       - agent-home:/home/agent/projects
 

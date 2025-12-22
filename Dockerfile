@@ -44,10 +44,6 @@ RUN mkdir /var/run/sshd && \
 RUN mkdir -p /home/agent/.claude/skills && \
     chown -R agent:agent /home/agent/.claude
 
-# Copy gemini-manager skill
-COPY --chown=agent:agent claude-code-gemini-manager-skill/gemini-manager /home/agent/.claude/skills/gemini-manager
-COPY --chown=agent:agent claude-code-gemini-manager-skill/skills/ /home/agent/.claude/skills/
-
 # Setup git config directory
 RUN mkdir -p /home/agent/.config/git && \
     chown -R agent:agent /home/agent/.config

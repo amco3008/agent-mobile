@@ -6,7 +6,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 
 - **Claude Code CLI** - Full Claude Code access from mobile
 - **Gemini CLI** - Google's Gemini CLI with OAuth
-- **gemini-manager skill** - Let Claude delegate implementation to Gemini
+- **Skills support** - Drop skills into `skills/` folder (optional)
 - **Tailscale** - Secure mesh networking, access from anywhere
 - **tmux** - Persistent sessions that survive disconnects
 - **Git + GitHub** - Full git operations with token auth
@@ -75,17 +75,21 @@ tmux attach -t dev
 | `GITHUB_TOKEN` | GitHub PAT for git operations |
 | `TAILSCALE_AUTHKEY` | Optional - for automated Tailscale auth |
 
-## Using the Gemini Manager Skill
+## Skills (Optional)
 
-Claude can delegate implementation work to Gemini:
+Drop Claude Code skills into the `skills/` folder. They're mounted at `~/.claude/skills/`.
 
+```bash
+# Example: Install gemini-manager skill
+cd skills
+git clone https://github.com/alchemiststudiosDOTai/claude-code-gemini-manager-skill.git
+docker-compose restart
 ```
-> Manage the implementation of a login form using Gemini
-> Drive Gemini to refactor this function
-> Use gemini-manager skill to add tests
-```
 
-Claude reads, plans, and verifies. Gemini implements.
+Then use:
+```
+> Manage the implementation of X using Gemini
+```
 
 ## Phone Setup (Android)
 

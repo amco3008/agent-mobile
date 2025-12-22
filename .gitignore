@@ -1,4 +1,8 @@
 .env
 *.log
-claude-code-gemini-manager-skill/
 .claude/
+
+# Skills folder - keep structure, ignore cloned repos
+skills/*
+!skills/.gitkeep
+!skills/README.md
