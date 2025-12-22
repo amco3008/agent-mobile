@@ -7,11 +7,13 @@ echo "Starting agent-mobile container..."
 SSH_KEY_DIR="/etc/ssh/ssh_host_keys"
 if [ -f "$SSH_KEY_DIR/ssh_host_rsa_key" ]; then
     echo "Restoring SSH host keys from volume..."
-    cp $SSH_KEY_DIR/ssh_host_* /etc/ssh/
+    cp $SSH_KEY_DIR/* /etc/ssh/
 else
     echo "Saving SSH host keys to volume..."
     mkdir -p $SSH_KEY_DIR
-    cp /etc/ssh/ssh_host_* $SSH_KEY_DIR/
+    for key in /etc/ssh/ssh_host_*; do
+        [ -f "$key" ] && cp "$key" $SSH_KEY_DIR/
+    done
 fi
 
 # Start Tailscale daemon

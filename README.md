@@ -104,12 +104,16 @@ Then use:
 
 ## Volumes
 
-Data persists across container restarts:
+Data persists across container restarts and rebuilds:
 
-- `tailscale-state` - Tailscale auth
-- `claude-config` - Claude settings and auth
-- `agent-home` - Projects directory
-- `git-config` - Git credentials
+| Volume | Purpose |
+|--------|---------|
+| `tailscale-state` | Tailscale auth |
+| `claude-config` | Claude settings and auth |
+| `agent-home` | Projects directory |
+| `git-config` | Git credentials |
+| `ssh-keys` | SSH host keys (no need to re-accept on rebuild) |
+| `./skills` | Skills folder (bind mount) |
 
 ## Rebuilding
 
@@ -118,4 +122,4 @@ docker-compose down
 docker-compose up -d --build
 ```
 
-Tailscale auth and Claude login persist in volumes.
+Everything persists - no need to re-auth or clear SSH keys.
