@@ -22,8 +22,8 @@ services:
       # Skills folder (optional - add skills here)
       - ./skills:/home/agent/.claude/skills
 
-      # Persist user home for projects
-      - agent-home:/home/agent/projects
+      # Persist user home for projects (bind mount for easy file access)
+      - ./home:/home/agent/projects
 
       # Git credentials
       - git-config:/home/agent/.config/git
@@ -55,6 +55,5 @@ services:
 volumes:
   tailscale-state:
   claude-config:
-  agent-home:
   git-config:
   ssh-keys:

@@ -6,3 +6,7 @@
 skills/*
 !skills/.gitkeep
 !skills/README.md
+
+# Home folder - keep structure, ignore contents
+home/*
+!home/.gitkeep
