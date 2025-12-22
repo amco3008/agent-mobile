@@ -112,7 +112,7 @@ Data persists across container restarts and rebuilds:
 | `claude-config` | - | `~/.claude` | Claude settings and auth |
 | `git-config` | - | `~/.config/git` | Git credentials |
 | `ssh-keys` | - | `/etc/ssh/ssh_host_keys` | SSH host keys |
-| `./home` | `agent-mobile/home/` | `~/projects` | Projects (easy file access) |
+| `./home` | `agent-mobile/home/` | Agent home (easy file access) |
 | `./skills` | `agent-mobile/skills/` | `~/.claude/skills` | Skills folder |
 
 **Bind mounts** (`./home`, `./skills`) are accessible from your host PC - drop files directly into these folders.
