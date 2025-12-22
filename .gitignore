@@ -1,3 +1,4 @@
 .env
 *.log
 claude-code-gemini-manager-skill/
+.claude/
