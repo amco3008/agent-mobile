@@ -49,7 +49,7 @@ RUN mkdir -p /home/agent/.config/git && \
     chown -R agent:agent /home/agent/.config
 
 # Copy tmux config
-COPY --chown=agent:agent .tmux.conf /home/agent/.tmux.conf
+COPY --chown=agent:agent .tmux.conf /home/agent/.tmux.conf   
 
 # Copy entrypoint script
 COPY entrypoint.sh /entrypoint.sh
