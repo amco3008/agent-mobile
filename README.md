@@ -106,14 +106,16 @@ Then use:
 
 Data persists across container restarts and rebuilds:
 
-| Volume | Purpose |
-|--------|---------|
-| `tailscale-state` | Tailscale auth |
-| `claude-config` | Claude settings and auth |
-| `agent-home` | Projects directory |
-| `git-config` | Git credentials |
-| `ssh-keys` | SSH host keys (no need to re-accept on rebuild) |
-| `./skills` | Skills folder (bind mount) |
+| Volume | Host Path | Container Path | Purpose |
+|--------|-----------|----------------|---------|
+| `tailscale-state` | - | `/var/lib/tailscale` | Tailscale auth |
+| `claude-config` | - | `~/.claude` | Claude settings and auth |
+| `git-config` | - | `~/.config/git` | Git credentials |
+| `ssh-keys` | - | `/etc/ssh/ssh_host_keys` | SSH host keys |
+| `./home` | `agent-mobile/home/` | `~/projects` | Projects (easy file access) |
+| `./skills` | `agent-mobile/skills/` | `~/.claude/skills` | Skills folder |
+
+**Bind mounts** (`./home`, `./skills`) are accessible from your host PC - drop files directly into these folders.
 
 ## Rebuilding
 
