@@ -56,6 +56,10 @@ tmux new -s dev
 
 # Reconnect later
 tmux attach -t dev
+
+# Or simply
+tmux new 
+tmux attach
 ```
 
 ### Key Bindings
