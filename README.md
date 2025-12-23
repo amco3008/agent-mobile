@@ -6,6 +6,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 
 - **Claude Code CLI** - Full Claude Code access from mobile
 - **Gemini CLI** - Google's Gemini CLI with OAuth
+- **GitHub CLI (gh)** - Create PRs, manage issues, etc.
 - **Skills support** - Drop skills into `skills/` folder (optional)
 - **Tailscale** - Secure mesh networking, access from anywhere
 - **tmux** - Persistent sessions that survive disconnects
@@ -76,7 +77,7 @@ tmux attach
 
 | Variable | Description |
 |----------|-------------|
-| `GITHUB_TOKEN` | GitHub PAT for git operations |
+| `GITHUB_TOKEN` | GitHub PAT for git and gh CLI (needs `repo`, `read:org`, `workflow` scopes) |
 | `TAILSCALE_AUTHKEY` | Optional - for automated Tailscale auth |
 | `GIT_EMAIL` | Git commit email (use GitHub email for Vercel) |
 | `GIT_NAME` | Git commit author name |
@@ -117,7 +118,7 @@ Data persists across container restarts and rebuilds:
 |--------|-----------|----------------|---------|
 | `tailscale-state` | - | `/var/lib/tailscale` | Tailscale auth |
 | `claude-config` | - | `~/.claude` | Claude settings and auth |
-| `git-config` | - | `~/.config/git` | Git credentials |
+| `config` | - | `~/.config` | Git and gh CLI config |
 | `ssh-keys` | - | `/etc/ssh/ssh_host_keys` | SSH host keys |
 | `./home` | `agent-mobile/home/` | `~/projects` | Projects (easy file access) |
 | `./skills` | `agent-mobile/skills/` | `~/.claude/skills` | Skills folder |

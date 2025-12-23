@@ -26,7 +26,9 @@ sleep 2
 # Authenticate Tailscale
 if [ -n "$TAILSCALE_AUTHKEY" ]; then
     echo "Authenticating Tailscale with authkey..."
-    tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=agent-mobile
+    if ! tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=agent-mobile; then
+        echo "Tailscale authkey failed (may be expired). Run 'tailscale up' manually."
+    fi
 else
     echo "No TAILSCALE_AUTHKEY set. Run 'tailscale up' manually to authenticate."
     tailscale up --hostname=agent-mobile || true
@@ -47,6 +49,19 @@ if [ -n "$GITHUB_TOKEN" ]; then
     # Export GITHUB_TOKEN for SSH sessions (Claude needs this)
     if ! grep -q "GITHUB_TOKEN" /home/agent/.bashrc 2>/dev/null; then
         echo "export GITHUB_TOKEN='${GITHUB_TOKEN}'" >> /home/agent/.bashrc
+    fi
+
+    # Auth gh CLI with GITHUB_TOKEN (requires read:org scope)
+    # Skip if already authenticated (persisted in volume)
+    if su - agent -c "gh auth status" &>/dev/null; then
+        echo "gh CLI already authenticated"
+    else
+        echo "Authenticating gh CLI..."
+        if echo "$GITHUB_TOKEN" | su - agent -c "gh auth login --with-token" 2>/dev/null; then
+            echo "gh CLI authenticated"
+        else
+            echo "gh CLI auth failed (token may need read:org scope). Run 'gh auth login' manually."
+        fi
     fi
 fi
 
