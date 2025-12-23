@@ -148,6 +148,17 @@ Common packages you might need:
 
 Use this proactively when a tool or dependency is missing rather than asking the user to install it.
 
+## Documentation
+
+**Always update documentation** when completing features, changes, or tasks:
+
+- Update `README.md` when adding/changing features, commands, or configuration
+- Update relevant `.md` files in the project when behavior changes
+- Keep docs concise and accurate - remove outdated information
+- Add new features to appropriate sections (Features list, usage examples, etc.)
+
+Do this automatically as part of completing work, not as a separate step.
+
 ## Skill System Awareness
 
 **Pattern tracking is active.** After completing complex multi-step workflows, consider running:
