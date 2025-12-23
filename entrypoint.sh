@@ -26,8 +26,14 @@ fi
 echo "Starting Tailscale daemon..."
 tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
 
-# Wait for tailscaled to be ready
-sleep 2
+# Wait for tailscaled socket (replaces hardcoded sleep 2)
+echo "Waiting for Tailscale daemon..."
+WAIT_COUNT=0
+while [ ! -S /var/run/tailscale/tailscaled.sock ] && [ $WAIT_COUNT -lt 20 ]; do
+    sleep 0.5
+    WAIT_COUNT=$((WAIT_COUNT + 1))
+done
+[ -S /var/run/tailscale/tailscaled.sock ] && echo "Tailscale ready (${WAIT_COUNT}00ms)" || echo "Warning: Tailscale socket timeout"
 
 # Authenticate Tailscale
 if [ -n "$TAILSCALE_AUTHKEY" ]; then
@@ -75,6 +81,71 @@ fi
 git config --global --add safe.directory '*'
 su - agent -c "git config --global user.email '${GIT_EMAIL:-agent@mobile.local}'"
 su - agent -c "git config --global user.name '${GIT_NAME:-Agent Mobile}'"
+
+# Setup skill system hooks (merge into Claude settings without replacing existing config)
+setup_skill_hooks() {
+    local CLAUDE_DIR="/home/agent/.claude"
+    local SETTINGS_FILE="$CLAUDE_DIR/settings.local.json"
+    local HOOKS_TEMPLATE="$CLAUDE_DIR/skills/_skill-manager/hooks.json"
+
+    # Ensure .claude directory exists
+    mkdir -p "$CLAUDE_DIR"
+    chown agent:agent "$CLAUDE_DIR"
+
+    # Check if hooks template exists
+    if [ ! -f "$HOOKS_TEMPLATE" ]; then
+        echo "Skill hooks template not found, skipping hooks setup..."
+        return
+    fi
+
+    # If settings file doesn't exist, create minimal one
+    if [ ! -f "$SETTINGS_FILE" ]; then
+        echo '{}' > "$SETTINGS_FILE"
+        chown agent:agent "$SETTINGS_FILE"
+    fi
+
+    # Merge hooks into settings using Python (preserves existing settings)
+    if command -v python3 &>/dev/null; then
+        python3 << 'PYTHON_SCRIPT'
+import json
+from pathlib import Path
+
+settings_file = Path("/home/agent/.claude/settings.local.json")
+hooks_file = Path("/home/agent/.claude/skills/_skill-manager/hooks.json")
+
+# Load existing settings
+settings = {}
+if settings_file.exists():
+    try:
+        content = settings_file.read_text().strip()
+        if content:
+            settings = json.loads(content)
+    except Exception as e:
+        print(f"Warning: Could not parse existing settings: {e}")
+        settings = {}
+
+# Load hooks template
+try:
+    hooks = json.loads(hooks_file.read_text())
+except Exception as e:
+    print(f"Error loading hooks template: {e}")
+    exit(1)
+
+# Merge hooks (replace hooks section only, keep everything else)
+settings["hooks"] = hooks
+
+# Write back with proper formatting
+settings_file.write_text(json.dumps(settings, indent=2))
+print("Skill system hooks configured successfully")
+PYTHON_SCRIPT
+        chown agent:agent "$SETTINGS_FILE"
+    else
+        echo "Python3 not available, skipping skill hooks setup"
+    fi
+}
+
+echo "Setting up skill system hooks..."
+setup_skill_hooks
 
 # Start SSH server
 echo "Starting SSH server..."

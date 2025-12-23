@@ -4,6 +4,7 @@
 
 # Skills folder - keep structure, ignore cloned repos
 skills/*
+!skills/_skill-manager
 !skills/.gitkeep
 !skills/README.md
 

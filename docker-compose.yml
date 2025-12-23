@@ -10,6 +10,16 @@ services:
       - NET_ADMIN
       - SYS_MODULE
 
+    # Resource limits for predictable performance
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
     volumes:
       # Persist Tailscale state (so you don't re-auth every restart)
       - tailscale-state:/var/lib/tailscale
@@ -43,6 +53,13 @@ services:
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
+      # Node.js performance tuning
+      - NODE_OPTIONS=--max-old-space-size=2048
+      - UV_THREADPOOL_SIZE=8
+      # Reduce file watcher CPU usage
+      - CHOKIDAR_USEPOLLING=false
+      # Skill system directory (for consistent paths in hooks and scripts)
+      - SKILL_SYSTEM_DIR=/home/agent/.claude/skills
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
