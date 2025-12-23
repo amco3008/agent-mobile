@@ -133,6 +133,15 @@ Global configuration for Claude Code in the agent-mobile container.
 
 ## Environment Capabilities
 
+### GitHub Access
+
+A `GITHUB_TOKEN` personal access token is available in the environment. Use it for:
+- GitHub API operations via `gh` CLI (already authenticated)
+- Cloning/pushing to private repositories (git credentials configured)
+- Direct API requests: `curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/...`
+
+### Package Installation
+
 This container has **passwordless sudo** configured. You can install missing packages without prompts:
 
 ```bash
