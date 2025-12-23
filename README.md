@@ -94,6 +94,24 @@ tmux attach
 | `HTTPS_PROXY` | Optional - Corporate proxy URL for secure traffic |
 | `NO_PROXY` | Optional - Domains to bypass proxy (default: `localhost,127.0.0.1`) |
 
+## Agent Environment
+
+When Claude Code runs inside this container, it has access to:
+
+### GitHub Access
+- `GITHUB_TOKEN` environment variable available for API calls
+- `gh` CLI pre-authenticated
+- Git credentials configured for private repos
+
+### Tailscale Network
+- Container runs on a Tailscale VPN mesh
+- Get container IP: `tailscale ip -4`
+- When Claude deploys local services (web servers, APIs), connect via `http://<tailscale-ip>:<port>`
+
+### System Access
+- Passwordless sudo for installing packages
+- Python 3, pip, and common build tools available
+
 ## Skills (Optional)
 
 Drop Claude Code skills into the `skills/` folder. They're mounted at `~/.claude/skills/`.

@@ -2,23 +2,17 @@
 
 Drop Claude Code skills here. They will be mounted into the container at `~/.claude/skills/`.
 
-## Container Environment
+## Global CLAUDE.md
 
-Skills run in an environment with these capabilities:
+The container entrypoint auto-generates `~/.claude/CLAUDE.md` with:
 
-### GitHub Access
-- `GITHUB_TOKEN` environment variable with a personal access token
-- `gh` CLI pre-authenticated
-- Git credentials configured for private repos
+- **Available Skills** - Auto-discovered from `SKILL.md` files
+- **GitHub Access** - `GITHUB_TOKEN` env var, pre-authenticated `gh` CLI
+- **Tailscale Network** - How to access locally deployed services via Tailscale IP
+- **Package Installation** - Passwordless sudo for installing dependencies
+- **Skill System** - Pattern tracking and skill learning commands
 
-### Tailscale Network
-- Container runs on a Tailscale VPN
-- Get container IP: `tailscale ip -4`
-- Local services are accessible to the user via `http://<tailscale-ip>:<port>`
-
-### System Access
-- Passwordless sudo for package installation
-- Python 3, pip, and common build tools available
+This file is regenerated on container start via `_skill-manager/scripts/claudemd.py`.
 
 ## Installing Skills
 
