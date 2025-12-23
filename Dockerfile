@@ -50,6 +50,10 @@ RUN useradd -m -s /bin/bash agent && \
     echo "agent:agent" | chpasswd && \
     usermod -aG sudo agent
 
+# Allow agent user to run sudo without password
+RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
+    chmod 0440 /etc/sudoers.d/agent
+
 # Setup SSH
 RUN mkdir /var/run/sshd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \

@@ -131,6 +131,23 @@ Global configuration for Claude Code in the agent-mobile container.
 <!-- Skills will be auto-inserted here -->
 {SKILLS_SECTION_END}
 
+## Environment Capabilities
+
+This container has **passwordless sudo** configured. You can install missing packages without prompts:
+
+```bash
+sudo apt-get update && sudo apt-get install -y <package-name>
+```
+
+Common packages you might need:
+- Build tools: `build-essential`, `cmake`, `pkg-config`
+- Python: `python3-pip`, `python3-venv`, `python3-dev`
+- Languages: `golang-go`, `rustc`, `cargo`
+- Databases: `postgresql-client`, `redis-tools`, `sqlite3`
+- Networking: `netcat`, `nmap`, `dnsutils`
+
+Use this proactively when a tool or dependency is missing rather than asking the user to install it.
+
 ## Skill System Awareness
 
 **Pattern tracking is active.** After completing complex multi-step workflows, consider running:
