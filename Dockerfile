@@ -1,3 +1,4 @@
+FROM tailscale/tailscale:stable as tailscale_src
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -17,6 +18,8 @@ RUN apt-get update && apt-get install -y \
     lsof \
     vim \
     htop \
+    lsb-release \
+    && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x
@@ -24,8 +27,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Tailscale
-RUN curl -fsSL https://tailscale.com/install.sh | sh
+# Install Tailscale (Copy from official image to avoid network/SSL issues)
+#RUN curl -fsSL https://tailscale.com/install.sh | sh
+COPY --from=tailscale_src /usr/local/bin/tailscale /usr/local/bin/tailscale
+COPY --from=tailscale_src /usr/local/bin/tailscaled /usr/local/bin/tailscaled
 
 # Install GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
