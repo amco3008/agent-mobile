@@ -37,6 +37,8 @@ services:
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}
+      - GIT_EMAIL=${GIT_EMAIL:-}
+      - GIT_NAME=${GIT_NAME:-}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:

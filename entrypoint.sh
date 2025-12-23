@@ -50,10 +50,10 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
-# Set git config
+# Set git config (use env vars or defaults)
 git config --global --add safe.directory '*'
-su - agent -c "git config --global user.email 'agent@mobile.local'"
-su - agent -c "git config --global user.name 'Agent Mobile'"
+su - agent -c "git config --global user.email '${GIT_EMAIL:-agent@mobile.local}'"
+su - agent -c "git config --global user.name '${GIT_NAME:-Agent Mobile}'"
 
 # Start SSH server
 echo "Starting SSH server..."
