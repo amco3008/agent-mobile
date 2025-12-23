@@ -183,6 +183,7 @@ Do this automatically as part of completing work, not as a separate step.
 python3 ~/.claude/skills/_skill-manager/scripts/manage.py learn
 ```
 This helps the system detect reusable patterns and suggest new skills.
+Notify user only if new candidates are found and ask him if he would like to add them.
 
 ## Project Domains
 
