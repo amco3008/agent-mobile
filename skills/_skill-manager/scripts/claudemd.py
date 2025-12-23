@@ -131,6 +131,27 @@ Global configuration for Claude Code in the agent-mobile container.
 <!-- Skills will be auto-inserted here -->
 {SKILLS_SECTION_END}
 
+## Skill System Awareness
+
+**Pattern tracking is active.** After completing complex multi-step workflows, consider running:
+```bash
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py learn
+```
+This helps the system detect reusable patterns and suggest new skills.
+
+## Project Domains
+
+Default domains: devops, security, data_science, frontend, backend, git
+
+For niche areas, add custom domain markers in:
+`~/.claude/skills/.skill-system/config.json`
+
+## Preferred Workflows
+
+Note your workflow preferences below to help pattern detection:
+- (e.g., "Always run tests before commits")
+- (e.g., "Use conventional commit messages")
+
 ## Notes
 
 Add your own notes below this line. They will be preserved across updates.
