@@ -152,7 +152,8 @@ python3 ~/.claude/skills/_skill-manager/scripts/manage.py <command>
 | Command | Description |
 |---------|-------------|
 | `list` | List all skills with status & effectiveness |
-| `learn` | Analyze patterns, generate candidates |
+| `scan` | Scan transcripts for usage patterns |
+| `learn` | Analyze scanned patterns, generate candidates |
 | `candidates` | Show pending skill candidates |
 | `approve <id>` | Approve a candidate |
 | `reject <id>` | Reject a candidate |
@@ -164,9 +165,12 @@ python3 ~/.claude/skills/_skill-manager/scripts/manage.py <command>
 ### Example Workflow
 
 ```bash
-# Use Claude Code normally - patterns are captured automatically
+# Use Claude Code normally - patterns are captured in transcripts
 
-# Check for learnable patterns
+# Scan transcripts for patterns (run this first)
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py scan
+
+# Analyze patterns and generate skill candidates
 python3 ~/.claude/skills/_skill-manager/scripts/manage.py learn
 
 # Review candidates
