@@ -100,7 +100,7 @@ Then use:
    ```bash
    pkg install openssh
    ssh agent@<tailscale-ip>
-   password: agent
+   # Password: agent
    ```
 
 ## Volumes
