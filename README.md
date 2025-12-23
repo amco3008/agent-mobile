@@ -79,10 +79,10 @@ tmux attach
 
 | Variable | Description |
 |----------|-------------|
-| `GITHUB_TOKEN` | GitHub PAT for git and gh CLI (needs `repo`, `read:org`, `workflow` scopes) |
-| `TAILSCALE_AUTHKEY` | Optional - for automated Tailscale auth |
-| `GIT_EMAIL` | Git commit email (use GitHub email for Vercel) |
-| `GIT_NAME` | Git commit author name |
+| `TAILSCALE_AUTHKEY` | Recommended - Tailscale authkey for automated Tailscale auth https://login.tailscale.com/admin/settings/keys |
+| `GITHUB_TOKEN` | Optional - GitHub PAT for git and gh CLI (needs `repo`, `read:org`, `workflow` scopes) |
+| `GIT_EMAIL` | Optional - Git commit email (use GitHub email for Vercel) |
+| `GIT_NAME` | Optional - Git commit author name |
 | `HTTP_PROXY` | Optional - Corporate proxy URL (e.g., `http://proxy:8080`) |
 | `HTTPS_PROXY` | Optional - Corporate proxy URL for secure traffic |
 | `NO_PROXY` | Optional - Domains to bypass proxy (default: `localhost,127.0.0.1`) |
