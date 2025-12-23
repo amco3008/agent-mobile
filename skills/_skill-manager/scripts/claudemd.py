@@ -140,6 +140,14 @@ A `GITHUB_TOKEN` personal access token is available in the environment. Use it f
 - Cloning/pushing to private repositories (git credentials configured)
 - Direct API requests: `curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/...`
 
+### Tailscale Network
+
+This container runs on a Tailscale network. When deploying local services (web servers, APIs, etc.), the user connects via the container's Tailscale IP:
+- Get IP: `tailscale ip -4`
+- Example: If you start a server on port 3000, the user accesses it at `http://<tailscale-ip>:3000`
+
+Always provide the Tailscale IP when starting services so the user knows how to connect.
+
 ### Package Installation
 
 This container has **passwordless sudo** configured. You can install missing packages without prompts:
