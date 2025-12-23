@@ -134,6 +134,14 @@ except Exception as e:
 # Merge hooks (replace hooks section only, keep everything else)
 settings["hooks"] = hooks
 
+# Add rg permission if not present
+if "permissions" not in settings:
+    settings["permissions"] = {"allow": []}
+if "allow" not in settings["permissions"]:
+    settings["permissions"]["allow"] = []
+if "Bash(rg:*)" not in settings["permissions"]["allow"]:
+    settings["permissions"]["allow"].append("Bash(rg:*)")
+
 # Write back with proper formatting
 settings_file.write_text(json.dumps(settings, indent=2))
 print("Skill system hooks configured successfully")
@@ -146,6 +154,29 @@ PYTHON_SCRIPT
 
 echo "Setting up skill system hooks..."
 setup_skill_hooks
+
+# Update global CLAUDE.md with discovered skills
+update_claude_md() {
+    local CLAUDE_DIR="/home/agent/.claude"
+    local CLAUDEMD_SCRIPT="$CLAUDE_DIR/skills/_skill-manager/scripts/claudemd.py"
+
+    # Check if the script exists
+    if [ ! -f "$CLAUDEMD_SCRIPT" ]; then
+        echo "CLAUDE.md maintenance script not found, skipping..."
+        return
+    fi
+
+    # Run the update script
+    if command -v python3 &>/dev/null; then
+        python3 "$CLAUDEMD_SCRIPT" --quiet || echo "Warning: CLAUDE.md update failed"
+        chown agent:agent "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null || true
+    else
+        echo "Python3 not available, skipping CLAUDE.md update"
+    fi
+}
+
+echo "Updating global CLAUDE.md..."
+update_claude_md
 
 # Start SSH server
 echo "Starting SSH server..."

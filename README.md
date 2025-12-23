@@ -7,6 +7,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Claude Code CLI** - Full Claude Code access from mobile
 - **Gemini CLI** - Google's Gemini CLI with OAuth
 - **GitHub CLI (gh)** - Create PRs, manage issues, etc.
+- **ripgrep (rg)** - Fast text search, auto-allowed for Claude
 - **Skills support** - Drop skills into `skills/` folder (optional)
 - **Dynamic Skill Learning** - Auto-learns skills from usage patterns with versioning
 - **Tailscale** - Secure mesh networking, access from anywhere
