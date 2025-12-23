@@ -9,6 +9,8 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **GitHub CLI (gh)** - Create PRs, manage issues, etc.
 - **Skills support** - Drop skills into `skills/` folder (optional)
 - **Tailscale** - Secure mesh networking, access from anywhere
+- **Multi-stage build** - Robust installation even behind restricted networks
+- **Corporate Proxy Support** - Built-in handling for proxies and custom CA certs
 - **tmux** - Persistent sessions that survive disconnects
 - **Git + GitHub** - Full git operations with token auth
 
@@ -81,6 +83,9 @@ tmux attach
 | `TAILSCALE_AUTHKEY` | Optional - for automated Tailscale auth |
 | `GIT_EMAIL` | Git commit email (use GitHub email for Vercel) |
 | `GIT_NAME` | Git commit author name |
+| `HTTP_PROXY` | Optional - Corporate proxy URL (e.g., `http://proxy:8080`) |
+| `HTTPS_PROXY` | Optional - Corporate proxy URL for secure traffic |
+| `NO_PROXY` | Optional - Domains to bypass proxy (default: `localhost,127.0.0.1`) |
 
 ## Skills (Optional)
 
@@ -110,6 +115,17 @@ Then use:
    # Password: agent
    ```
 
+## Corporate Proxy / SSL Setup
+
+If you are behind a corporate firewall that intercepts SSL traffic:
+
+1. **Proxy Settings**: Add your proxy URLs to the [.env](file:///.env) file.
+2. **CA Certificates**:
+   - Create a `certs/` directory in the project root.
+   - Drop your corporate Root CA certificate (in `.crt` format) inside.
+   - The container will automatically import it on startup via `update-ca-certificates`.
+3. **Docker Desktop**: Remember to also set your proxy in **Docker Desktop Settings > Resources > Proxies** so it can pull the base images.
+
 ## Volumes
 
 Data persists across container restarts and rebuilds:
@@ -122,6 +138,7 @@ Data persists across container restarts and rebuilds:
 | `ssh-keys` | - | `/etc/ssh/ssh_host_keys` | SSH host keys |
 | `./home` | `agent-mobile/home/` | `~/projects` | Projects (easy file access) |
 | `./skills` | `agent-mobile/skills/` | `~/.claude/skills` | Skills folder |
+| `./certs` | `agent-mobile/certs/` | `/usr/local/share/ca-certificates/extra` | Custom CA certificates |
 
 **Bind mounts** (`./home`, `./skills`) are accessible from your host PC - drop files directly into these folders.
 
