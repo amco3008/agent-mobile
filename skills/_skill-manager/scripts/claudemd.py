@@ -178,12 +178,20 @@ Do this automatically as part of completing work, not as a separate step.
 
 ## Skill System Awareness
 
-**Pattern tracking is active.** After completing complex multi-step workflows, consider running:
+**Pattern learning via transcript scanning.** After complex sessions, run:
 ```bash
+# Scan transcripts for patterns (run this first)
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py scan
+
+# Analyze patterns and generate skill candidates
 python3 ~/.claude/skills/_skill-manager/scripts/manage.py learn
+
+# Review and approve candidates
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py candidates
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py approve <candidate-id>
 ```
-This helps the system detect reusable patterns and suggest new skills.
-Notify user only if new candidates are found and ask him if he would like to add them.
+
+**Automatic workflow:** Run `scan` then `learn` after completing multi-step tasks. If candidates are generated, inform the user.
 
 ## Project Domains
 
