@@ -78,6 +78,8 @@ tmux attach
 |----------|-------------|
 | `GITHUB_TOKEN` | GitHub PAT for git operations |
 | `TAILSCALE_AUTHKEY` | Optional - for automated Tailscale auth |
+| `GIT_EMAIL` | Git commit email (use GitHub email for Vercel) |
+| `GIT_NAME` | Git commit author name |
 
 ## Skills (Optional)
 
