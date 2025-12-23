@@ -1,4 +1,4 @@
-FROM tailscale/tailscale:stable as tailscale_src
+FROM tailscale/tailscale:stable AS tailscale_src
 FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive

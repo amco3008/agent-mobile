@@ -3,6 +3,12 @@ set -e
 
 echo "Starting agent-mobile container..."
 
+# Import corporate CA certificates if provided
+if [ -d "/usr/local/share/ca-certificates/extra" ] && [ "$(ls -A /usr/local/share/ca-certificates/extra)" ]; then
+    echo "Importing custom CA certificates..."
+    update-ca-certificates
+fi
+
 # Persist SSH host keys across rebuilds
 SSH_KEY_DIR="/etc/ssh/ssh_host_keys"
 if [ -f "$SSH_KEY_DIR/ssh_host_rsa_key" ]; then

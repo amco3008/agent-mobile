@@ -32,11 +32,17 @@ services:
       # TUN device for Tailscale
       - /dev/net/tun:/dev/net/tun
 
+      # Corporate CA certificates
+      - ./certs:/usr/local/share/ca-certificates/extra
+
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}
       - GIT_EMAIL=${GIT_EMAIL:-}
       - GIT_NAME=${GIT_NAME:-}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
