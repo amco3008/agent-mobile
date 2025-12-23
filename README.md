@@ -14,6 +14,9 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **tmux** - Persistent sessions that survive disconnects
 - **Git + GitHub** - Full git operations with token auth
 
+> [!TIP]
+> **Windows Users**: It is highly recommended to run this project inside **WSL2** (Ubuntu) rather than directly in Windows PowerShell/CMD. This avoids volume mount permission issues and provides better performance.
+
 ## Quick Start
 
 1. **Configure environment**
