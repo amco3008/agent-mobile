@@ -14,6 +14,9 @@ RUN apt-get update && apt-get install -y \
     iptables \
     iproute2 \
     tmux \
+    lsof \
+    vim \
+    htop \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js 20.x
