@@ -356,6 +356,15 @@ def run_learning(verbose: bool = True) -> List[dict]:
     retention_days = config.get("observation", {}).get("pattern_retention_days", 90)
     score_threshold = learning_config.get("score_threshold", 0.6)
 
+    # Run prompt analysis first
+    prompt_analysis = {}
+    try:
+        from prompt_analyzer import run_prompt_analysis
+        prompt_analysis = run_prompt_analysis(verbose=False)
+    except Exception as e:
+        if verbose:
+            print(f"Note: Prompt analysis skipped ({e})")
+
     if verbose:
         print("Loading patterns...")
 
@@ -426,6 +435,48 @@ def run_learning(verbose: bool = True) -> List[dict]:
 
             if verbose:
                 print(f"  - Created: {candidate['skill_name']} (score: {score}, freq: {frequency})")
+
+    # Generate intent-based candidates from prompt analysis
+    if prompt_analysis and prompt_analysis.get("intent_tool_patterns"):
+        if verbose:
+            print("Generating intent-based candidates...")
+
+        intent_patterns = prompt_analysis.get("intent_tool_patterns", {})
+        for intent, tool_counts in intent_patterns.items():
+            # Need at least 3 tool uses for this intent
+            total_uses = sum(tool_counts.values())
+            if total_uses < 3:
+                continue
+
+            # Get top tools for this intent
+            top_tools = [t for t, c in sorted(tool_counts.items(), key=lambda x: -x[1])[:4]]
+            if len(top_tools) < 2:
+                continue
+
+            # Create intent-based candidate
+            skill_name = f"intent-{intent}"
+            if skill_name in existing_skills:
+                continue
+
+            candidate = {
+                "candidate_id": generate_candidate_id(),
+                "skill_name": skill_name,
+                "domain": intent,
+                "score": min(0.6 + (total_uses * 0.02), 0.95),  # Score based on usage
+                "frequency": total_uses,
+                "tool_sequence": top_tools,
+                "unique_tools": top_tools,
+                "intents": [intent],
+                "source": "prompt_analysis",
+                "created_at": datetime.utcnow().isoformat() + "Z",
+                "status": "pending",
+            }
+
+            save_candidate(candidate)
+            candidates.append(candidate)
+
+            if verbose:
+                print(f"  - Created: {skill_name} (intent-based, uses: {total_uses})")
 
     if verbose:
         print(f"\nGenerated {len(candidates)} skill candidates.")

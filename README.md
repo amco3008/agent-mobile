@@ -154,6 +154,8 @@ python3 ~/.claude/skills/_skill-manager/scripts/manage.py <command>
 | `list` | List all skills with status & effectiveness |
 | `scan` | Scan transcripts for usage patterns |
 | `learn` | Analyze scanned patterns, generate candidates |
+| `preferences` | Learn user preferences from prompts (`--force` to update CLAUDE.md) |
+| `prompts [N]` | View captured user prompts (default: 20) |
 | `candidates` | Show pending skill candidates |
 | `approve <id>` | Approve a candidate |
 | `reject <id>` | Reject a candidate |
@@ -167,10 +169,13 @@ python3 ~/.claude/skills/_skill-manager/scripts/manage.py <command>
 ```bash
 # Use Claude Code normally - patterns are captured in transcripts
 
-# Scan transcripts for patterns (run this first)
+# Scan transcripts for patterns
 python3 ~/.claude/skills/_skill-manager/scripts/manage.py scan
 
-# Analyze patterns and generate skill candidates
+# Learn user preferences (workflows, style) and update CLAUDE.md
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py preferences --force
+
+# Or generate skill candidates from patterns
 python3 ~/.claude/skills/_skill-manager/scripts/manage.py learn
 
 # Review candidates

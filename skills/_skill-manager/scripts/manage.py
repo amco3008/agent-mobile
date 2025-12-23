@@ -344,6 +344,79 @@ def cmd_refine(args):
     print("3. The skill system will learn from your changes.")
 
 
+def cmd_scan(args):
+    """Scan transcripts for patterns (alternative to hooks)."""
+    script_dir = Path(__file__).parent
+    parse_script = script_dir / "parse_transcripts.py"
+
+    if not parse_script.exists():
+        print(f"Error: {parse_script} not found")
+        sys.exit(1)
+
+    cmd = ["python3", str(parse_script)]
+    if args.force:
+        cmd.append("--all")
+
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
+def cmd_analyze(args):
+    """Analyze prompt patterns for semantic learning."""
+    script_dir = Path(__file__).parent
+    sys.path.insert(0, str(script_dir))
+    from prompt_analyzer import run_prompt_analysis
+    run_prompt_analysis(verbose=not args.quiet)
+
+
+def cmd_preferences(args):
+    """Learn preferences from user prompts."""
+    script_dir = Path(__file__).parent
+    sys.path.insert(0, str(script_dir))
+    from preference_learner import run_preference_learning
+
+    do_update = args.force  # --force means update CLAUDE.md
+    run_preference_learning(verbose=not args.quiet, update_claude=do_update)
+
+
+def cmd_prompts(args):
+    """View captured user prompts."""
+    prompts_file = SKILLS_DIR / ".skill-system" / "patterns" / "user-prompts.jsonl"
+
+    if not prompts_file.exists():
+        print("No prompts captured yet. Run 'manage.py scan' first.")
+        sys.exit(1)
+
+    print("User Prompts Log")
+    print("=" * 60)
+
+    # Get limit from args
+    limit = int(args.skill_name) if args.skill_name and args.skill_name.isdigit() else 20
+
+    prompts = []
+    with open(prompts_file) as f:
+        for line in f:
+            try:
+                prompts.append(json.loads(line))
+            except:
+                pass
+
+    # Filter out warmup and shell commands if not verbose
+    if not getattr(args, 'force', False):
+        prompts = [p for p in prompts if not p['prompt'].startswith('[shell]')
+                   and 'warmup' not in p['prompt'].lower()]
+
+    # Show most recent first
+    prompts = prompts[-limit:][::-1]
+
+    for p in prompts:
+        ts = p.get('timestamp', '')[:16]
+        prompt = p.get('prompt', '')[:70]
+        print(f"{ts} | {prompt}")
+
+    print(f"\nTotal: {len(prompts)} prompts (use 'prompts 50' for more)")
+
+
 def main():
     """Main entry point."""
     import argparse
@@ -354,10 +427,13 @@ def main():
         epilog="""
 Commands:
   list                  List all installed skills
+  scan                  Scan transcripts for patterns (no hooks needed)
   learn                 Analyze patterns and generate candidates
+  preferences           Learn preferences from prompts (--force to update CLAUDE.md)
   candidates            Show pending skill candidates
   approve <id>          Approve a candidate
   reject <id>           Reject a candidate
+  prompts [N]           View captured user prompts (default: 20)
   history <skill>       Show version history for a skill
   rollback <skill> <v>  Rollback a skill to version
   stats                 Show usage analytics
@@ -368,7 +444,7 @@ Commands:
 
     parser.add_argument("command",
                        choices=["list", "learn", "candidates", "approve", "reject",
-                               "history", "rollback", "stats", "improve", "refine"],
+                               "history", "rollback", "stats", "improve", "refine", "scan", "prompts", "analyze", "preferences"],
                        help="Command to run")
     parser.add_argument("args", nargs="*", help="Command arguments")
     parser.add_argument("--quiet", "-q", action="store_true", help="Suppress output")
@@ -394,6 +470,10 @@ Commands:
         "stats": cmd_stats,
         "improve": cmd_improve,
         "refine": cmd_refine,
+        "scan": cmd_scan,
+        "prompts": cmd_prompts,
+        "analyze": cmd_analyze,
+        "preferences": cmd_preferences,
     }
 
     handler = commands.get(args.command)

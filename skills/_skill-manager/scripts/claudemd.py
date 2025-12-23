@@ -11,6 +11,7 @@ and users to add their own notes over time.
 
 import os
 import re
+import json
 import argparse
 from pathlib import Path
 
@@ -23,6 +24,11 @@ CLAUDE_MD_PATH = CLAUDE_DIR / "CLAUDE.md"
 # Markers to identify auto-generated section
 SKILLS_SECTION_START = "<!-- AUTO-GENERATED SKILLS START -->"
 SKILLS_SECTION_END = "<!-- AUTO-GENERATED SKILLS END -->"
+
+# User preferences (persistent across rebuilds)
+USER_PREFS_FILE = SKILLS_DIR / ".skill-system" / "patterns" / "user-preferences.json"
+USER_PREFS_START = "<!-- USER PREFERENCES START -->"
+USER_PREFS_END = "<!-- USER PREFERENCES END -->"
 
 
 def parse_yaml_frontmatter(filepath):
@@ -178,20 +184,21 @@ Do this automatically as part of completing work, not as a separate step.
 
 ## Skill System Awareness
 
-**Pattern learning via transcript scanning.** After complex sessions, run:
+**Learn user preferences from usage patterns.** Run periodically:
 ```bash
-# Scan transcripts for patterns (run this first)
+# Scan transcripts for patterns
 python3 ~/.claude/skills/_skill-manager/scripts/manage.py scan
 
-# Analyze patterns and generate skill candidates
-python3 ~/.claude/skills/_skill-manager/scripts/manage.py learn
-
-# Review and approve candidates
-python3 ~/.claude/skills/_skill-manager/scripts/manage.py candidates
-python3 ~/.claude/skills/_skill-manager/scripts/manage.py approve <candidate-id>
+# Learn user preferences (workflows, style, shortcuts)
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py preferences --force
 ```
 
-**Automatic workflow:** Run `scan` then `learn` after completing multi-step tasks. If candidates are generated, inform the user.
+This learns actionable rules like:
+- "After commit, push" → auto-push when user says commit
+- "Before commit, update docs" → update docs first
+- Response style preferences from feedback
+
+**Run after sessions** where user gives feedback or repeats similar commands.
 
 ## Project Domains
 
@@ -227,6 +234,65 @@ def generate_skills_section(skills):
         lines.append("")
 
     return "\n".join(lines)
+
+
+def load_user_preferences():
+    """Load user preferences from JSON file."""
+    if not USER_PREFS_FILE.exists():
+        return {}
+    try:
+        with open(USER_PREFS_FILE) as f:
+            return json.load(f)
+    except:
+        return {}
+
+
+def generate_user_prefs_section(prefs):
+    """Generate markdown section from user preferences."""
+    if not prefs:
+        return ""
+
+    sections = []
+
+    # Workflow rules
+    workflows = prefs.get("rules", {}).get("workflows", [])
+    if workflows:
+        sections.append("## Workflow Rules")
+        sections.append("Do these automatically without asking:")
+        for r in workflows:
+            sections.append(f"- {r['rule'].capitalize()}")
+        sections.append("")
+
+    # Style preferences
+    style = prefs.get("rules", {}).get("style", [])
+    if style:
+        sections.append("## Response Style")
+        for s in style:
+            sections.append(f"- {s['rule'].capitalize()}")
+        sections.append("")
+
+    # Skip preferences
+    skips = prefs.get("rules", {}).get("skip", [])
+    if skips:
+        sections.append("## Skip Unless Asked")
+        for s in skips:
+            sections.append(f"- {s['rule'].capitalize()}")
+        sections.append("")
+
+    # Project context
+    context = prefs.get("context", [])
+    if context:
+        sections.append("## Current Project")
+        for c in context:
+            if c['type'] == 'tech':
+                sections.append(f"- Uses: {c['value']}")
+            elif c['type'] == 'url':
+                sections.append(f"- URL: {c['value']}")
+            elif c['type'] == 'project_name':
+                sections.append(f"- Project: {c['value']}")
+        sections.append("")
+
+    return "\n".join(sections)
 
 
 def update_claude_md(verbose=True):
@@ -290,6 +356,30 @@ def update_claude_md(verbose=True):
             + content[end_idx:]
         )
 
+    # Also restore user preferences if they exist
+    user_prefs = load_user_preferences()
+    if user_prefs:
+        if verbose:
+            print("Restoring user preferences...")
+        prefs_content = generate_user_prefs_section(user_prefs)
+        if prefs_content:
+            prefs_section = f"\n{USER_PREFS_START}\n{prefs_content}{USER_PREFS_END}\n"
+
+            # Check if preferences section exists
+            prefs_start_idx = content.find(USER_PREFS_START)
+            prefs_end_idx = content.find(USER_PREFS_END)
+
+            if prefs_start_idx != -1 and prefs_end_idx != -1:
+                # Replace existing
+                content = (
+                    content[:prefs_start_idx]
+                    + prefs_section.strip()
+                    + content[prefs_end_idx + len(USER_PREFS_END):]
+                )
+            else:
+                # Append at end
+                content = content.rstrip() + "\n" + prefs_section
+
     # Write back
     CLAUDE_MD_PATH.parent.mkdir(parents=True, exist_ok=True)
     CLAUDE_MD_PATH.write_text(content)
@@ -299,6 +389,10 @@ def update_claude_md(verbose=True):
         for skill in sorted(skills, key=lambda s: s["name"]):
             desc_preview = skill['description'][:50] + "..." if len(skill['description']) > 50 else skill['description']
             print(f"  - {skill['name']}: {desc_preview}")
+        if user_prefs:
+            rules = user_prefs.get("rules", {})
+            total_rules = len(rules.get("workflows", [])) + len(rules.get("style", [])) + len(rules.get("skip", []))
+            print(f"  + {total_rules} user preference rules restored")
 
 
 def main():

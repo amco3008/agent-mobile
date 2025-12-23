@@ -80,13 +80,27 @@ def summarize_input(tool_input, tool_name):
 
 
 def main():
+    # Debug: log that hook was triggered
+    debug_file = PATTERNS_DIR / "hook-debug.log"
+    try:
+        with open(debug_file, "a") as f:
+            f.write(f"{datetime.utcnow().isoformat()} - Hook triggered\n")
+    except:
+        pass
+
     # Read hook input from stdin
     try:
         input_data = json.load(sys.stdin)
-    except json.JSONDecodeError:
-        # Silent fail - don't block tool execution
+        # Debug: log input
+        with open(debug_file, "a") as f:
+            f.write(f"  Input: {json.dumps(input_data)[:200]}\n")
+    except json.JSONDecodeError as e:
+        with open(debug_file, "a") as f:
+            f.write(f"  JSON Error: {e}\n")
         sys.exit(0)
-    except Exception:
+    except Exception as e:
+        with open(debug_file, "a") as f:
+            f.write(f"  Error: {e}\n")
         sys.exit(0)
 
     # Extract tool information
