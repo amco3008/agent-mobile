@@ -301,33 +301,69 @@ setup_skill_hooks
 
 # Pre-configure workspace trust for common working directories
 # Trust is stored in ~/.claude.json with projects object keyed by absolute path
-# This allows hooks to execute without interactive trust prompt
+# This MERGES with existing config to preserve user's custom folder trust
 setup_workspace_trust() {
     local CLAUDE_JSON="/home/agent/.claude.json"
 
     echo "Configuring workspace trust..."
 
-    # Create ~/.claude.json with pre-trusted workspaces
-    # Format: { "projects": { "/absolute/path": { "hasTrustDialogAccepted": true, ... } } }
-    # Note: No blanket "Bash" - only safe command patterns (rm, chmod etc require approval)
-    cat > "$CLAUDE_JSON" << 'EOF'
-{
-  "projects": {
-    "/home/agent": {
-      "hasTrustDialogAccepted": true,
-      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(rg:*)", "Bash(git:*)", "Bash(npm:*)", "Bash(node:*)", "Bash(python3:*)", "Bash(pip:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(echo:*)", "Bash(pwd:*)", "Bash(cd:*)", "Bash(mkdir:*)", "Bash(touch:*)", "Bash(cp:*)", "Bash(mv:*)"]
-    },
-    "/home/agent/projects": {
-      "hasTrustDialogAccepted": true,
-      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(rg:*)", "Bash(git:*)", "Bash(npm:*)", "Bash(node:*)", "Bash(python3:*)", "Bash(pip:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(echo:*)", "Bash(pwd:*)", "Bash(cd:*)", "Bash(mkdir:*)", "Bash(touch:*)", "Bash(cp:*)", "Bash(mv:*)"]
-    }
-  }
+    # Use Python to merge trust settings (preserves existing project trust)
+    python3 << 'PYTHON_SCRIPT'
+import json
+from pathlib import Path
+
+CLAUDE_JSON = Path("/home/agent/.claude.json")
+
+# Default allowed tools (no blanket Bash - rm, chmod etc require approval)
+ALLOWED_TOOLS = [
+    "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch",
+    "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP",
+    "Bash(rg:*)", "Bash(git:*)", "Bash(npm:*)", "Bash(node:*)",
+    "Bash(python3:*)", "Bash(pip:*)", "Bash(ls:*)", "Bash(cat:*)",
+    "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)", "Bash(find:*)",
+    "Bash(echo:*)", "Bash(pwd:*)", "Bash(cd:*)", "Bash(mkdir:*)",
+    "Bash(touch:*)", "Bash(cp:*)", "Bash(mv:*)"
+]
+
+# Default project trust settings
+DEFAULT_TRUST = {
+    "hasTrustDialogAccepted": True,
+    "allowedTools": ALLOWED_TOOLS
 }
-EOF
+
+# Paths to ensure trust for
+DEFAULT_PATHS = ["/home/agent", "/home/agent/projects"]
+
+# Load existing config or create new
+config = {}
+if CLAUDE_JSON.exists():
+    try:
+        config = json.loads(CLAUDE_JSON.read_text())
+    except:
+        config = {}
+
+# Ensure projects dict exists
+if "projects" not in config:
+    config["projects"] = {}
+
+# Merge default trust (don't overwrite existing projects)
+for path in DEFAULT_PATHS:
+    if path not in config["projects"]:
+        # New path - add full trust config
+        config["projects"][path] = DEFAULT_TRUST.copy()
+    else:
+        # Existing path - only ensure trust is accepted, preserve other settings
+        config["projects"][path]["hasTrustDialogAccepted"] = True
+        if "allowedTools" not in config["projects"][path]:
+            config["projects"][path]["allowedTools"] = ALLOWED_TOOLS
+
+# Write back
+CLAUDE_JSON.write_text(json.dumps(config, indent=2))
+print(f"Trust configured for {len(config['projects'])} project(s)")
+PYTHON_SCRIPT
 
     chown agent:agent "$CLAUDE_JSON"
     chmod 600 "$CLAUDE_JSON"
-    echo "Workspace trust configured in ~/.claude.json"
 }
 
 setup_workspace_trust
