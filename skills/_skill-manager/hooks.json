@@ -1,4 +1,16 @@
 {
+  "PreToolUse": [
+    {
+      "matcher": "*",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 /home/agent/.claude/skills/_skill-manager/scripts/hooks/push_notify.py pretool",
+          "timeout": 5
+        }
+      ]
+    }
+  ],
   "PostToolUse": [
     {
       "matcher": "AskUserQuestion",
@@ -28,6 +40,15 @@
         {
           "type": "command",
           "command": "python3 /home/agent/.claude/skills/_skill-manager/scripts/hooks/push_notify.py permission",
+          "timeout": 5
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "python3 /home/agent/.claude/skills/_skill-manager/scripts/hooks/push_notify.py notification_debug",
           "timeout": 5
         }
       ]

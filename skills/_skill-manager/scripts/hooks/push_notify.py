@@ -22,11 +22,40 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
-# Configuration from environment
-NTFY_ENABLED = os.environ.get('NTFY_ENABLED', 'false').lower() == 'true'
-NTFY_TOPIC = os.environ.get('NTFY_TOPIC', '')
-NTFY_SERVER = os.environ.get('NTFY_SERVER', 'https://ntfy.sh')
-NTFY_RATE_LIMIT = int(os.environ.get('NTFY_RATE_LIMIT', '30'))
+# Configuration - try environment first, then config file
+def load_config():
+    """Load ntfy config from environment or config file."""
+    # First try environment variables
+    enabled = os.environ.get('NTFY_ENABLED', '').lower() == 'true'
+    topic = os.environ.get('NTFY_TOPIC', '')
+    server = os.environ.get('NTFY_SERVER', 'https://ntfy.sh')
+    rate_limit = os.environ.get('NTFY_RATE_LIMIT', '30')
+
+    # If not in env, try config file
+    if not topic:
+        config_file = Path.home() / ".claude" / "ntfy.conf"
+        if config_file.exists():
+            try:
+                for line in config_file.read_text().splitlines():
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip().strip("'\"")
+                        if key == 'NTFY_ENABLED':
+                            enabled = value.lower() == 'true'
+                        elif key == 'NTFY_TOPIC':
+                            topic = value
+                        elif key == 'NTFY_SERVER':
+                            server = value
+                        elif key == 'NTFY_RATE_LIMIT':
+                            rate_limit = value
+            except Exception:
+                pass
+
+    return enabled, topic, server, int(rate_limit)
+
+NTFY_ENABLED, NTFY_TOPIC, NTFY_SERVER, NTFY_RATE_LIMIT = load_config()
 
 # Rate limiting state file
 SKILLS_DIR = Path(os.environ.get('SKILL_SYSTEM_DIR', Path.home() / ".claude" / "skills"))
@@ -130,11 +159,34 @@ def handle_ask_question(hook_data):
 
 
 def handle_permission(hook_data):
-    """Handle permission_prompt notification."""
+    """Handle permission_prompt notification (legacy)."""
     message = hook_data.get('message', 'Permission required for an action')
 
     send_notification(
         message=message[:200] if message else 'Permission required',
+        title='Claude needs permission',
+        priority='high',
+        tags=['warning', 'lock']
+    )
+
+
+def handle_permission_request(hook_data):
+    """Handle PermissionRequest hook - fires when permission dialog shown."""
+    tool_name = hook_data.get('tool_name', 'Unknown tool')
+    tool_input = hook_data.get('tool_input', {})
+
+    # Build a descriptive message
+    if tool_name == 'Bash':
+        cmd = tool_input.get('command', '')[:100]
+        message = f"Run: {cmd}"
+    elif tool_name in ['Write', 'Edit']:
+        path = tool_input.get('file_path', 'unknown file')
+        message = f"{tool_name}: {path}"
+    else:
+        message = f"Use {tool_name} tool"
+
+    send_notification(
+        message=message,
         title='Claude needs permission',
         priority='high',
         tags=['warning', 'lock']
@@ -152,6 +204,15 @@ def handle_stop(hook_data):
 
 
 def main():
+    # Debug logging
+    debug_file = SKILLS_DIR / ".skill-system" / "patterns" / "push-notify-debug.log"
+    try:
+        debug_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(debug_file, "a") as f:
+            f.write(f"{datetime.utcnow().isoformat()} - Called with args: {sys.argv}\n")
+    except:
+        pass
+
     if len(sys.argv) < 2:
         sys.exit(0)
 
@@ -160,6 +221,12 @@ def main():
     # Read hook data from stdin
     try:
         hook_data = json.load(sys.stdin)
+        # Log what we received
+        try:
+            with open(debug_file, "a") as f:
+                f.write(f"  Data: {json.dumps(hook_data)[:500]}\n")
+        except:
+            pass
     except Exception:
         hook_data = {}
 
@@ -168,8 +235,22 @@ def main():
         handle_ask_question(hook_data)
     elif event_type == 'permission':
         handle_permission(hook_data)
+    elif event_type == 'permission_request':
+        handle_permission_request(hook_data)
+    elif event_type == 'pretool':
+        handle_permission_request(hook_data)  # Same handler - fires before tool execution
     elif event_type == 'stop':
         handle_stop(hook_data)
+    elif event_type == 'notification_debug':
+        # Debug: send notification for ANY notification event
+        notif_type = hook_data.get('notification_type', 'unknown')
+        message = hook_data.get('message', 'No message')[:150]
+        send_notification(
+            message=f"[{notif_type}] {message}",
+            title='Debug: Notification',
+            priority='high',
+            tags=['bell']
+        )
 
     sys.exit(0)
 

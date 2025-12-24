@@ -110,8 +110,17 @@ def extract_error_type(message):
 
 
 def main():
+    # Debug: log all notifications to see what Claude sends
+    debug_file = PATTERNS_DIR / "notification-debug.log"
+
     try:
         input_data = json.load(sys.stdin)
+        # Log raw input for debugging
+        try:
+            with open(debug_file, "a") as f:
+                f.write(f"{datetime.utcnow().isoformat()} - {json.dumps(input_data)}\n")
+        except:
+            pass
     except json.JSONDecodeError:
         sys.exit(0)
     except Exception:

@@ -176,6 +176,21 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
+# Configure push notifications (ntfy.sh)
+# Write config file that hooks can read (env vars don't propagate to hook subprocesses)
+if [ -n "$NTFY_ENABLED" ] && [ "$NTFY_ENABLED" = "true" ]; then
+    echo "Configuring push notifications..."
+    cat > /home/agent/.claude/ntfy.conf << EOF
+NTFY_ENABLED=${NTFY_ENABLED}
+NTFY_TOPIC=${NTFY_TOPIC}
+NTFY_SERVER=${NTFY_SERVER:-https://ntfy.sh}
+NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-30}
+EOF
+    chown agent:agent /home/agent/.claude/ntfy.conf
+    chmod 600 /home/agent/.claude/ntfy.conf
+    echo "Push notifications enabled for topic: ${NTFY_TOPIC}"
+fi
+
 # Set git config (use env vars or defaults)
 git config --global --add safe.directory '*'
 su - agent -c "git config --global user.email '${GIT_EMAIL:-agent@mobile.local}'"
