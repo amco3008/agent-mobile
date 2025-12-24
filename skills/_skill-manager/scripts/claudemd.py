@@ -148,11 +148,15 @@ A `GITHUB_TOKEN` personal access token is available in the environment. Use it f
 
 ### Tailscale Network
 
-This container runs on a Tailscale network. When deploying local services (web servers, APIs, etc.), the user connects via the container's Tailscale IP:
-- Get IP: `tailscale ip -4`
-- Example: If you start a server on port 3000, the user accesses it at `http://<tailscale-ip>:3000`
+This container runs on a Tailscale network with MagicDNS enabled:
+- **MagicDNS hostname**: `agent-mobile` (preferred, easier to remember)
+- **Get IP**: `tailscale ip -4`
 
-Always provide the Tailscale IP when starting services so the user knows how to connect.
+When deploying local services (web servers, APIs, etc.), tell the user to connect via:
+- `http://agent-mobile:<port>` (MagicDNS)
+- `http://<tailscale-ip>:<port>` (IP fallback)
+
+Example: If you start a server on port 3000, the user accesses it at `http://agent-mobile:3000`
 
 ### Package Installation
 
