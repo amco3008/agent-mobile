@@ -1,6 +1,6 @@
 ---
 name: skill-manager
-description: Manages the dynamic skill learning system. Use when you want to list skills, analyze patterns to learn new skills, approve/reject candidates, rollback versions, view skill history, or check usage statistics. Trigger phrases include "manage skills", "skill learn", "list skills", "approve skill", "skill stats", "skill history", "rollback skill".
+description: Manages the dynamic skill learning system. Use when you want to list skills, scan transcripts for patterns, learn preferences, approve/reject candidates, rollback versions, view skill history, or check usage statistics. Trigger phrases include "manage skills", "skill learn", "list skills", "approve skill", "skill stats", "skill history", "rollback skill", "scan patterns", "learn preferences".
 allowed-tools:
   - Bash
   - Read
@@ -34,6 +34,30 @@ Show installed skills with status and effectiveness scores:
 
 ```bash
 python3 ~/.claude/skills/_skill-manager/scripts/manage.py list
+```
+
+### Scan Transcripts
+
+Scan Claude transcripts for usage patterns (run before learn):
+
+```bash
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py scan
+```
+
+### Learn Preferences
+
+Learn user preferences from prompts and update CLAUDE.md:
+
+```bash
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py preferences --force
+```
+
+### View Captured Prompts
+
+View recent user prompts:
+
+```bash
+python3 ~/.claude/skills/_skill-manager/scripts/manage.py prompts [N]
 ```
 
 ### Learn from Patterns
@@ -230,12 +254,14 @@ Custom domains can be added in config.
 
 ## Example Workflow
 
-1. **Normal usage** - Hooks observe patterns automatically
-2. **Run learn** - `manage.py learn` analyzes patterns
-3. **Review candidates** - `manage.py candidates` shows suggestions
-4. **Approve** - `manage.py approve docker-compose-helper`
-5. **Use skill** - Skill is now active and tracking effectiveness
-6. **Auto-improve** - System enhances based on usage data
+1. **Normal usage** - Use Claude Code normally
+2. **Scan transcripts** - `manage.py scan` extracts patterns from transcripts
+3. **Learn preferences** - `manage.py preferences --force` updates CLAUDE.md with learned rules
+4. **Generate candidates** - `manage.py learn` creates skill candidates from patterns
+5. **Review candidates** - `manage.py candidates` shows suggestions
+6. **Approve** - `manage.py approve docker-compose-helper`
+7. **Use skill** - Skill is now active and tracking effectiveness
+8. **Auto-improve** - System enhances based on usage data
 
 ## Troubleshooting
 
