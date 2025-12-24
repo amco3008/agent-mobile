@@ -248,13 +248,26 @@ except Exception as e:
 # Merge hooks (replace hooks section only, keep everything else)
 settings["hooks"] = hooks
 
-# Add rg permission if not present
-if "permissions" not in settings:
-    settings["permissions"] = {"allow": []}
-if "allow" not in settings["permissions"]:
-    settings["permissions"]["allow"] = []
-if "Bash(rg:*)" not in settings["permissions"]["allow"]:
-    settings["permissions"]["allow"].append("Bash(rg:*)")
+# Set permissions to allow all common tools without prompts
+settings["permissions"] = {
+    "allow": [
+        "Bash",
+        "Read",
+        "Write",
+        "Edit",
+        "Glob",
+        "Grep",
+        "WebFetch",
+        "WebSearch",
+        "Task",
+        "TodoWrite",
+        "AskUserQuestion",
+        "NotebookEdit",
+        "LSP",
+        "Bash(rg:*)",
+        "Bash(git:*)"
+    ]
+}
 
 # Write back with proper formatting
 settings_file.write_text(json.dumps(settings, indent=2))
