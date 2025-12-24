@@ -15,7 +15,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Global CLAUDE.md** - Auto-generated config with available skills, persisted across restarts
 - **Tailscale** - Secure mesh networking, access from anywhere
 - **Multi-stage build** - Robust installation even behind restricted networks
-- **Corporate Proxy Support** - Built-in handling for proxies and custom CA certs
+- **Corporate Proxy Support** - Auto-detects and trusts corporate proxies (Cisco/Zscaler)
 - **tmux** - Persistent sessions that survive disconnects
 - **Git + GitHub** - Full git operations with token auth
 
@@ -280,6 +280,9 @@ If you are behind a corporate firewall that intercepts SSL traffic:
    - The container will automatically import it on startup via `update-ca-certificates`.
 3. **Docker Desktop**: Remember to also set your proxy in **Docker Desktop Settings > Resources > Proxies** so it can pull the base images.
 
+> [!TIP]
+> **Automatic Proxy Detection**: The container now attempts to automatically detect if an intercepting proxy (like Cisco Umbrella or Zscaler) is blocking SSL connections on startup. If detected, it will try to fetch and trust the proxy's certificate automatically.
+
 ## Bypassing Corporate Firewalls (Exit Nodes)
 
 If your corporate network blocks access to the AI APIs directly (e.g., `anthropic.com`), you can route the agent's traffic through an **Exit Node**:
@@ -290,6 +293,14 @@ If your corporate network blocks access to the AI APIs directly (e.g., `anthropi
 4. **Restart**: `docker-compose up -d`.
 
 Traffic will now bypass the corporate firewall entirely.
+
+### Troubleshooting
+
+**SSL Handshake Failure (Initial Setup)**
+If you see SSL/TLS handshake failures even with an exit node configured, your corporate firewall might be blocking the *initial* connection to Tailscale.
+1. **Switch Network**: Briefly connect your computer to a mobile hotspot or non-corporate Wi-Fi.
+2. **Start Container**: Run `docker-compose up -d` to let Tailscale authenticate and connect.
+3. **Switch Back**: Once connected, you can switch back to corporate Wi-Fi. The established tunnel (or the exit node configuration) should allow it to reconnect.
 
 ## Volumes
 

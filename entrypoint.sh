@@ -9,6 +9,44 @@ if [ -d "/usr/local/share/ca-certificates/extra" ] && [ "$(ls -A /usr/local/shar
     update-ca-certificates
 fi
 
+# Auto-detect and trust corporate proxy certificates
+auto_trust_proxy() {
+    # Check if we have internet access or if SSL is being intercepted
+    # We use Google because it's reliable and often intercepted
+    echo "Checking for SSL interception..."
+    if curl -I https://google.com >/dev/null 2>&1; then
+        echo "SSL connection to google.com successful. No interception detected (or cert already trusted)."
+        return
+    fi
+    
+    # Check if it's specifically an SSL error (curl 60)
+    local curl_exit=$?
+    if [ $curl_exit -eq 60 ]; then
+        echo "SSL Certificate error detected! Attempting to fetch and trust intercepting proxy..."
+        
+        MKDIR_CMD="mkdir -p /usr/local/share/ca-certificates/extra"
+        FETCH_CMD="echo -n | openssl s_client -connect google.com:443 -showcerts 2>/dev/null | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /usr/local/share/ca-certificates/extra/auto-proxy.crt"
+        
+        # Try to run these commands
+        eval "$MKDIR_CMD"
+        if eval "$FETCH_CMD"; then
+             if [ -s "/usr/local/share/ca-certificates/extra/auto-proxy.crt" ]; then
+                 echo "Proxy certificate fetched. Updating trust store..."
+                 update-ca-certificates
+                 echo "Proxy certificate trust updated."
+             else
+                 echo "Warning: Failed to capture proxy certificate (empty file)."
+             fi
+        else
+            echo "Warning: Failed to fetch proxy certificate."
+        fi
+    else
+        echo "Network check failed with code $curl_exit (not purely SSL). Skipping auto-trust."
+    fi
+}
+
+auto_trust_proxy
+
 # Persist SSH host keys across rebuilds
 SSH_KEY_DIR="/etc/ssh/ssh_host_keys"
 if [ -f "$SSH_KEY_DIR/ssh_host_rsa_key" ]; then

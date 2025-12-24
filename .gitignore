@@ -2,6 +2,7 @@
 *.log
 .claude/
 *__pycache__
+certs/
 # Skills folder - keep structure, ignore cloned repos
 skills/*
 !skills/_skill-manager
