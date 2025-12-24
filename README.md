@@ -112,6 +112,21 @@ When Claude Code runs inside this container, it has access to:
 - Passwordless sudo for installing packages
 - Python 3, pip, and common build tools available
 
+### Custom Directives (CLAUDE.local.md)
+
+Edit `skills/CLAUDE.local.md` to add persistent instructions for Claude:
+
+```markdown
+## Preferences
+- Use kebab-case for file names
+- Before commit, update docs
+
+## Style
+- Keep responses concise
+```
+
+These get merged into `~/.claude/CLAUDE.md` on container start.
+
 ## Skills (Optional)
 
 Drop Claude Code skills into the `skills/` folder. They're mounted at `~/.claude/skills/`.
