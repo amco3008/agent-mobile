@@ -21,20 +21,28 @@ SKILLS_DIR = Path(os.environ.get('SKILL_SYSTEM_DIR', Path.home() / ".claude" / "
 
 
 def backup_credentials():
-    """Backup Claude credentials to bind-mounted folders."""
+    """Backup Claude credentials to bind-mounted folders.
+
+    Primary backup: ~/projects/ (direct bind mount, most reliable)
+    Legacy backup: ~/.claude/skills/.skill-system/ (nested mount, kept for compatibility)
+    """
     try:
         creds_file = Path.home() / ".claude" / ".credentials.json"
-        backup1 = SKILLS_DIR / ".skill-system" / ".credentials-backup.json"
-        backup2 = Path.home() / "projects" / ".claude-credentials-backup.json"
+        # PRIMARY: Direct bind mount (./home/) - most reliable
+        primary_backup = Path.home() / "projects" / ".claude-credentials-backup.json"
+        # LEGACY: Nested bind mount (./skills/) - kept for compatibility
+        legacy_backup = SKILLS_DIR / ".skill-system" / ".credentials-backup.json"
 
         if creds_file.exists() and creds_file.stat().st_size > 0:
-            backup1.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(creds_file, backup1)
-            backup1.chmod(0o600)
+            # Primary backup first
+            if primary_backup.parent.exists():
+                shutil.copy2(creds_file, primary_backup)
+                primary_backup.chmod(0o600)
 
-            if backup2.parent.exists():
-                shutil.copy2(creds_file, backup2)
-                backup2.chmod(0o600)
+            # Legacy backup for compatibility
+            legacy_backup.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(creds_file, legacy_backup)
+            legacy_backup.chmod(0o600)
     except Exception:
         pass  # Fail silently - don't interrupt the hook
 
