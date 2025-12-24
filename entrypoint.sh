@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+# Trap shutdown signals to backup credentials before exit
+cleanup_and_backup() {
+    echo "[shutdown] Container stopping, backing up credentials..."
+    if [ -f "/home/agent/.claude/.credentials.json" ] && [ -s "/home/agent/.claude/.credentials.json" ]; then
+        cp "/home/agent/.claude/.credentials.json" "/home/agent/projects/.claude-credentials-backup.json" 2>/dev/null && \
+            echo "[shutdown] Credential backup completed"
+    fi
+    exit 0
+}
+trap cleanup_and_backup SIGTERM SIGINT
+
 echo "Starting agent-mobile container..."
 
 # Import corporate CA certificates if provided
@@ -64,46 +75,111 @@ fi
 # Credential Persistence
 # ==========================================
 
-# Backup/restore Claude credentials to bind-mounted folders
-# This survives even if the claude-config volume gets deleted
+# Backup/restore Claude credentials to bind-mounted folder
+# Uses ./home/ (projects) as PRIMARY backup - direct mount, not nested
+# Legacy backup in skills is checked as fallback
 persist_credentials() {
     local CREDS_FILE="/home/agent/.claude/.credentials.json"
-    local BACKUP_DIR="/home/agent/.claude/skills/.skill-system"
-    local BACKUP_FILE="$BACKUP_DIR/.credentials-backup.json"
-    # Secondary backup in projects folder (more visible to user)
-    local BACKUP_FILE2="/home/agent/projects/.claude-credentials-backup.json"
+    local BACKUP_FILE="/home/agent/projects/.claude-credentials-backup.json"  # PRIMARY
+    local LEGACY_BACKUP="/home/agent/.claude/skills/.skill-system/.credentials-backup.json"
+    local MAX_RETRIES=5
+    local RETRY_DELAY=1
 
-    mkdir -p "$BACKUP_DIR"
+    echo "[credentials] Starting credential persistence check..."
 
-    if [ -f "$CREDS_FILE" ] && [ -s "$CREDS_FILE" ]; then
-        # Credentials exist - backup to both bind mounts
-        cp "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null
-        cp "$CREDS_FILE" "$BACKUP_FILE2" 2>/dev/null
-        chown agent:agent "$BACKUP_FILE" "$BACKUP_FILE2" 2>/dev/null
-        chmod 600 "$BACKUP_FILE" "$BACKUP_FILE2" 2>/dev/null
-        echo "Claude credentials backed up"
-    elif [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
-        # No credentials but backup exists - restore from skills
-        echo "Restoring Claude credentials from skills backup..."
-        mkdir -p "$(dirname "$CREDS_FILE")"
-        cp "$BACKUP_FILE" "$CREDS_FILE"
-        chown agent:agent "$CREDS_FILE"
-        chmod 600 "$CREDS_FILE"
-        echo "Claude credentials restored"
-    elif [ -f "$BACKUP_FILE2" ] && [ -s "$BACKUP_FILE2" ]; then
-        # No credentials but backup exists in projects - restore
-        echo "Restoring Claude credentials from projects backup..."
-        mkdir -p "$(dirname "$CREDS_FILE")"
-        cp "$BACKUP_FILE2" "$CREDS_FILE"
-        chown agent:agent "$CREDS_FILE"
-        chmod 600 "$CREDS_FILE"
-        echo "Claude credentials restored"
-    else
-        echo "No Claude credentials found (will need OAuth on first use)"
+    # Wait for bind mount to be ready (WSL2/Docker Desktop timing issue)
+    local attempt=0
+    while [ $attempt -lt $MAX_RETRIES ]; do
+        if [ -d "/home/agent/projects" ] && [ -w "/home/agent/projects" ]; then
+            echo "[credentials] Projects directory ready (attempt $((attempt+1)))"
+            break
+        fi
+        attempt=$((attempt+1))
+        echo "[credentials] Waiting for projects mount... ($attempt/$MAX_RETRIES)"
+        sleep $RETRY_DELAY
+    done
+
+    if [ ! -d "/home/agent/projects" ] || [ ! -w "/home/agent/projects" ]; then
+        echo "[credentials] WARNING: Projects directory not accessible after $MAX_RETRIES attempts"
     fi
+
+    # Ensure .claude directory exists in named volume
+    mkdir -p "/home/agent/.claude"
+    chown agent:agent "/home/agent/.claude" 2>/dev/null || true
+
+    # CASE 1: Credentials exist in volume - backup them
+    if [ -f "$CREDS_FILE" ] && [ -s "$CREDS_FILE" ]; then
+        echo "[credentials] Found existing credentials, creating backup..."
+        if cp "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null; then
+            chown agent:agent "$BACKUP_FILE" 2>/dev/null || true
+            chmod 600 "$BACKUP_FILE" 2>/dev/null || true
+            echo "[credentials] Backup created ($(wc -c < "$CREDS_FILE") bytes)"
+        else
+            echo "[credentials] WARNING: Failed to create backup"
+        fi
+        return 0
+    fi
+
+    # CASE 2: No credentials, try to restore from primary backup (projects)
+    echo "[credentials] No credentials in volume, checking backups..."
+
+    if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+        echo "[credentials] Found backup at $BACKUP_FILE, restoring..."
+        if cp "$BACKUP_FILE" "$CREDS_FILE"; then
+            chown agent:agent "$CREDS_FILE"
+            chmod 600 "$CREDS_FILE"
+            echo "[credentials] Restored from projects backup ($(wc -c < "$CREDS_FILE") bytes)"
+            return 0
+        else
+            echo "[credentials] ERROR: Failed to restore from projects backup"
+        fi
+    fi
+
+    # CASE 3: Try legacy backup location (skills folder - nested mount)
+    if [ -f "$LEGACY_BACKUP" ] && [ -s "$LEGACY_BACKUP" ]; then
+        echo "[credentials] Found legacy backup at $LEGACY_BACKUP, restoring..."
+        if cp "$LEGACY_BACKUP" "$CREDS_FILE"; then
+            chown agent:agent "$CREDS_FILE"
+            chmod 600 "$CREDS_FILE"
+            echo "[credentials] Restored from legacy backup ($(wc -c < "$CREDS_FILE") bytes)"
+            # Also copy to new primary location for future use
+            cp "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null || true
+            chown agent:agent "$BACKUP_FILE" 2>/dev/null || true
+            chmod 600 "$BACKUP_FILE" 2>/dev/null || true
+            return 0
+        else
+            echo "[credentials] ERROR: Failed to restore from legacy backup"
+        fi
+    fi
+
+    echo "[credentials] No backup found - OAuth will be required on first use"
+    return 0
+}
+
+# Background daemon that periodically backs up credentials
+start_credential_backup_daemon() {
+    local CREDS_FILE="/home/agent/.claude/.credentials.json"
+    local BACKUP_FILE="/home/agent/projects/.claude-credentials-backup.json"
+    local INTERVAL=300  # 5 minutes
+
+    (
+        while true; do
+            sleep $INTERVAL
+            if [ -f "$CREDS_FILE" ] && [ -s "$CREDS_FILE" ]; then
+                # Only backup if credentials changed
+                if ! cmp -s "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null; then
+                    cp "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null
+                    chown agent:agent "$BACKUP_FILE" 2>/dev/null || true
+                    chmod 600 "$BACKUP_FILE" 2>/dev/null || true
+                fi
+            fi
+        done
+    ) &
+    echo "[credentials] Background backup daemon started (interval: ${INTERVAL}s)"
 }
 
 persist_credentials
+start_credential_backup_daemon
 
 # ==========================================
 # Skill System Initialization
@@ -434,5 +510,9 @@ echo "  2. gemini          # Will prompt OAuth with Google on first run"
 echo ""
 echo "============================================"
 
-# Keep container running
-tail -f /dev/null
+# Keep container running with proper signal handling
+# Using wait allows the SIGTERM trap to work properly
+while true; do
+    sleep 86400 &  # Sleep for 24 hours in background
+    wait $!        # Wait for sleep, allowing signals to be caught
+done
