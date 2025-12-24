@@ -18,11 +18,14 @@ from pathlib import Path
 from collections import Counter, defaultdict
 from typing import Dict, List, Set
 
-SKILLS_DIR = Path(os.environ.get('SKILL_SYSTEM_DIR', Path.home() / ".claude" / "skills"))
+# Use /home/agent for container environment, fallback to home dir
+AGENT_HOME = Path("/home/agent") if Path("/home/agent").exists() else Path.home()
+CLAUDE_DIR = Path(os.environ.get('CLAUDE_DIR', AGENT_HOME / ".claude"))
+SKILLS_DIR = Path(os.environ.get('SKILL_SYSTEM_DIR', CLAUDE_DIR / "skills"))
 PATTERNS_DIR = SKILLS_DIR / ".skill-system" / "patterns"
 PROMPTS_LOG = PATTERNS_DIR / "user-prompts.jsonl"
 LEARNED_FILE = PATTERNS_DIR / "user-preferences.json"
-CLAUDE_MD = Path.home() / ".claude" / "CLAUDE.md"
+CLAUDE_MD = CLAUDE_DIR / "CLAUDE.md"
 
 
 def load_prompts(days: int = 30) -> List[str]:
