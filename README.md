@@ -45,7 +45,8 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 4. **Connect from Termux**
    ```bash
    pkg install openssh
-   ssh agent@<tailscale-ip>
+   ssh agent@agent-mobile    # MagicDNS hostname (recommended)
+   # Or use IP: ssh agent@<tailscale-ip>
    # Password: agent
    ```
 
@@ -329,7 +330,8 @@ NTFY_SERVER=https://ntfy.your-domain.com
 4. In Termux:
    ```bash
    pkg install openssh
-   ssh agent@<tailscale-ip>
+   ssh agent@agent-mobile    # MagicDNS hostname
+   # Or: ssh agent@<tailscale-ip>
    # Password: agent
    ```
 
