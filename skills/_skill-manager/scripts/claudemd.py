@@ -30,6 +30,11 @@ USER_PREFS_FILE = SKILLS_DIR / ".skill-system" / "patterns" / "user-preferences.
 USER_PREFS_START = "<!-- USER PREFERENCES START -->"
 USER_PREFS_END = "<!-- USER PREFERENCES END -->"
 
+# Manual directives from repo (version controlled)
+MANUAL_DIRECTIVES_FILE = SKILLS_DIR / "CLAUDE.local.md"
+MANUAL_DIRECTIVES_START = "<!-- MANUAL DIRECTIVES START -->"
+MANUAL_DIRECTIVES_END = "<!-- MANUAL DIRECTIVES END -->"
+
 
 def parse_yaml_frontmatter(filepath):
     """
@@ -207,11 +212,11 @@ Default domains: devops, security, data_science, frontend, backend, git
 For niche areas, add custom domain markers in:
 `~/.claude/skills/.skill-system/config.json`
 
-## Preferred Workflows
+## Manual Directives
 
-Note your workflow preferences below to help pattern detection:
-- (e.g., "Always run tests before commits")
-- (e.g., "Use conventional commit messages")
+{MANUAL_DIRECTIVES_START}
+<!-- Loaded from skills/CLAUDE.local.md -->
+{MANUAL_DIRECTIVES_END}
 
 ## Notes
 
@@ -245,6 +250,21 @@ def load_user_preferences():
             return json.load(f)
     except:
         return {}
+
+
+def load_manual_directives():
+    """Load manual directives from CLAUDE.local.md in skills folder."""
+    if not MANUAL_DIRECTIVES_FILE.exists():
+        return ""
+    try:
+        content = MANUAL_DIRECTIVES_FILE.read_text().strip()
+        # Skip the title line if present
+        lines = content.split('\n')
+        if lines and lines[0].startswith('# '):
+            lines = lines[1:]
+        return '\n'.join(lines).strip()
+    except:
+        return ""
 
 
 def generate_user_prefs_section(prefs):
@@ -380,6 +400,32 @@ def update_claude_md(verbose=True):
                 # Append at end
                 content = content.rstrip() + "\n" + prefs_section
 
+    # Load and merge manual directives from CLAUDE.local.md
+    manual_directives = load_manual_directives()
+    if manual_directives:
+        if verbose:
+            print("Loading manual directives from CLAUDE.local.md...")
+        directives_section = f"{MANUAL_DIRECTIVES_START}\n{manual_directives}\n{MANUAL_DIRECTIVES_END}"
+
+        # Check if manual directives section exists
+        dir_start_idx = content.find(MANUAL_DIRECTIVES_START)
+        dir_end_idx = content.find(MANUAL_DIRECTIVES_END)
+
+        if dir_start_idx != -1 and dir_end_idx != -1:
+            # Replace existing
+            content = (
+                content[:dir_start_idx]
+                + directives_section
+                + content[dir_end_idx + len(MANUAL_DIRECTIVES_END):]
+            )
+        else:
+            # Insert before ## Notes if it exists, otherwise append
+            notes_idx = content.find("## Notes")
+            if notes_idx != -1:
+                content = content[:notes_idx] + f"## Manual Directives\n\n{directives_section}\n\n" + content[notes_idx:]
+            else:
+                content = content.rstrip() + f"\n\n## Manual Directives\n\n{directives_section}\n"
+
     # Write back
     CLAUDE_MD_PATH.parent.mkdir(parents=True, exist_ok=True)
     CLAUDE_MD_PATH.write_text(content)
@@ -393,6 +439,8 @@ def update_claude_md(verbose=True):
             rules = user_prefs.get("rules", {})
             total_rules = len(rules.get("workflows", [])) + len(rules.get("style", [])) + len(rules.get("skip", []))
             print(f"  + {total_rules} user preference rules restored")
+        if manual_directives:
+            print(f"  + Manual directives loaded from CLAUDE.local.md")
 
 
 def main():
