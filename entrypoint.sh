@@ -309,16 +309,17 @@ setup_workspace_trust() {
 
     # Create ~/.claude.json with pre-trusted workspaces
     # Format: { "projects": { "/absolute/path": { "hasTrustDialogAccepted": true, ... } } }
+    # Note: No blanket "Bash" - only safe command patterns (rm, chmod etc require approval)
     cat > "$CLAUDE_JSON" << 'EOF'
 {
   "projects": {
     "/home/agent": {
       "hasTrustDialogAccepted": true,
-      "allowedTools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(git:*)", "Bash(rg:*)"]
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(rg:*)", "Bash(git:*)", "Bash(npm:*)", "Bash(node:*)", "Bash(python3:*)", "Bash(pip:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(echo:*)", "Bash(pwd:*)", "Bash(cd:*)", "Bash(mkdir:*)", "Bash(touch:*)", "Bash(cp:*)", "Bash(mv:*)"]
     },
     "/home/agent/projects": {
       "hasTrustDialogAccepted": true,
-      "allowedTools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(git:*)", "Bash(rg:*)"]
+      "allowedTools": ["Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(rg:*)", "Bash(git:*)", "Bash(npm:*)", "Bash(node:*)", "Bash(python3:*)", "Bash(pip:*)", "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)", "Bash(find:*)", "Bash(echo:*)", "Bash(pwd:*)", "Bash(cd:*)", "Bash(mkdir:*)", "Bash(touch:*)", "Bash(cp:*)", "Bash(mv:*)"]
     }
   }
 }
