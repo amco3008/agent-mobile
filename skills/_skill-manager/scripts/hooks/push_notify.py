@@ -228,9 +228,20 @@ def handle_ask_question(hook_data):
     tool_input = hook_data.get('tool_input', {})
     questions = tool_input.get('questions', [])
 
-    # Get session context for title
+    # Get session and prompt context for title
     session = get_session_context(hook_data)
-    base_title = f'[{session}] Question' if session else 'Question'
+    transcript_path = hook_data.get('transcript_path')
+    prompt_context = get_last_user_prompt(transcript_path)
+
+    # Build title with available context
+    if session and prompt_context:
+        base_title = f'[{session}] {prompt_context}'
+    elif session:
+        base_title = f'[{session}] Question'
+    elif prompt_context:
+        base_title = f'Q: {prompt_context}'
+    else:
+        base_title = 'Question'
 
     if not questions:
         send_notification(
@@ -333,7 +344,18 @@ def handle_permission_request(hook_data):
 def handle_stop(hook_data):
     """Handle session stop notification."""
     session = get_session_context(hook_data)
-    title = f'[{session}] Complete' if session else 'Session complete'
+    transcript_path = hook_data.get('transcript_path')
+    prompt_context = get_last_user_prompt(transcript_path)
+
+    # Build title with available context
+    if session and prompt_context:
+        title = f'[{session}] {prompt_context}'
+    elif session:
+        title = f'[{session}] Complete'
+    elif prompt_context:
+        title = f'Done: {prompt_context}'
+    else:
+        title = 'Session complete'
 
     send_notification(
         message='Claude session has ended',
