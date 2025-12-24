@@ -3,6 +3,8 @@
 user_prompt_submit.py - Analyzes user prompts for domain markers.
 Runs when user submits a prompt.
 
+Also backs up Claude credentials on each prompt to ensure they persist.
+
 Hook type: UserPromptSubmit
 """
 
@@ -10,11 +12,33 @@ import json
 import sys
 import os
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
 
 # Determine skills directory based on environment
 SKILLS_DIR = Path(os.environ.get('SKILL_SYSTEM_DIR', Path.home() / ".claude" / "skills"))
+
+
+def backup_credentials():
+    """Backup Claude credentials to bind-mounted folders."""
+    try:
+        creds_file = Path.home() / ".claude" / ".credentials.json"
+        backup1 = SKILLS_DIR / ".skill-system" / ".credentials-backup.json"
+        backup2 = Path.home() / "projects" / ".claude-credentials-backup.json"
+
+        if creds_file.exists() and creds_file.stat().st_size > 0:
+            backup1.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(creds_file, backup1)
+            backup1.chmod(0o600)
+
+            if backup2.parent.exists():
+                shutil.copy2(creds_file, backup2)
+                backup2.chmod(0o600)
+    except Exception:
+        pass  # Fail silently - don't interrupt the hook
+
+
 PATTERNS_DIR = SKILLS_DIR / ".skill-system" / "patterns"
 DOMAIN_FILE = PATTERNS_DIR / "prompt-patterns.jsonl"
 CONFIG_FILE = SKILLS_DIR / ".skill-system" / "config.json"
@@ -91,6 +115,9 @@ def extract_intent_signals(prompt):
 
 
 def main():
+    # Backup credentials on every prompt (ensures OAuth persists immediately)
+    backup_credentials()
+
     try:
         input_data = json.load(sys.stdin)
     except json.JSONDecodeError:

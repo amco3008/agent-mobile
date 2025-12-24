@@ -64,28 +64,42 @@ fi
 # Credential Persistence
 # ==========================================
 
-# Backup/restore Claude credentials to bind-mounted skills folder
+# Backup/restore Claude credentials to bind-mounted folders
 # This survives even if the claude-config volume gets deleted
 persist_credentials() {
     local CREDS_FILE="/home/agent/.claude/.credentials.json"
     local BACKUP_DIR="/home/agent/.claude/skills/.skill-system"
     local BACKUP_FILE="$BACKUP_DIR/.credentials-backup.json"
+    # Secondary backup in projects folder (more visible to user)
+    local BACKUP_FILE2="/home/agent/projects/.claude-credentials-backup.json"
 
     mkdir -p "$BACKUP_DIR"
 
     if [ -f "$CREDS_FILE" ] && [ -s "$CREDS_FILE" ]; then
-        # Credentials exist - backup to bind mount
+        # Credentials exist - backup to both bind mounts
         cp "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null
-        chown agent:agent "$BACKUP_FILE" 2>/dev/null
-        chmod 600 "$BACKUP_FILE" 2>/dev/null
+        cp "$CREDS_FILE" "$BACKUP_FILE2" 2>/dev/null
+        chown agent:agent "$BACKUP_FILE" "$BACKUP_FILE2" 2>/dev/null
+        chmod 600 "$BACKUP_FILE" "$BACKUP_FILE2" 2>/dev/null
         echo "Claude credentials backed up"
     elif [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
-        # No credentials but backup exists - restore
-        echo "Restoring Claude credentials from backup..."
+        # No credentials but backup exists - restore from skills
+        echo "Restoring Claude credentials from skills backup..."
+        mkdir -p "$(dirname "$CREDS_FILE")"
         cp "$BACKUP_FILE" "$CREDS_FILE"
         chown agent:agent "$CREDS_FILE"
         chmod 600 "$CREDS_FILE"
         echo "Claude credentials restored"
+    elif [ -f "$BACKUP_FILE2" ] && [ -s "$BACKUP_FILE2" ]; then
+        # No credentials but backup exists in projects - restore
+        echo "Restoring Claude credentials from projects backup..."
+        mkdir -p "$(dirname "$CREDS_FILE")"
+        cp "$BACKUP_FILE2" "$CREDS_FILE"
+        chown agent:agent "$CREDS_FILE"
+        chmod 600 "$CREDS_FILE"
+        echo "Claude credentials restored"
+    else
+        echo "No Claude credentials found (will need OAuth on first use)"
     fi
 }
 
