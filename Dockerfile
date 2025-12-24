@@ -46,14 +46,14 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli \
     && npm cache clean --force
 
-# Clone awesome-Claude-skills repository
-RUN git clone https://github.com/ComposioHQ/awesome-Claude-skills /opt/awesome-claude-skills \
-    && chown -R agent:agent /opt/awesome-claude-skills
-
 # Create user for SSH access
 RUN useradd -m -s /bin/bash agent && \
     echo "agent:agent" | chpasswd && \
     usermod -aG sudo agent
+
+# Clone awesome-Claude-skills repository (must be after user creation for chown)
+RUN git clone https://github.com/ComposioHQ/awesome-Claude-skills /opt/awesome-claude-skills \
+    && chown -R agent:agent /opt/awesome-claude-skills
 
 # Allow agent user to run sudo without password
 RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
