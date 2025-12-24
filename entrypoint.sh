@@ -1,9 +1,41 @@
 #!/bin/bash
 set -e
 
-# Trap shutdown signals to backup credentials and config before exit
+# Trap shutdown signals to gracefully stop Claude and backup data
 cleanup_and_backup() {
-    echo "[shutdown] Container stopping, backing up data..."
+    echo ""
+    echo "╭─────────────────────────────────────────────────────────╮"
+    echo "│  CONTAINER SHUTTING DOWN                                │"
+    echo "│  Attempting to gracefully stop Claude processes...      │"
+    echo "╰─────────────────────────────────────────────────────────╯"
+
+    # Find and gracefully terminate any running Claude processes
+    # SIGTERM allows Claude to flush transcripts before exiting
+    if pgrep -u agent -f "claude" > /dev/null 2>&1; then
+        echo "[shutdown] Found running Claude processes, sending SIGTERM..."
+        pkill -TERM -u agent -f "claude" 2>/dev/null
+
+        # Wait up to 5 seconds for Claude to flush and exit
+        for i in 1 2 3 4 5; do
+            if ! pgrep -u agent -f "claude" > /dev/null 2>&1; then
+                echo "[shutdown] Claude processes exited cleanly"
+                break
+            fi
+            echo "[shutdown] Waiting for Claude to flush transcripts... ($i/5)"
+            sleep 1
+        done
+
+        # Force kill if still running
+        if pgrep -u agent -f "claude" > /dev/null 2>&1; then
+            echo "[shutdown] Force killing remaining Claude processes"
+            pkill -KILL -u agent -f "claude" 2>/dev/null
+        fi
+    else
+        echo "[shutdown] No Claude processes running"
+    fi
+
+    # Backup credentials
+    echo "[shutdown] Backing up data..."
     if [ -f "/home/agent/.claude/.credentials.json" ] && [ -s "/home/agent/.claude/.credentials.json" ]; then
         cp "/home/agent/.claude/.credentials.json" "/home/agent/projects/.claude-credentials-backup.json" 2>/dev/null && \
             echo "[shutdown] Credentials backed up"
@@ -12,6 +44,8 @@ cleanup_and_backup() {
         cp "/home/agent/.claude.json" "/home/agent/projects/.claude-config-backup.json" 2>/dev/null && \
             echo "[shutdown] Config backed up"
     fi
+
+    echo "[shutdown] Cleanup complete"
     exit 0
 }
 trap cleanup_and_backup SIGTERM SIGINT
