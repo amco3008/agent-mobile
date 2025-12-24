@@ -324,6 +324,24 @@ NTFY_SERVER=https://ntfy.your-domain.com
    # Password: agent
    ```
 
+### Prevent SSH Disconnects
+
+Add keepalive settings to prevent "broken pipe" errors:
+
+```bash
+mkdir -p ~/.ssh
+cat >> ~/.ssh/config << 'EOF'
+Host *
+    ServerAliveInterval 30
+    ServerAliveCountMax 120
+    TCPKeepAlive yes
+EOF
+chmod 600 ~/.ssh/config
+```
+
+> [!IMPORTANT]
+> **Background behavior**: When Termux is not focused, Android suspends it and keepalives stop being sent. This means SSH will eventually disconnect when the app is in the background. **Always use tmux** to keep your Claude session alive - you can simply reattach after reconnecting.
+
 ## Corporate Proxy / SSL Setup
 
 If you are behind a corporate firewall that intercepts SSL traffic:
