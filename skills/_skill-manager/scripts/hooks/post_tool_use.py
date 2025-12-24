@@ -108,8 +108,8 @@ def main():
     tool_input = input_data.get("tool_input", {})
     tool_response = input_data.get("tool_response", {})
 
-    # Skip internal/system tools
-    skip_tools = ["TodoWrite", "AskUserQuestion", "ExitPlanMode", "EnterPlanMode"]
+    # Skip internal/system tools (AskUserQuestion now has dedicated hook in hooks.json)
+    skip_tools = ["TodoWrite", "ExitPlanMode", "EnterPlanMode"]
     if tool_name in skip_tools:
         sys.exit(0)
 

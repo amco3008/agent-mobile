@@ -61,6 +61,11 @@ services:
       - CHOKIDAR_USEPOLLING=false
       # Skill system directory (for consistent paths in hooks and scripts)
       - SKILL_SYSTEM_DIR=/home/agent/.claude/skills
+      # Push notification configuration (ntfy.sh)
+      - NTFY_ENABLED=${NTFY_ENABLED:-false}
+      - NTFY_TOPIC=${NTFY_TOPIC:-}
+      - NTFY_SERVER=${NTFY_SERVER:-https://ntfy.sh}
+      - NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-30}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:

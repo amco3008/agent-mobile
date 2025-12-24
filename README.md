@@ -13,6 +13,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Pre-integrated Skills** - Includes [awesome-Claude-skills](https://github.com/ComposioHQ/awesome-Claude-skills) by default
 - **Dynamic Skill Learning** - Auto-learns skills from usage patterns with versioning
 - **Global CLAUDE.md** - Auto-generated config with available skills, persisted across restarts
+- **Push Notifications** - Get notified on your phone when Claude needs input (via ntfy.sh)
 - **Tailscale** - Secure mesh networking, access from anywhere
 - **Multi-stage build** - Robust installation even behind restricted networks
 - **Corporate Proxy Support** - Auto-detects and trusts corporate proxies (Cisco/Zscaler)
@@ -98,6 +99,10 @@ tmux attach
 | `AGENT_CPUS` | Optional - Max CPU cores (default: `2.0`) |
 | `AGENT_MEMORY` | Optional - Max RAM limit (default: `3G`) |
 | `AGENT_NODE_MEMORY` | Optional - Node.js heap size in MB (default: `2048`) |
+| `NTFY_ENABLED` | Optional - Enable push notifications (default: `false`) |
+| `NTFY_TOPIC` | Optional - Your unique ntfy.sh topic name |
+| `NTFY_SERVER` | Optional - ntfy server URL (default: `https://ntfy.sh`) |
+| `NTFY_RATE_LIMIT` | Optional - Min seconds between notifications (default: `30`) |
 
 ## Resource Configuration
 
@@ -255,6 +260,45 @@ Edit `skills/.skill-system/config.json` to customize:
     "success_rate_trigger": 0.7
   }
 }
+```
+
+## Push Notifications (ntfy.sh)
+
+Get notified on your phone when Claude needs your input - no more waiting around!
+
+### Notification Events
+
+| Event | When It Fires |
+|-------|---------------|
+| **Permission Required** | Claude needs approval for a potentially dangerous action |
+| **User Input Needed** | Claude is asking a question via `AskUserQuestion` |
+| **Session Complete** | Claude session has ended |
+
+### Setup
+
+1. **Install ntfy app** on your phone:
+   - [Android (Play Store)](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
+   - [iOS (App Store)](https://apps.apple.com/app/ntfy/id1625396347)
+
+2. **Subscribe to a topic**: Open the app and subscribe to a unique, hard-to-guess topic name (e.g., `my-claude-agent-abc123`)
+
+3. **Configure the agent** in your `.env`:
+   ```bash
+   NTFY_ENABLED=true
+   NTFY_TOPIC=my-claude-agent-abc123
+   ```
+
+4. **Restart the container**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+### Self-Hosted ntfy
+
+For privacy, you can [self-host ntfy](https://docs.ntfy.sh/install/):
+
+```bash
+NTFY_SERVER=https://ntfy.your-domain.com
 ```
 
 ## Phone Setup (Android)

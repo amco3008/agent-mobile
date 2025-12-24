@@ -184,7 +184,7 @@ su - agent -c "git config --global user.name '${GIT_NAME:-Agent Mobile}'"
 # Setup skill system hooks (merge into Claude settings without replacing existing config)
 setup_skill_hooks() {
     local CLAUDE_DIR="/home/agent/.claude"
-    local SETTINGS_FILE="$CLAUDE_DIR/settings.local.json"
+    local SETTINGS_FILE="$CLAUDE_DIR/settings.json"
     local HOOKS_TEMPLATE="$CLAUDE_DIR/skills/_skill-manager/hooks.json"
 
     # Ensure .claude directory exists
@@ -209,7 +209,7 @@ setup_skill_hooks() {
 import json
 from pathlib import Path
 
-settings_file = Path("/home/agent/.claude/settings.local.json")
+settings_file = Path("/home/agent/.claude/settings.json")
 hooks_file = Path("/home/agent/.claude/skills/_skill-manager/hooks.json")
 
 # Load existing settings
