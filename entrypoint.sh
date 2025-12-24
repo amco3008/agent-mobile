@@ -360,6 +360,13 @@ git config --global --add safe.directory '*'
 su - agent -c "git config --global user.email '${GIT_EMAIL:-agent@mobile.local}'"
 su - agent -c "git config --global user.name '${GIT_NAME:-Agent Mobile}'"
 
+# Add tmux session picker to bashrc (runs on SSH login)
+if ! grep -q "tmux-picker" /home/agent/.bashrc 2>/dev/null; then
+    echo "" >> /home/agent/.bashrc
+    echo "# Auto-launch tmux session picker on SSH login" >> /home/agent/.bashrc
+    echo "source ~/.tmux-picker.sh" >> /home/agent/.bashrc
+fi
+
 # Setup skill system hooks (merge into Claude settings without replacing existing config)
 setup_skill_hooks() {
     local CLAUDE_DIR="/home/agent/.claude"
