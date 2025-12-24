@@ -254,6 +254,41 @@ PYTHON_SCRIPT
 echo "Setting up skill system hooks..."
 setup_skill_hooks
 
+# Pre-configure workspace trust for common working directories
+# This allows hooks to execute without interactive trust prompt
+# Path encoding: /home/agent -> -home-agent, /home/agent/projects -> -home-agent-projects
+setup_workspace_trust() {
+    local CLAUDE_DIR="/home/agent/.claude"
+
+    # Trust settings to write
+    local TRUST_SETTINGS='{
+  "hasTrustDialogAccepted": true,
+  "isTrusted": true,
+  "enabledTools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP"]
+}'
+
+    # Configure trust for multiple directories
+    local TRUST_DIRS="-home-agent -home-agent-projects"
+
+    for dir_name in $TRUST_DIRS; do
+        local PROJECT_DIR="$CLAUDE_DIR/projects/$dir_name"
+        local TRUST_FILE="$PROJECT_DIR/settings.local.json"
+
+        echo "Configuring workspace trust for $dir_name..."
+        mkdir -p "$PROJECT_DIR"
+        echo "$TRUST_SETTINGS" > "$TRUST_FILE"
+
+        # Set proper ownership (critical - must be owned by agent, not root)
+        chown -R agent:agent "$PROJECT_DIR"
+        chmod 700 "$PROJECT_DIR"
+        chmod 600 "$TRUST_FILE"
+    done
+
+    echo "Workspace trust configured"
+}
+
+setup_workspace_trust
+
 # Start SSH server
 echo "Starting SSH server..."
 /usr/sbin/sshd
