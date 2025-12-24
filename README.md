@@ -94,6 +94,22 @@ tmux attach
 | `HTTP_PROXY` | Optional - Corporate proxy URL (e.g., `http://proxy:8080`) |
 | `HTTPS_PROXY` | Optional - Corporate proxy URL for secure traffic |
 | `NO_PROXY` | Optional - Domains to bypass proxy (default: `localhost,127.0.0.1`) |
+| `AGENT_CPUS` | Optional - Max CPU cores (default: `2.0`) |
+| `AGENT_MEMORY` | Optional - Max RAM limit (default: `3G`) |
+| `AGENT_NODE_MEMORY` | Optional - Node.js heap size in MB (default: `2048`) |
+
+## Resource Configuration
+
+You can dynamically adjust the agent's resources based on your host machine's specs via the `.env` file.
+
+| Host RAM | AGENT_MEMORY | AGENT_NODE_MEMORY | Use Case |
+| :--- | :--- | :--- | :--- |
+| **8 GB** | `2G` | `1024` | Basic tasks, small repos |
+| **16 GB** | `4G` | `2048` | Standard development |
+| **32 GB+** | `8G` | `6144` | Large codebases, high performance |
+
+> [!NOTE]
+> Changes to these variables require a container restart: `docker-compose up -d`.
 
 ## Agent Environment
 

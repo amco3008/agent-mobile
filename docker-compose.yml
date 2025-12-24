@@ -14,11 +14,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
-          memory: 3G
+          cpus: '${AGENT_CPUS:-2.0}'
+          memory: ${AGENT_MEMORY:-3G}
         reservations:
-          cpus: '0.5'
-          memory: 512M
+          cpus: '${AGENT_RESERVATION_CPUS:-0.5}'
+          memory: ${AGENT_RESERVATION_MEMORY:-512M}
 
     volumes:
       # Persist Tailscale state (so you don't re-auth every restart)
@@ -54,7 +54,7 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
       # Node.js performance tuning
-      - NODE_OPTIONS=--max-old-space-size=2048
+      - NODE_OPTIONS=--max-old-space-size=${AGENT_NODE_MEMORY:-2048}
       - UV_THREADPOOL_SIZE=8
       # Reduce file watcher CPU usage
       - CHOKIDAR_USEPOLLING=false
