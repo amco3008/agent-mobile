@@ -135,6 +135,12 @@ When Claude Code runs inside this container, it has access to:
 - Passwordless sudo for installing packages
 - Python 3, pip, and common build tools available
 
+### Workspace Trust
+- `/home/agent` and `/home/agent/projects` are pre-trusted (no trust dialog)
+- Custom folders you trust are **persisted** across container restarts
+- Safe commands (git, ls, cat, etc.) run without prompts
+- Dangerous commands (rm, chmod, etc.) still require approval
+
 ### Custom Directives (CLAUDE.local.md)
 
 Edit `skills/CLAUDE.local.md` to add persistent instructions for Claude:
