@@ -138,8 +138,8 @@ When Claude Code runs inside this container, it has access to:
 
 ### Tailscale Network
 - Container runs on a Tailscale VPN mesh
-- Get container IP: `tailscale ip -4`
-- When Claude deploys local services (web servers, APIs), connect via `http://<tailscale-ip>:<port>`
+- MagicDNS hostname: `agent-mobile` (or get IP with `tailscale ip -4`)
+- When Claude deploys local services (web servers, APIs), connect via `http://agent-mobile:<port>`
 
 ### System Access
 - Passwordless sudo for installing packages
