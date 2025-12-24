@@ -248,10 +248,10 @@ except Exception as e:
 # Merge hooks (replace hooks section only, keep everything else)
 settings["hooks"] = hooks
 
-# Set permissions to allow all common tools without prompts
+# Set permissions to allow safe tools without prompts
+# Note: Bash is NOT blanket-allowed - only specific safe patterns
 settings["permissions"] = {
     "allow": [
-        "Bash",
         "Read",
         "Write",
         "Edit",
@@ -265,7 +265,24 @@ settings["permissions"] = {
         "NotebookEdit",
         "LSP",
         "Bash(rg:*)",
-        "Bash(git:*)"
+        "Bash(git:*)",
+        "Bash(npm:*)",
+        "Bash(node:*)",
+        "Bash(python3:*)",
+        "Bash(pip:*)",
+        "Bash(ls:*)",
+        "Bash(cat:*)",
+        "Bash(head:*)",
+        "Bash(tail:*)",
+        "Bash(grep:*)",
+        "Bash(find:*)",
+        "Bash(echo:*)",
+        "Bash(pwd:*)",
+        "Bash(cd:*)",
+        "Bash(mkdir:*)",
+        "Bash(touch:*)",
+        "Bash(cp:*)",
+        "Bash(mv:*)"
     ]
 }
 
