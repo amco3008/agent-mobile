@@ -184,7 +184,7 @@ if [ -n "$NTFY_ENABLED" ] && [ "$NTFY_ENABLED" = "true" ]; then
 NTFY_ENABLED=${NTFY_ENABLED}
 NTFY_TOPIC=${NTFY_TOPIC}
 NTFY_SERVER=${NTFY_SERVER:-https://ntfy.sh}
-NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-30}
+NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-15}
 EOF
     chown agent:agent /home/agent/.claude/ntfy.conf
     chmod 600 /home/agent/.claude/ntfy.conf

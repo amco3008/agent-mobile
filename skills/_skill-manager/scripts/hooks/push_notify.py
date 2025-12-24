@@ -29,7 +29,7 @@ def load_config():
     enabled = os.environ.get('NTFY_ENABLED', '').lower() == 'true'
     topic = os.environ.get('NTFY_TOPIC', '')
     server = os.environ.get('NTFY_SERVER', 'https://ntfy.sh')
-    rate_limit = os.environ.get('NTFY_RATE_LIMIT', '30')
+    rate_limit = os.environ.get('NTFY_RATE_LIMIT', '15')
 
     # If not in env, try config file
     if not topic:
@@ -139,39 +139,60 @@ def send_notification(message, title=None, priority='default', tags=None):
     return False
 
 
-def handle_ask_question(hook_data):
-    """Handle AskUserQuestion tool notification with question and options."""
-    tool_input = hook_data.get('tool_input', {})
-    questions = tool_input.get('questions', [])
+def get_session_context(hook_data):
+    """Extract session context (project/directory) from hook data."""
+    try:
+        # Try session_cwd first (most reliable for identifying which session)
+        cwd = hook_data.get('session_cwd', '')
+        if cwd:
+            # Return last directory component
+            return Path(cwd).name
 
-    if not questions:
-        send_notification(
-            message='Claude needs your input',
-            title='Question',
-            priority='high',
-            tags=['question']
-        )
-        return
+        # Fall back to transcript path
+        transcript_path = hook_data.get('transcript_path', '')
+        if transcript_path:
+            # Transcript path like: ~/.claude/projects/<encoded-path>/transcripts/<id>.jsonl
+            # Extract project directory from path
+            parts = Path(transcript_path).parts
+            if 'projects' in parts:
+                idx = parts.index('projects')
+                if idx + 1 < len(parts):
+                    # Decode the project path (it's usually URL-encoded)
+                    project = parts[idx + 1]
+                    # Return last meaningful segment
+                    return project.split('%2F')[-1] if '%2F' in project else project
+    except:
+        pass
+    return None
 
-    # Get the first question
-    q = questions[0]
-    question_text = q.get('question', 'Claude needs your input')
-    options = q.get('options', [])
 
-    # Build message with options if available
-    if options:
-        option_labels = [opt.get('label', '') for opt in options[:4]]  # Max 4 options
-        options_str = ' | '.join(option_labels)
-        message = f"{question_text}\n→ {options_str}"
-    else:
-        message = question_text
+def get_last_user_prompt(transcript_path):
+    """Read transcript to find the last user prompt for context."""
+    try:
+        if not transcript_path:
+            return None
+        path = Path(transcript_path)
+        if not path.exists():
+            return None
 
-    send_notification(
-        message=message[:250],
-        title='Question',
-        priority='high',
-        tags=['question']
-    )
+        lines = path.read_text().strip().split('\n')
+        for line in reversed(lines):
+            try:
+                entry = json.loads(line)
+                if entry.get('type') == 'user':
+                    message = entry.get('message', {})
+                    content = message.get('content', '')
+                    if isinstance(content, str) and content.strip():
+                        # Return first ~15 chars of prompt
+                        prompt = content.strip()[:15]
+                        if len(content.strip()) > 15:
+                            prompt += '...'
+                        return prompt
+            except:
+                continue
+    except:
+        pass
+    return None
 
 
 def get_pending_tool_from_transcript(transcript_path):
@@ -202,10 +223,63 @@ def get_pending_tool_from_transcript(transcript_path):
     return None, None
 
 
+def handle_ask_question(hook_data):
+    """Handle AskUserQuestion tool notification with question and options."""
+    tool_input = hook_data.get('tool_input', {})
+    questions = tool_input.get('questions', [])
+
+    # Get session context for title
+    session = get_session_context(hook_data)
+    base_title = f'[{session}] Question' if session else 'Question'
+
+    if not questions:
+        send_notification(
+            message='Claude needs your input',
+            title=base_title,
+            priority='high',
+            tags=['question']
+        )
+        return
+
+    # Get the first question
+    q = questions[0]
+    question_text = q.get('question', 'Claude needs your input')
+    options = q.get('options', [])
+
+    # Build message with options if available
+    if options:
+        option_labels = [opt.get('label', '') for opt in options[:4]]  # Max 4 options
+        options_str = ' | '.join(option_labels)
+        message = f"{question_text}\n→ {options_str}"
+    else:
+        message = question_text
+
+    send_notification(
+        message=message[:250],
+        title=base_title,
+        priority='high',
+        tags=['question']
+    )
+
+
 def handle_permission(hook_data):
     """Handle permission_prompt notification with detailed context."""
     base_message = hook_data.get('message', 'Permission required')
     transcript_path = hook_data.get('transcript_path')
+
+    # Get session and prompt context for title
+    session = get_session_context(hook_data)
+    prompt_context = get_last_user_prompt(transcript_path)
+
+    # Build title with available context
+    if session and prompt_context:
+        title = f'[{session}] {prompt_context}'
+    elif session:
+        title = f'[{session}] Permission'
+    elif prompt_context:
+        title = f'Permission: {prompt_context}'
+    else:
+        title = 'Permission needed'
 
     # Try to get more details from transcript
     tool_name, tool_input = get_pending_tool_from_transcript(transcript_path)
@@ -223,7 +297,7 @@ def handle_permission(hook_data):
 
     send_notification(
         message=message[:200],
-        title='Permission needed',
+        title=title,
         priority='high',
         tags=['warning', 'lock']
     )
@@ -233,6 +307,10 @@ def handle_permission_request(hook_data):
     """Handle PermissionRequest hook - fires when permission dialog shown."""
     tool_name = hook_data.get('tool_name', 'Unknown tool')
     tool_input = hook_data.get('tool_input', {})
+
+    # Get session context for title
+    session = get_session_context(hook_data)
+    title = f'[{session}] Permission' if session else 'Claude needs permission'
 
     # Build a descriptive message
     if tool_name == 'Bash':
@@ -246,7 +324,7 @@ def handle_permission_request(hook_data):
 
     send_notification(
         message=message,
-        title='Claude needs permission',
+        title=title,
         priority='high',
         tags=['warning', 'lock']
     )
@@ -254,9 +332,12 @@ def handle_permission_request(hook_data):
 
 def handle_stop(hook_data):
     """Handle session stop notification."""
+    session = get_session_context(hook_data)
+    title = f'[{session}] Complete' if session else 'Session complete'
+
     send_notification(
         message='Claude session has ended',
-        title='Session complete',
+        title=title,
         priority='default',
         tags=['white_check_mark']
     )

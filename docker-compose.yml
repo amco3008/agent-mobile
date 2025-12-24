@@ -65,7 +65,7 @@ services:
       - NTFY_ENABLED=${NTFY_ENABLED:-false}
       - NTFY_TOPIC=${NTFY_TOPIC:-}
       - NTFY_SERVER=${NTFY_SERVER:-https://ntfy.sh}
-      - NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-30}
+      - NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-15}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:

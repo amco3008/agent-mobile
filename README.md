@@ -102,7 +102,7 @@ tmux attach
 | `NTFY_ENABLED` | Optional - Enable push notifications (default: `false`) |
 | `NTFY_TOPIC` | Optional - Your unique ntfy.sh topic name |
 | `NTFY_SERVER` | Optional - ntfy server URL (default: `https://ntfy.sh`) |
-| `NTFY_RATE_LIMIT` | Optional - Min seconds between notifications (default: `30`) |
+| `NTFY_RATE_LIMIT` | Optional - Min seconds between notifications (default: `15`) |
 
 ## Resource Configuration
 
@@ -278,6 +278,7 @@ Get notified on your phone when Claude needs your input - no more waiting around
 |-------|---------------------|
 | **Permission Required** | `$ rm -rf /tmp/old-files` |
 | **User Input Needed** | `Which database? → PostgreSQL \| MySQL \| SQLite` |
+| **Session Ended** | `Session complete` |
 
 Notifications include context: the actual command needing approval or the question being asked with available options.
 
