@@ -140,31 +140,90 @@ def send_notification(message, title=None, priority='default', tags=None):
 
 
 def handle_ask_question(hook_data):
-    """Handle AskUserQuestion tool notification."""
+    """Handle AskUserQuestion tool notification with question and options."""
     tool_input = hook_data.get('tool_input', {})
     questions = tool_input.get('questions', [])
 
-    if questions:
-        # Get the first question text
-        question = questions[0].get('question', 'Claude needs your input')
+    if not questions:
+        send_notification(
+            message='Claude needs your input',
+            title='Question',
+            priority='high',
+            tags=['question']
+        )
+        return
+
+    # Get the first question
+    q = questions[0]
+    question_text = q.get('question', 'Claude needs your input')
+    options = q.get('options', [])
+
+    # Build message with options if available
+    if options:
+        option_labels = [opt.get('label', '') for opt in options[:4]]  # Max 4 options
+        options_str = ' | '.join(option_labels)
+        message = f"{question_text}\n→ {options_str}"
     else:
-        question = 'Claude needs your input'
+        message = question_text
 
     send_notification(
-        message=question[:200],  # Truncate long questions
-        title='Claude needs input',
+        message=message[:250],
+        title='Question',
         priority='high',
-        tags=['robot', 'question']
+        tags=['question']
     )
 
 
+def get_pending_tool_from_transcript(transcript_path):
+    """Read transcript to find the pending tool call for more context."""
+    try:
+        if not transcript_path:
+            return None, None
+        path = Path(transcript_path)
+        if not path.exists():
+            return None, None
+
+        # Read last few lines to find the pending tool call
+        lines = path.read_text().strip().split('\n')
+        for line in reversed(lines[-10:]):  # Check last 10 entries
+            try:
+                entry = json.loads(line)
+                # Look for assistant message with tool_use
+                if entry.get('type') == 'assistant':
+                    message = entry.get('message', {})
+                    content = message.get('content', [])
+                    for block in content:
+                        if block.get('type') == 'tool_use':
+                            return block.get('name'), block.get('input', {})
+            except:
+                continue
+    except:
+        pass
+    return None, None
+
+
 def handle_permission(hook_data):
-    """Handle permission_prompt notification (legacy)."""
-    message = hook_data.get('message', 'Permission required for an action')
+    """Handle permission_prompt notification with detailed context."""
+    base_message = hook_data.get('message', 'Permission required')
+    transcript_path = hook_data.get('transcript_path')
+
+    # Try to get more details from transcript
+    tool_name, tool_input = get_pending_tool_from_transcript(transcript_path)
+
+    if tool_name == 'Bash' and tool_input:
+        cmd = tool_input.get('command', '')[:150]
+        message = f"$ {cmd}"
+    elif tool_name in ['Write', 'Edit'] and tool_input:
+        file_path = tool_input.get('file_path', 'unknown')
+        message = f"{tool_name}: {file_path}"
+    elif tool_name:
+        message = f"{tool_name}: {base_message}"
+    else:
+        message = base_message
 
     send_notification(
-        message=message[:200] if message else 'Permission required',
-        title='Claude needs permission',
+        message=message[:200],
+        title='Permission needed',
         priority='high',
         tags=['warning', 'lock']
     )
