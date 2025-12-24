@@ -61,6 +61,37 @@ else
 fi
 
 # ==========================================
+# Credential Persistence
+# ==========================================
+
+# Backup/restore Claude credentials to bind-mounted skills folder
+# This survives even if the claude-config volume gets deleted
+persist_credentials() {
+    local CREDS_FILE="/home/agent/.claude/.credentials.json"
+    local BACKUP_DIR="/home/agent/.claude/skills/.skill-system"
+    local BACKUP_FILE="$BACKUP_DIR/.credentials-backup.json"
+
+    mkdir -p "$BACKUP_DIR"
+
+    if [ -f "$CREDS_FILE" ] && [ -s "$CREDS_FILE" ]; then
+        # Credentials exist - backup to bind mount
+        cp "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null
+        chown agent:agent "$BACKUP_FILE" 2>/dev/null
+        chmod 600 "$BACKUP_FILE" 2>/dev/null
+        echo "Claude credentials backed up"
+    elif [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+        # No credentials but backup exists - restore
+        echo "Restoring Claude credentials from backup..."
+        cp "$BACKUP_FILE" "$CREDS_FILE"
+        chown agent:agent "$CREDS_FILE"
+        chmod 600 "$CREDS_FILE"
+        echo "Claude credentials restored"
+    fi
+}
+
+persist_credentials
+
+# ==========================================
 # Skill System Initialization
 # ==========================================
 
