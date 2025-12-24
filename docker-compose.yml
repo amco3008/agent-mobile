@@ -53,6 +53,7 @@ services:
       - HTTP_PROXY=${HTTP_PROXY:-}
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
+      - TAILSCALE_EXIT_NODE=${TAILSCALE_EXIT_NODE:-}
       # Node.js performance tuning
       - NODE_OPTIONS=--max-old-space-size=${AGENT_NODE_MEMORY:-2048}
       - UV_THREADPOOL_SIZE=8

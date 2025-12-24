@@ -94,6 +94,7 @@ tmux attach
 | `HTTP_PROXY` | Optional - Corporate proxy URL (e.g., `http://proxy:8080`) |
 | `HTTPS_PROXY` | Optional - Corporate proxy URL for secure traffic |
 | `NO_PROXY` | Optional - Domains to bypass proxy (default: `localhost,127.0.0.1`) |
+| `TAILSCALE_EXIT_NODE` | Optional - Tailscale IP of a node to use as a gateway (bypass firewalls) |
 | `AGENT_CPUS` | Optional - Max CPU cores (default: `2.0`) |
 | `AGENT_MEMORY` | Optional - Max RAM limit (default: `3G`) |
 | `AGENT_NODE_MEMORY` | Optional - Node.js heap size in MB (default: `2048`) |
@@ -278,6 +279,17 @@ If you are behind a corporate firewall that intercepts SSL traffic:
    - Drop your corporate Root CA certificate (in `.crt` format) inside.
    - The container will automatically import it on startup via `update-ca-certificates`.
 3. **Docker Desktop**: Remember to also set your proxy in **Docker Desktop Settings > Resources > Proxies** so it can pull the base images.
+
+## Bypassing Corporate Firewalls (Exit Nodes)
+
+If your corporate network blocks access to the AI APIs directly (e.g., `anthropic.com`), you can route the agent's traffic through an **Exit Node**:
+
+1. **Setup an Exit Node**: Enable "Run as Exit Node" on your phone's Tailscale app or another node outside the firewall (e.g., Home PC or VPS).
+2. **Authorize**: In the Tailscale Admin Console, edit the machine's route settings and check "Use as exit node".
+3. **Configure Agent**: Set the `TAILSCALE_EXIT_NODE` environment variable in your [.env](file:///.env) file to that machine's Tailscale IP.
+4. **Restart**: `docker-compose up -d`.
+
+Traffic will now bypass the corporate firewall entirely.
 
 ## Volumes
 

@@ -90,15 +90,21 @@ done
 [ -S /var/run/tailscale/tailscaled.sock ] && echo "Tailscale ready (${WAIT_COUNT}00ms)" || echo "Warning: Tailscale socket timeout"
 
 # Authenticate Tailscale (Non-blocking with timeout)
+LOGIN_FLAGS="--hostname=agent-mobile"
+if [ -n "$TAILSCALE_EXIT_NODE" ]; then
+    echo "Configuring exit node: $TAILSCALE_EXIT_NODE"
+    LOGIN_FLAGS="$LOGIN_FLAGS --exit-node=$TAILSCALE_EXIT_NODE --exit-node-allow-lan-access"
+fi
+
 if [ -n "$TAILSCALE_AUTHKEY" ]; then
     echo "Authenticating Tailscale with authkey..."
     # Use timeout to prevent blocking the rest of the script if connectivity is poor
-    if ! timeout 30s tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=agent-mobile; then
+    if ! timeout 30s tailscale up --authkey="$TAILSCALE_AUTHKEY" $LOGIN_FLAGS; then
         echo "Tailscale authkey failed or timed out. Run 'tailscale up' manually."
     fi
 else
     echo "No TAILSCALE_AUTHKEY set. Initializing Tailscale in background..."
-    tailscale up --hostname=agent-mobile >/dev/null 2>&1 &
+    tailscale up $LOGIN_FLAGS >/dev/null 2>&1 &
 fi
 
 # Show Tailscale status
