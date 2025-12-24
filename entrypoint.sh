@@ -13,14 +13,68 @@ fi
 SSH_KEY_DIR="/etc/ssh/ssh_host_keys"
 if [ -f "$SSH_KEY_DIR/ssh_host_rsa_key" ]; then
     echo "Restoring SSH host keys from volume..."
-    cp $SSH_KEY_DIR/* /etc/ssh/
+    cp $SSH_KEY_DIR/* /etc/ssh/ 2>/dev/null || true
 else
     echo "Saving SSH host keys to volume..."
     mkdir -p $SSH_KEY_DIR
     for key in /etc/ssh/ssh_host_*; do
-        [ -f "$key" ] && cp "$key" $SSH_KEY_DIR/
+        [ -f "$key" ] && cp "$key" $SSH_KEY_DIR/ 2>/dev/null || true
     done
 fi
+
+# ==========================================
+# Skill System Initialization
+# ==========================================
+
+# Synchronize default skills from image to volume
+sync_default_skills() {
+    local DEST_DIR="/home/agent/.claude/skills/awesome-claude-skills"
+    local SRC_DIR="/opt/awesome-claude-skills"
+
+    if [ -d "$SRC_DIR" ]; then
+        if [ ! -d "$DEST_DIR" ] || [ -z "$(ls -A "$DEST_DIR")" ]; then
+            echo "Synchronizing awesome-claude-skills to volume..."
+            mkdir -p "$DEST_DIR"
+            cp -r "$SRC_DIR"/. "$DEST_DIR"/ 2>/dev/null || true
+            chown -R agent:agent "/home/agent/.claude/skills" 2>/dev/null || true
+        else
+            echo "Default skills already present in volume, skipping sync."
+        fi
+    fi
+}
+
+# Update global CLAUDE.md with discovered skills
+update_claude_md() {
+    local CLAUDE_DIR="/home/agent/.claude"
+    local CLAUDEMD_SCRIPT="$CLAUDE_DIR/skills/_skill-manager/scripts/claudemd.py"
+
+    # Ensure .claude directory exists
+    mkdir -p "$CLAUDE_DIR"
+    chown agent:agent "$CLAUDE_DIR" 2>/dev/null || true
+
+    # Check if the script exists
+    if [ ! -f "$CLAUDEMD_SCRIPT" ]; then
+        echo "CLAUDE.md maintenance script not found, skipping..."
+        return
+    fi
+
+    # Run the update script
+    if command -v python3 &>/dev/null; then
+        echo "Running CLAUDE.md update script..."
+        python3 "$CLAUDEMD_SCRIPT" --quiet || echo "Warning: CLAUDE.md update failed"
+        chown agent:agent "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null || true
+    else
+        echo "Python3 not available, skipping CLAUDE.md update"
+    fi
+}
+
+echo "Initializing skill system..."
+sync_default_skills
+update_claude_md
+
+# ==========================================
+# Network & Identity Setup
+# ==========================================
 
 # Start Tailscale daemon
 echo "Starting Tailscale daemon..."
@@ -35,15 +89,16 @@ while [ ! -S /var/run/tailscale/tailscaled.sock ] && [ $WAIT_COUNT -lt 20 ]; do
 done
 [ -S /var/run/tailscale/tailscaled.sock ] && echo "Tailscale ready (${WAIT_COUNT}00ms)" || echo "Warning: Tailscale socket timeout"
 
-# Authenticate Tailscale
+# Authenticate Tailscale (Non-blocking with timeout)
 if [ -n "$TAILSCALE_AUTHKEY" ]; then
     echo "Authenticating Tailscale with authkey..."
-    if ! tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=agent-mobile; then
-        echo "Tailscale authkey failed (may be expired). Run 'tailscale up' manually."
+    # Use timeout to prevent blocking the rest of the script if connectivity is poor
+    if ! timeout 30s tailscale up --authkey="$TAILSCALE_AUTHKEY" --hostname=agent-mobile; then
+        echo "Tailscale authkey failed or timed out. Run 'tailscale up' manually."
     fi
 else
-    echo "No TAILSCALE_AUTHKEY set. Run 'tailscale up' manually to authenticate."
-    tailscale up --hostname=agent-mobile || true
+    echo "No TAILSCALE_AUTHKEY set. Initializing Tailscale in background..."
+    tailscale up --hostname=agent-mobile >/dev/null 2>&1 &
 fi
 
 # Show Tailscale status
@@ -152,51 +207,8 @@ PYTHON_SCRIPT
     fi
 }
 
-# Synchronize default skills from image to volume
-sync_default_skills() {
-    local DEST_DIR="/home/agent/.claude/skills/awesome-claude-skills"
-    local SRC_DIR="/opt/awesome-claude-skills"
-
-    if [ -d "$SRC_DIR" ]; then
-        if [ ! -d "$DEST_DIR" ] || [ -z "$(ls -A "$DEST_DIR")" ]; then
-            echo "Synchronizing awesome-claude-skills to volume..."
-            mkdir -p "$DEST_DIR"
-            cp -r "$SRC_DIR"/. "$DEST_DIR"/
-            chown -R agent:agent "/home/agent/.claude/skills"
-        else
-            echo "Default skills already present in volume, skipping sync."
-        fi
-    fi
-}
-
-echo "Synchronizing default skills..."
-sync_default_skills
-
 echo "Setting up skill system hooks..."
 setup_skill_hooks
-
-# Update global CLAUDE.md with discovered skills
-update_claude_md() {
-    local CLAUDE_DIR="/home/agent/.claude"
-    local CLAUDEMD_SCRIPT="$CLAUDE_DIR/skills/_skill-manager/scripts/claudemd.py"
-
-    # Check if the script exists
-    if [ ! -f "$CLAUDEMD_SCRIPT" ]; then
-        echo "CLAUDE.md maintenance script not found, skipping..."
-        return
-    fi
-
-    # Run the update script
-    if command -v python3 &>/dev/null; then
-        python3 "$CLAUDEMD_SCRIPT" --quiet || echo "Warning: CLAUDE.md update failed"
-        chown agent:agent "$CLAUDE_DIR/CLAUDE.md" 2>/dev/null || true
-    else
-        echo "Python3 not available, skipping CLAUDE.md update"
-    fi
-}
-
-echo "Updating global CLAUDE.md..."
-update_claude_md
 
 # Start SSH server
 echo "Starting SSH server..."
