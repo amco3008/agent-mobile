@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
 
-# Trap shutdown signals to backup credentials before exit
+# Trap shutdown signals to backup credentials and config before exit
 cleanup_and_backup() {
-    echo "[shutdown] Container stopping, backing up credentials..."
+    echo "[shutdown] Container stopping, backing up data..."
     if [ -f "/home/agent/.claude/.credentials.json" ] && [ -s "/home/agent/.claude/.credentials.json" ]; then
         cp "/home/agent/.claude/.credentials.json" "/home/agent/projects/.claude-credentials-backup.json" 2>/dev/null && \
-            echo "[shutdown] Credential backup completed"
+            echo "[shutdown] Credentials backed up"
+    fi
+    if [ -f "/home/agent/.claude.json" ] && [ -s "/home/agent/.claude.json" ]; then
+        cp "/home/agent/.claude.json" "/home/agent/projects/.claude-config-backup.json" 2>/dev/null && \
+            echo "[shutdown] Config backed up"
     fi
     exit 0
 }
@@ -75,7 +79,7 @@ fi
 # Credential Persistence
 # ==========================================
 
-# Backup/restore Claude credentials to bind-mounted folder
+# Backup/restore Claude credentials AND config to bind-mounted folder
 # Uses ./home/ (projects) as PRIMARY backup - direct mount, not nested
 # Legacy backup in skills is checked as fallback
 persist_credentials() {
@@ -156,29 +160,68 @@ persist_credentials() {
     return 0
 }
 
-# Background daemon that periodically backs up credentials
+# Backup/restore .claude.json (user settings, workspace trust, cached config)
+# This file is NOT in the claude-config volume - it's at /home/agent/.claude.json
+persist_claude_config() {
+    local CONFIG_FILE="/home/agent/.claude.json"
+    local BACKUP_FILE="/home/agent/projects/.claude-config-backup.json"
+
+    echo "[config] Checking .claude.json persistence..."
+
+    # Restore from backup if exists and local file doesn't
+    if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+        if [ ! -f "$CONFIG_FILE" ] || [ ! -s "$CONFIG_FILE" ]; then
+            echo "[config] Restoring .claude.json from backup..."
+            cp "$BACKUP_FILE" "$CONFIG_FILE"
+            chown agent:agent "$CONFIG_FILE"
+            chmod 600 "$CONFIG_FILE"
+            echo "[config] Restored ($(wc -c < "$CONFIG_FILE") bytes)"
+            return 0
+        fi
+    fi
+
+    # If config exists, back it up
+    if [ -f "$CONFIG_FILE" ] && [ -s "$CONFIG_FILE" ]; then
+        cp "$CONFIG_FILE" "$BACKUP_FILE" 2>/dev/null || true
+        chown agent:agent "$BACKUP_FILE" 2>/dev/null || true
+        chmod 600 "$BACKUP_FILE" 2>/dev/null || true
+    fi
+}
+
+# Background daemon that periodically backs up credentials AND config
 start_credential_backup_daemon() {
     local CREDS_FILE="/home/agent/.claude/.credentials.json"
-    local BACKUP_FILE="/home/agent/projects/.claude-credentials-backup.json"
+    local CREDS_BACKUP="/home/agent/projects/.claude-credentials-backup.json"
+    local CONFIG_FILE="/home/agent/.claude.json"
+    local CONFIG_BACKUP="/home/agent/projects/.claude-config-backup.json"
     local INTERVAL=300  # 5 minutes
 
     (
         while true; do
             sleep $INTERVAL
+            # Backup credentials if changed
             if [ -f "$CREDS_FILE" ] && [ -s "$CREDS_FILE" ]; then
-                # Only backup if credentials changed
-                if ! cmp -s "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null; then
-                    cp "$CREDS_FILE" "$BACKUP_FILE" 2>/dev/null
-                    chown agent:agent "$BACKUP_FILE" 2>/dev/null || true
-                    chmod 600 "$BACKUP_FILE" 2>/dev/null || true
+                if ! cmp -s "$CREDS_FILE" "$CREDS_BACKUP" 2>/dev/null; then
+                    cp "$CREDS_FILE" "$CREDS_BACKUP" 2>/dev/null
+                    chown agent:agent "$CREDS_BACKUP" 2>/dev/null || true
+                    chmod 600 "$CREDS_BACKUP" 2>/dev/null || true
+                fi
+            fi
+            # Backup .claude.json if changed
+            if [ -f "$CONFIG_FILE" ] && [ -s "$CONFIG_FILE" ]; then
+                if ! cmp -s "$CONFIG_FILE" "$CONFIG_BACKUP" 2>/dev/null; then
+                    cp "$CONFIG_FILE" "$CONFIG_BACKUP" 2>/dev/null
+                    chown agent:agent "$CONFIG_BACKUP" 2>/dev/null || true
+                    chmod 600 "$CONFIG_BACKUP" 2>/dev/null || true
                 fi
             fi
         done
     ) &
-    echo "[credentials] Background backup daemon started (interval: ${INTERVAL}s)"
+    echo "[backup] Background daemon started (interval: ${INTERVAL}s)"
 }
 
 persist_credentials
+persist_claude_config
 start_credential_backup_daemon
 
 # ==========================================

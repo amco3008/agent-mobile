@@ -373,9 +373,19 @@ Data persists across container restarts and rebuilds:
 
 **Bind mounts** (`./home`, `./skills`) are accessible from your host PC - drop files directly into these folders.
 
-### Credential Backup
+### Credential & Config Backup
 
-Claude OAuth credentials are automatically backed up to `skills/.skill-system/.credentials-backup.json` on each container start. If the `claude-config` volume is ever lost, credentials are restored from this backup.
+Claude OAuth credentials and user config are automatically backed up to `./home/` on each container start:
+
+| Backup File | Contents |
+|-------------|----------|
+| `home/.claude-credentials-backup.json` | OAuth tokens (access/refresh) |
+| `home/.claude-config-backup.json` | Workspace trust, user settings |
+
+Backups are also created:
+- Every 5 minutes (background daemon)
+- On each user prompt (via hook)
+- On container shutdown (SIGTERM trap)
 
 ## Rebuilding
 
@@ -386,4 +396,4 @@ docker-compose up -d --build
 
 Everything persists - no need to re-auth or clear SSH keys.
 
-> **Note**: If you run `docker-compose down -v` (with `-v` flag), volumes are deleted. Credentials will be restored from the backup in `./skills/` on next start.
+> **Note**: If you run `docker-compose down -v` (with `-v` flag), volumes are deleted. Credentials and config will be restored from the backups in `./home/` on next start.
