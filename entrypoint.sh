@@ -308,14 +308,16 @@ setup_workspace_trust() {
     echo "Configuring workspace trust..."
 
     # Create ~/.claude.json with pre-trusted workspaces
-    # Format: { "projects": { "/absolute/path": { "allowedTools": [...] } } }
+    # Format: { "projects": { "/absolute/path": { "hasTrustDialogAccepted": true, ... } } }
     cat > "$CLAUDE_JSON" << 'EOF'
 {
   "projects": {
     "/home/agent": {
+      "hasTrustDialogAccepted": true,
       "allowedTools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(git:*)", "Bash(rg:*)"]
     },
     "/home/agent/projects": {
+      "hasTrustDialogAccepted": true,
       "allowedTools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Task", "TodoWrite", "AskUserQuestion", "NotebookEdit", "LSP", "Bash(git:*)", "Bash(rg:*)"]
     }
   }
