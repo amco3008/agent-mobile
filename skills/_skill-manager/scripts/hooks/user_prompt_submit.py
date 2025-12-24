@@ -90,28 +90,6 @@ def extract_intent_signals(prompt):
     return signals
 
 
-def send_prompt_notification(prompt):
-    """Send notification that a prompt was received (for testing hooks)."""
-    try:
-        # Import from same directory
-        from push_notify import send_notification, NTFY_ENABLED, NTFY_TOPIC
-
-        if not NTFY_ENABLED or not NTFY_TOPIC:
-            return
-
-        # Truncate long prompts
-        short_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
-
-        send_notification(
-            message=short_prompt,
-            title="Prompt received",
-            priority="low",
-            tags=["speech_balloon"]
-        )
-    except Exception:
-        pass  # Fail silently
-
-
 def main():
     try:
         input_data = json.load(sys.stdin)
@@ -123,9 +101,6 @@ def main():
     prompt = input_data.get("prompt", "")
     if not prompt:
         sys.exit(0)
-
-    # Send notification (tests if hooks work)
-    send_prompt_notification(prompt)
 
     prompt_lower = prompt.lower()
     domain_markers = load_domain_markers()
