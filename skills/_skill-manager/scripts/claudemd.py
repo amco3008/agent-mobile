@@ -86,7 +86,7 @@ def parse_yaml_frontmatter(filepath):
 
 def discover_skills(verbose=False):
     """
-    Discover all skills with SKILL.md files.
+    Discover all skills with SKILL.md files recursively.
     Returns list of dicts with 'name', 'description', 'dir'.
     """
     skills = []
@@ -94,38 +94,33 @@ def discover_skills(verbose=False):
     if not SKILLS_DIR.exists():
         return skills
 
-    for item in SKILLS_DIR.iterdir():
-        if not item.is_dir():
+    # Use rglob to find all SKILL.md files recursively
+    for skill_md in SKILLS_DIR.rglob("SKILL.md"):
+        # Skip hidden directories and system directories starting with .
+        if any(part.startswith(".") for part in skill_md.relative_to(SKILLS_DIR).parts):
             continue
+            
+        # Skip the _skill-manager itself if it's considered a skill (optional)
+        # if "_skill-manager" in skill_md.parts:
+        #     continue
 
-        # Skip hidden directories and system directories
-        if item.name.startswith("."):
-            continue
-
-        # Look for SKILL.md in the skill directory
-        skill_md = item / "SKILL.md"
-
-        if not skill_md.exists():
-            # Check one level deeper for nested structures
-            for subdir in item.iterdir():
-                if subdir.is_dir() and not subdir.name.startswith("."):
-                    nested_skill_md = subdir / "SKILL.md"
-                    if nested_skill_md.exists():
-                        skill_md = nested_skill_md
-                        break
-
-        if skill_md.exists():
-            frontmatter = parse_yaml_frontmatter(skill_md)
-            if frontmatter and frontmatter.get("name"):
-                skills.append({
-                    "name": frontmatter.get("name"),
-                    "description": frontmatter.get("description", "No description available"),
-                    "dir": item.name,
-                })
-                if verbose:
-                    print(f"  Found: {frontmatter.get('name')}")
-            elif verbose:
-                print(f"  Skipping {item.name}: no valid frontmatter")
+        frontmatter = parse_yaml_frontmatter(skill_md)
+        if frontmatter and frontmatter.get("name"):
+            # Use the directory containing SKILL.md as the skill dir name
+            skill_dir_name = skill_md.parent.name
+            
+            # If it's very deep, we might want to include more context in the name
+            # but for now, the parent directory name is usually sufficient.
+            
+            skills.append({
+                "name": frontmatter.get("name"),
+                "description": frontmatter.get("description", "No description available"),
+                "dir": skill_dir_name,
+            })
+            if verbose:
+                print(f"  Found: {frontmatter.get('name')} in {skill_dir_name}")
+        elif verbose:
+            print(f"  Skipping {skill_md}: no valid frontmatter")
 
     return skills
 
