@@ -152,6 +152,26 @@ PYTHON_SCRIPT
     fi
 }
 
+# Synchronize default skills from image to volume
+sync_default_skills() {
+    local DEST_DIR="/home/agent/.claude/skills/awesome-claude-skills"
+    local SRC_DIR="/opt/awesome-claude-skills"
+
+    if [ -d "$SRC_DIR" ]; then
+        if [ ! -d "$DEST_DIR" ] || [ -z "$(ls -A "$DEST_DIR")" ]; then
+            echo "Synchronizing awesome-claude-skills to volume..."
+            mkdir -p "$DEST_DIR"
+            cp -r "$SRC_DIR"/. "$DEST_DIR"/
+            chown -R agent:agent "/home/agent/.claude/skills"
+        else
+            echo "Default skills already present in volume, skipping sync."
+        fi
+    fi
+}
+
+echo "Synchronizing default skills..."
+sync_default_skills
+
 echo "Setting up skill system hooks..."
 setup_skill_hooks
 

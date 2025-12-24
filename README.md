@@ -9,7 +9,8 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **GitHub CLI (gh)** - Create PRs, manage issues, etc.
 - **ripgrep (rg)** - Fast text search, auto-allowed for Claude
 - **Passwordless sudo** - Agent can install missing packages without prompts
-- **Skills support** - Drop skills into `skills/` folder (optional)
+- **Skills support** - Drop skills into `skills/` folder
+- **Pre-integrated Skills** - Includes [awesome-Claude-skills](https://github.com/ComposioHQ/awesome-Claude-skills) by default
 - **Dynamic Skill Learning** - Auto-learns skills from usage patterns with versioning
 - **Global CLAUDE.md** - Auto-generated config with available skills, persisted across restarts
 - **Tailscale** - Secure mesh networking, access from anywhere
@@ -127,9 +128,15 @@ Edit `skills/CLAUDE.local.md` to add persistent instructions for Claude:
 
 These get merged into `~/.claude/CLAUDE.md` on container start.
 
-## Skills (Optional)
-
 Drop Claude Code skills into the `skills/` folder. They're mounted at `~/.claude/skills/`.
+
+### Pre-integrated Skills
+
+The container comes pre-integrated with the [awesome-Claude-skills](https://github.com/ComposioHQ/awesome-Claude-skills) repository. These skills are automatically synchronized to your `skills/awesome-claude-skills` folder on first start and available to Claude Code immediately.
+
+### Custom Skills
+
+You can also add your own skills:
 
 ```bash
 # Example: Install gemini-manager skill
