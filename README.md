@@ -268,11 +268,12 @@ Get notified on your phone when Claude needs your input - no more waiting around
 
 ### Notification Events
 
-| Event | When It Fires |
-|-------|---------------|
-| **Permission Required** | Claude needs approval for a potentially dangerous action |
-| **User Input Needed** | Claude is asking a question via `AskUserQuestion` |
-| **Session Complete** | Claude session has ended |
+| Event | Example Notification |
+|-------|---------------------|
+| **Permission Required** | `$ rm -rf /tmp/old-files` |
+| **User Input Needed** | `Which database? → PostgreSQL \| MySQL \| SQLite` |
+
+Notifications include context: the actual command needing approval or the question being asked with available options.
 
 ### Setup
 
