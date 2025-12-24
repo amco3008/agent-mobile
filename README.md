@@ -274,13 +274,16 @@ Get notified on your phone when Claude needs your input - no more waiting around
 
 ### Notification Events
 
-| Event | Example Notification |
-|-------|---------------------|
-| **Permission Required** | `$ rm -rf /tmp/old-files` |
-| **User Input Needed** | `Which database? → PostgreSQL \| MySQL \| SQLite` |
-| **Session Ended** | `Session complete` |
+| Event | Title | Body |
+|-------|-------|------|
+| **Permission Required** | `[myproject] update docs...` | `$ rm -rf /tmp/old-files` |
+| **User Input Needed** | `[myproject] add feature...` | `Which database? → PostgreSQL \| MySQL` |
+| **Session Ended** | `[myproject] fix bug...` | `Claude session has ended` |
 
-Notifications include context: the actual command needing approval or the question being asked with available options.
+Notifications include:
+- **Session context** - Working directory in brackets (useful when running multiple Claude sessions)
+- **Prompt preview** - First ~15 characters of your prompt
+- **Action details** - The actual command, question with options, or completion status
 
 ### Setup
 
