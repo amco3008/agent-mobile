@@ -59,12 +59,10 @@ RUN git clone https://github.com/ComposioHQ/awesome-Claude-skills /opt/awesome-c
 RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
     chmod 0440 /etc/sudoers.d/agent
 
-# Setup SSH with keepalive to prevent "broken pipe" disconnects
+# Setup SSH
 RUN mkdir /var/run/sshd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#ClientAliveInterval 0/ClientAliveInterval 60/' /etc/ssh/sshd_config && \
-    sed -i 's/#ClientAliveCountMax 3/ClientAliveCountMax 120/' /etc/ssh/sshd_config
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 # Create directories for Claude config and skills
 RUN mkdir -p /home/agent/.claude/skills && \

@@ -57,22 +57,31 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 
 ## Using tmux
 
-tmux keeps your session alive when you disconnect.
+tmux keeps your session alive when you disconnect - essential for mobile use since Android suspends Termux when backgrounded.
 
-```bash
-# Start a new session
-tmux new -s dev
+### Session Picker
 
-# Detach (Ctrl+a, then d)
-# Close Termux, switch apps, lose connection - session persists
+On SSH login, you'll see an interactive session picker:
 
-# Reconnect later
-tmux attach -t dev
-
-# Or simply
-tmux new 
-tmux attach
 ```
+╭─────────────────────────────────╮
+│      tmux Session Picker        │
+╰─────────────────────────────────╯
+
+Existing sessions:
+  1) main: 2 windows
+  2) dev: 1 windows
+
+  n) New session
+  s) Skip (no tmux)
+
+Select [1]:
+```
+
+- Press **Enter** to attach to session 1 (default)
+- Type a number to attach to that session
+- Type **n** to create a new named session
+- Type **s** to skip tmux
 
 ### Key Bindings
 
@@ -324,23 +333,8 @@ NTFY_SERVER=https://ntfy.your-domain.com
    # Password: agent
    ```
 
-### Prevent SSH Disconnects
-
-Add keepalive settings to prevent "broken pipe" errors:
-
-```bash
-mkdir -p ~/.ssh
-cat >> ~/.ssh/config << 'EOF'
-Host *
-    ServerAliveInterval 30
-    ServerAliveCountMax 120
-    TCPKeepAlive yes
-EOF
-chmod 600 ~/.ssh/config
-```
-
-> [!IMPORTANT]
-> **Background behavior**: When Termux is not focused, Android suspends it and keepalives stop being sent. This means SSH will eventually disconnect when the app is in the background. **Always use tmux** to keep your Claude session alive - you can simply reattach after reconnecting.
+> [!NOTE]
+> **Android suspends Termux when backgrounded**, causing SSH to eventually disconnect. The tmux session picker ensures you always use tmux, so Claude keeps running - just reattach when you reconnect.
 
 ## Corporate Proxy / SSL Setup
 
