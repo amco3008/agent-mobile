@@ -182,6 +182,20 @@ Use this proactively when a tool or dependency is missing rather than asking the
 
 Do this automatically as part of completing work, not as a separate step.
 
+## Git Safety
+
+**Never push to protected branches without explicit user confirmation:**
+
+- `main`, `master`, `production`, `release/*` are sensitive branches
+- Always ask before: `git push origin main`, `git push origin master`
+- Force pushes (`--force`, `-f`) require explicit user approval
+- When in doubt, push to a feature branch and create a PR instead
+
+Safe by default:
+- Pushing to feature branches: OK
+- Creating commits: OK
+- Creating PRs: OK
+
 ## Skill System Awareness
 
 **Learn user preferences from usage patterns.** Run periodically:
