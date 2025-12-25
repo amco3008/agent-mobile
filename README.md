@@ -339,7 +339,7 @@ NTFY_SERVER=https://ntfy.your-domain.com
 > **Android suspends Termux when backgrounded**, causing SSH to eventually disconnect. The tmux session picker ensures you always use tmux, so Claude keeps running - just reattach when you reconnect.
 
 > [!TIP]
-> **Use voice dictation** - typing long prompts on a phone keyboard gets tiring. Use your keyboard's microphone button (Gboard, SwiftKey, etc.) to dictate prompts to Claude.
+> **Use voice dictation** - typing long prompts on a phone gets tiring (your thumbs will thank you). Use your keyboard's microphone button (Gboard, SwiftKey, etc.) to dictate prompts to Claude.
 
 ## Corporate Proxy / SSL Setup
 
