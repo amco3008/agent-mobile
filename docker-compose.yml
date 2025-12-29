@@ -45,6 +45,9 @@ services:
       # Corporate CA certificates
       - ./certs:/usr/local/share/ca-certificates/extra
 
+      # Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock
+
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}

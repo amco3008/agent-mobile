@@ -9,6 +9,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **GitHub CLI (gh)** - Create PRs, manage issues, etc.
 - **ripgrep (rg)** - Fast text search, auto-allowed for Claude
 - **Passwordless sudo** - Agent can install missing packages without prompts
+- **Docker access** - Spin up Redis, PostgreSQL, or other containers from within the agent
 - **Skills support** - Drop skills into `skills/` folder
 - **Pre-integrated Skills** - Includes [awesome-Claude-skills](https://github.com/ComposioHQ/awesome-Claude-skills) by default
 - **Dynamic Skill Learning** - Auto-learns skills from usage patterns with versioning
@@ -144,6 +145,12 @@ When Claude Code runs inside this container, it has access to:
 ### System Access
 - Passwordless sudo for installing packages
 - Python 3, pip, and common build tools available
+
+### Docker Access
+- Full access to host Docker daemon via socket mount
+- Run containers: `docker run -d --name redis -p 6379:6379 redis:latest`
+- Manage containers: `docker ps`, `docker stop`, `docker rm`, `docker logs`
+- Useful for spinning up Redis, PostgreSQL, or other dev services
 
 ### Workspace Trust
 - `/home/agent` and `/home/agent/projects` are pre-trusted (no trust dialog)
@@ -380,6 +387,7 @@ Data persists across container restarts and rebuilds:
 
 | Volume | Host Path | Container Path | Purpose |
 |--------|-----------|----------------|---------|
+| Docker socket | `/var/run/docker.sock` | `/var/run/docker.sock` | Docker daemon access |
 | `tailscale-state` | - | `/var/lib/tailscale` | Tailscale auth |
 | `claude-config` | - | `~/.claude` | Claude settings and auth |
 | `config` | - | `~/.config` | Git and gh CLI config |

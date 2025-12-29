@@ -309,6 +309,45 @@ sync_default_skills
 update_claude_md
 
 # ==========================================
+# Docker Daemon Setup
+# ==========================================
+
+# Start Docker daemon if socket not available from host
+start_docker_daemon() {
+    # Fix permissions on mounted Docker socket (host socket is typically root:docker)
+    if [ -S /var/run/docker.sock ]; then
+        chmod 666 /var/run/docker.sock 2>/dev/null || true
+    fi
+
+    # Check if Docker is already accessible (via host socket mount)
+    if docker info &>/dev/null; then
+        echo "Docker accessible via host socket"
+        return 0
+    fi
+
+    echo "Starting Docker daemon..."
+    # Try multiple methods (Ubuntu container doesn't have systemd)
+    if command -v dockerd &>/dev/null; then
+        dockerd &>/dev/null &
+        # Wait for Docker to be ready
+        local attempts=0
+        while [ $attempts -lt 30 ]; do
+            if docker info &>/dev/null; then
+                echo "Docker daemon started successfully"
+                return 0
+            fi
+            sleep 1
+            attempts=$((attempts + 1))
+        done
+        echo "Warning: Docker daemon start timed out"
+    else
+        echo "Warning: dockerd not found"
+    fi
+}
+
+start_docker_daemon
+
+# ==========================================
 # Network & Identity Setup
 # ==========================================
 

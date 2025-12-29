@@ -175,6 +175,35 @@ Common packages you might need:
 
 Use this proactively when a tool or dependency is missing rather than asking the user to install it.
 
+### Docker
+
+This container has access to the host's Docker daemon via socket mount. You can manage containers directly:
+
+```bash
+# Run containers
+docker run -d --name redis -p 6379:6379 redis:latest
+
+# List running containers
+docker ps
+
+# Stop and remove
+docker stop <container>
+docker rm <container>
+
+# View logs
+docker logs <container>
+
+# Execute commands in container
+docker exec -it <container> sh
+```
+
+**Common use cases:**
+- Spin up Redis, PostgreSQL, or other services for development
+- Run one-off containers for testing
+- Manage supporting services for projects in `~/projects`
+
+**Network note:** Containers started here share the host network context. Access them via `localhost:<port>` from within the agent, or via `agent-mobile:<port>` from other Tailscale devices.
+
 ## Documentation
 
 **Always update documentation** when completing features, changes, or tasks:

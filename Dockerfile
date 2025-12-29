@@ -46,6 +46,9 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli \
     && npm cache clean --force
 
+# Install Docker CLI (for container management from within the agent)
+RUN curl -fsSL https://get.docker.com | sh
+
 # Create user for SSH access
 RUN useradd -m -s /bin/bash agent && \
     echo "agent:agent" | chpasswd && \
