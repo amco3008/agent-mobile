@@ -64,6 +64,8 @@ services:
       - CHOKIDAR_USEPOLLING=false
       # Skill system directory (for consistent paths in hooks and scripts)
       - SKILL_SYSTEM_DIR=/home/agent/.claude/skills
+      # Claude Code max output tokens (default: 16000, max: 128000)
+      - CLAUDE_CODE_MAX_OUTPUT_TOKENS=${CLAUDE_CODE_MAX_OUTPUT_TOKENS:-64000}
       # Push notification configuration (ntfy.sh)
       - NTFY_ENABLED=${NTFY_ENABLED:-false}
       - NTFY_TOPIC=${NTFY_TOPIC:-}
