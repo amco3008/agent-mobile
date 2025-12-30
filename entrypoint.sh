@@ -464,8 +464,9 @@ setup_skill_hooks() {
 
     # Merge hooks into settings using Python (preserves existing settings)
     if command -v python3 &>/dev/null; then
-        python3 << 'PYTHON_SCRIPT'
+        python3 << PYTHON_SCRIPT
 import json
+import os
 from pathlib import Path
 
 settings_file = Path("/home/agent/.claude/settings.json")
@@ -529,6 +530,18 @@ settings["permissions"] = {
         "Bash(mv:*)"
     ]
 }
+
+# Configure max output tokens if specified via environment variable
+max_tokens = os.environ.get("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "").strip()
+if max_tokens:
+    try:
+        tokens_int = int(max_tokens)
+        # Clamp to valid range (1 to 128000)
+        tokens_int = max(1, min(128000, tokens_int))
+        settings["maxOutputTokens"] = tokens_int
+        print(f"Max output tokens configured: {tokens_int}")
+    except ValueError:
+        print(f"Warning: Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {max_tokens}")
 
 # Write back with proper formatting
 settings_file.write_text(json.dumps(settings, indent=2))
