@@ -532,13 +532,16 @@ settings["permissions"] = {
 }
 
 # Configure max output tokens if specified via environment variable
+# Must be set in "env" section, and max allowed by Claude Code is 32000
 max_tokens = os.environ.get("CLAUDE_CODE_MAX_OUTPUT_TOKENS", "").strip()
 if max_tokens:
     try:
         tokens_int = int(max_tokens)
-        # Clamp to valid range (1 to 128000)
-        tokens_int = max(1, min(128000, tokens_int))
-        settings["maxOutputTokens"] = tokens_int
+        # Clamp to valid range (1 to 32000 - Claude Code's hard limit)
+        tokens_int = max(1, min(32000, tokens_int))
+        if "env" not in settings:
+            settings["env"] = {}
+        settings["env"]["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = str(tokens_int)
         print(f"Max output tokens configured: {tokens_int}")
     except ValueError:
         print(f"Warning: Invalid CLAUDE_CODE_MAX_OUTPUT_TOKENS value: {max_tokens}")
