@@ -1,6 +1,43 @@
 #!/bin/bash
 set -e
 
+# Commit skills repo to GitHub (called on shutdown)
+commit_skills_repo() {
+    # Skip if no GITHUB_TOKEN
+    if [ -z "$GITHUB_TOKEN" ]; then
+        return 0
+    fi
+
+    local SKILLS_DIR="/home/agent/.claude/skills"
+
+    if [ ! -d "$SKILLS_DIR/.git" ]; then
+        echo "[skills-git] Skills directory not a git repo, skipping"
+        return 0
+    fi
+
+    cd "$SKILLS_DIR" || return 1
+
+    # Check for changes
+    if [ -z "$(git status --porcelain)" ]; then
+        echo "[skills-git] No changes to commit"
+        cd - >/dev/null
+        return 0
+    fi
+
+    echo "[skills-git] Committing skills changes..."
+    git add -A
+    git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S')" || {
+        echo "[skills-git] Commit failed"
+        cd - >/dev/null
+        return 0
+    }
+
+    echo "[skills-git] Pushing to remote..."
+    git push origin master 2>/dev/null || echo "[skills-git] Push failed (network issue?)"
+
+    cd - >/dev/null
+}
+
 # Trap shutdown signals to gracefully stop Claude and backup data
 cleanup_and_backup() {
     echo ""
@@ -33,6 +70,9 @@ cleanup_and_backup() {
     else
         echo "[shutdown] No Claude processes running"
     fi
+
+    # Commit skills repo before shutdown
+    commit_skills_repo
 
     # Backup credentials
     echo "[shutdown] Backing up data..."
@@ -304,9 +344,76 @@ update_claude_md() {
     fi
 }
 
+# Initialize skills git repo and sync with GitHub (called on startup)
+init_skills_git() {
+    local SKILLS_DIR="/home/agent/.claude/skills"
+
+    # Mark skills directory as safe (fixes ownership issues with mounted volumes)
+    git config --global --add safe.directory "$SKILLS_DIR" 2>/dev/null || true
+
+    # Skip if no GITHUB_TOKEN
+    if [ -z "$GITHUB_TOKEN" ]; then
+        echo "[skills-git] GITHUB_TOKEN not set, skipping skills repo sync"
+        return 0
+    fi
+
+    local REPO_NAME="agent-mobile-claude-skills"
+    local GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
+
+    if [ -z "$GITHUB_USER" ]; then
+        echo "[skills-git] Could not get GitHub username, skipping"
+        return 0
+    fi
+
+    local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
+
+    cd "$SKILLS_DIR" || return 1
+
+    # Set git identity for commits (use env vars or defaults)
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
+
+    # Initialize git if needed
+    if [ ! -d ".git" ]; then
+        echo "[skills-git] Initializing git repository..."
+        git init
+        git branch -M master
+    fi
+
+    # Set/update remote origin
+    if git remote get-url origin &>/dev/null; then
+        git remote set-url origin "$REMOTE_URL"
+    else
+        git remote add origin "$REMOTE_URL"
+    fi
+
+    # Create repo if doesn't exist
+    if ! git ls-remote origin &>/dev/null; then
+        echo "[skills-git] Creating private repo ${REPO_NAME}..."
+        gh repo create "$REPO_NAME" --private --source=. --push 2>/dev/null || true
+    fi
+
+    # Pull latest (if exists)
+    git fetch origin master 2>/dev/null && git merge origin/master --no-edit 2>/dev/null || true
+
+    # Commit any uncommitted changes from previous crash
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "[skills-git] Found uncommitted changes, committing..."
+        git add -A
+        git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [startup recovery]" || true
+        git push -u origin master 2>/dev/null || echo "[skills-git] Push failed, will retry on shutdown"
+    fi
+
+    cd - >/dev/null
+    echo "[skills-git] Skills repo initialized"
+}
+
 echo "Initializing skill system..."
+# Mark skills directory as safe early (fixes ownership issues with mounted volumes)
+git config --global --add safe.directory /home/agent/.claude/skills 2>/dev/null || true
 sync_default_skills
 update_claude_md
+init_skills_git
 
 # ==========================================
 # Docker Daemon Setup

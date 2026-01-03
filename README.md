@@ -100,7 +100,7 @@ Select [1]:
 | Variable | Description |
 |----------|-------------|
 | `TAILSCALE_AUTHKEY` | Recommended - Tailscale authkey for automated Tailscale auth https://login.tailscale.com/admin/settings/keys |
-| `GITHUB_TOKEN` | Optional - GitHub PAT for git and gh CLI (needs `repo`, `read:org`, `workflow` scopes) |
+| `GITHUB_TOKEN` | Optional - GitHub PAT for git and gh CLI (needs `repo`, `read:org`, `workflow` scopes). Also enables auto-backup of skills folder to GitHub. |
 | `GIT_EMAIL` | Optional - Git commit email (use GitHub email for Vercel) |
 | `GIT_NAME` | Optional - Git commit author name |
 | `HTTP_PROXY` | Optional - Corporate proxy URL (e.g., `http://proxy:8080`) |
@@ -283,6 +283,26 @@ Edit `skills/.skill-system/config.json` to customize:
     "success_rate_trigger": 0.7
   }
 }
+```
+
+### Skills Version Control
+
+When `GITHUB_TOKEN` is set, the skills folder is automatically version-controlled:
+
+- **Repo**: `agent-mobile-claude-skills` (private, created on your GitHub account)
+- **Auto-commit on shutdown**: When container receives SIGTERM, all skill changes are committed and pushed
+- **Auto-commit on startup**: Catches any uncommitted changes from previous unclean shutdown
+- **Commit format**: `Auto-commit from agent-mobile: YYYY-MM-DD HH:MM:SS`
+
+This ensures your custom skills, learned preferences, and skill system data are backed up to GitHub automatically.
+
+```bash
+# Manual commands (inside container)
+cd ~/.claude/skills
+git status              # Check for changes
+git log --oneline -5    # View recent commits
+git add -A && git commit -m "Manual commit"
+git push origin master
 ```
 
 ## Push Notifications (ntfy.sh)
