@@ -66,8 +66,8 @@ Active Ralph Loops:
   • zones (iteration 3/20)
 
 Deployed Services:
-  ● myria-api (up 2h, port 3001)
-  ● myria-web (up 2h, port 3000)
+  ● app-api (up 2h, port 3001)
+  ● app-web (up 2h, port 3000)
   ● redis (up 2h, port 6379)
 
 Backups:
