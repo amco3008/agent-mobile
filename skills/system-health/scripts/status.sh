@@ -173,7 +173,41 @@ else
     echo "Deployed Services: ${YELLOW}!${RESET} Docker not available"
 fi
 
-# 7. Backups
+# 7. Dev Servers (Node.js processes on common ports)
+echo ""
+DEV_PORTS="3000 3001 4000 5000 5173 8000 8080 8888"
+DEV_SERVERS=""
+
+for port in $DEV_PORTS; do
+    # Check if port is listening
+    proc_info=$(ss -tlnp 2>/dev/null | grep ":$port " | head -1 || true)
+    if [[ -n "$proc_info" ]]; then
+        # Extract process name from ss output
+        proc_name=$(echo "$proc_info" | grep -oP 'users:\(\("\K[^"]+' 2>/dev/null || echo "unknown")
+        DEV_SERVERS="$DEV_SERVERS$port:$proc_name\n"
+    fi
+done
+
+if [[ -n "$DEV_SERVERS" ]]; then
+    echo "Dev Servers:"
+    echo -e "$DEV_SERVERS" | while IFS=: read -r port proc; do
+        if [[ -n "$port" ]] && [[ -n "$proc" ]]; then
+            # Try to identify the project from process details
+            proc_details=$(ss -tlnp 2>/dev/null | grep ":$port " | head -1 || true)
+            if echo "$proc_details" | grep -q "vite"; then
+                echo "  ${GREEN}●${RESET} Vite client (port $port)"
+            elif echo "$proc_details" | grep -q "tsx\|colyseus\|express"; then
+                echo "  ${GREEN}●${RESET} Node server (port $port)"
+            else
+                echo "  ${GREEN}●${RESET} $proc (port $port)"
+            fi
+        fi
+    done
+else
+    echo "Dev Servers: none running"
+fi
+
+# 8. Backups
 echo ""
 echo "Backups:"
 
