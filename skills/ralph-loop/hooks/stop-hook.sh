@@ -220,11 +220,33 @@ TEMP_FILE="${RALPH_STATE_FILE}.tmp.$$"
 sed "s/^iteration: .*/iteration: $NEXT_ITERATION/" "$RALPH_STATE_FILE" > "$TEMP_FILE"
 mv "$TEMP_FILE" "$RALPH_STATE_FILE"
 
+# Check for pending steering questions
+STEERING_FILE=".claude/ralph-steering-${TASK_ID}.md"
+STEERING_QUESTION=""
+if [[ -f "$STEERING_FILE" ]]; then
+  STEERING_STATUS=$(grep '^status:' "$STEERING_FILE" | sed 's/status: *//')
+  if [[ "$STEERING_STATUS" == "pending" ]]; then
+    # Extract the question and options
+    STEERING_QUESTION=$(sed -n '/^## Question/,/^## Response/p' "$STEERING_FILE" | head -n -1)
+  fi
+fi
+
 # Build system message with iteration count and completion promise info
 if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
   SYSTEM_MSG="🔄 Ralph [$TASK_ID] iteration $NEXT_ITERATION | To stop: output <promise>$COMPLETION_PROMISE</promise> (ONLY when statement is TRUE - do not lie to exit!)"
 else
   SYSTEM_MSG="🔄 Ralph [$TASK_ID] iteration $NEXT_ITERATION | No completion promise set - loop runs infinitely"
+fi
+
+# Append steering question to system message if pending
+if [[ -n "$STEERING_QUESTION" ]]; then
+  SYSTEM_MSG="$SYSTEM_MSG
+
+⚠️ PENDING QUESTION FOR USER - Please relay this to the user and wait for their answer:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+$STEERING_QUESTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+After user responds, update $STEERING_FILE with status: answered and add their response under ## Response"
 fi
 
 # Output JSON to block the stop and feed prompt back
