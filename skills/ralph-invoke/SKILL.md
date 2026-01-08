@@ -346,7 +346,7 @@ TASK_ID="trading"  # Your task ID
 ITERATION=$(grep '^iteration:' ".claude/ralph-loop-${TASK_ID}.local.md" | sed 's/iteration: *//')
 
 git add -A && git commit -m "$(cat <<EOF
-[Ralph #${ITERATION}] Milestone: <title>
+[Ralph ${TASK_ID} #${ITERATION}] Milestone: <title>
 
 - What was done
 - Key changes
@@ -354,7 +354,7 @@ EOF
 )"
 ```
 
-**Commit prefix format:** `[Ralph #N]` where N is the iteration number.
+**Commit prefix format:** `[Ralph {task-id} #N]` - includes task ID and iteration number.
 
 **Commit triggers:**
 - Completed a feature/component
@@ -528,7 +528,7 @@ Or use: `/ralph-wiggum:cancel-ralph`
 4. **Monitor progress** - `head -10 .claude/ralph-loop.local.md`
 5. **Start small** - Test with 3-5 iterations first
 6. **Use steering for decisions** - Don't guess on ambiguous requirements
-7. **Commit at milestones** - Use `[Ralph #N]` prefix with iteration number for tracking
+7. **Commit at milestones** - Use `[Ralph {task-id} #N]` prefix for tracking
 8. **Update progress file** - Keep orchestrator informed via `.claude/ralph-progress-{task-id}.md`
 9. **Create summary on completion** - Write `.claude/ralph-summary-{task-id}.md` when done
 
