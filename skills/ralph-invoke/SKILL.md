@@ -166,10 +166,12 @@ Run this bash command:
 | Parameter | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | TASK_DESCRIPTION | Yes | - | The task to work on |
-| --task-id | Recommended | "default" | Unique ID for concurrent loops |
+| --task-id | **REQUIRED** | - | Descriptive ID (e.g., "polymarket-alpha", "auth-refactor") |
 | --max-iterations | Recommended | unlimited | Safety limit (use 20-100) |
 | --completion-promise | Recommended | null | Text to output when truly done |
 | --mode | Optional | yolo | `yolo` = autonomous, `review` = ask questions |
+
+**IMPORTANT:** Always provide a descriptive `--task-id`. Never omit it or use generic names like "default" or "task". Use project/feature specific names like "polymarket-alpha", "trading-bot", "zone-completion".
 
 ### Example Invocations
 
@@ -238,7 +240,7 @@ rm .claude/ralph-loop-{task-id}.local.md
 
 ## How the Loop Works
 
-1. **Claude runs the setup script** → Creates state file at `.claude/ralph-loop.local.md`
+1. **Claude runs the setup script** → Creates state file at `.claude/ralph-loop-{task-id}.local.md`
 2. **Claude works on the task** → Normal operation
 3. **Claude tries to exit** → Stop hook intercepts
 4. **Hook re-injects prompt** → Claude continues with same task
@@ -643,22 +645,23 @@ Any important follow-up items or things to review.
 
 If needed, cancel with:
 ```bash
-rm .claude/ralph-loop.local.md
+rm .claude/ralph-loop-{task-id}.local.md
 ```
 
-Or use: `/ralph-wiggum:cancel-ralph`
+Replace `{task-id}` with your actual task ID (e.g., `rm .claude/ralph-loop-polymarket-alpha.local.md`).
 
 ## Best Practices
 
-1. **Always set --max-iterations** - Prevents runaway costs (50-100 is reasonable)
-2. **Use specific completion promises** - "ALL_TESTS_PASS" not "DONE"
-3. **Include success criteria in task** - Be explicit about what "done" means
-4. **Monitor progress** - `head -10 .claude/ralph-loop.local.md`
-5. **Start small** - Test with 3-5 iterations first
-6. **Use steering for decisions** - Don't guess on ambiguous requirements
-7. **Commit at milestones** - Use `[Ralph {task-id} #N]` prefix for tracking
-8. **Update progress file** - Keep orchestrator informed via `.claude/ralph-progress-{task-id}.md`
-9. **Create summary on completion** - Write `.claude/ralph-summary-{task-id}.md` when done
+1. **Always use descriptive --task-id** - Use project names like "polymarket-alpha", never "default"
+2. **Always set --max-iterations** - Prevents runaway costs (50-100 is reasonable)
+3. **Use specific completion promises** - "ALL_TESTS_PASS" not "DONE"
+4. **Include success criteria in task** - Be explicit about what "done" means
+5. **Monitor progress** - `head -10 .claude/ralph-loop-{task-id}.local.md`
+6. **Start small** - Test with 3-5 iterations first
+7. **Use steering for decisions** - Don't guess on ambiguous requirements
+8. **Commit at milestones** - Use `[Ralph {task-id} #N]` prefix for tracking
+9. **Update progress file** - Keep orchestrator informed via `.claude/ralph-progress-{task-id}.md`
+10. **Create summary on completion** - Write `.claude/ralph-summary-{task-id}.md` when done
 
 ## Cost Warning
 
