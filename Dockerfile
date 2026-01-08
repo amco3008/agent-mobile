@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release \
     ripgrep \
     python3-pip \
+    jq \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
