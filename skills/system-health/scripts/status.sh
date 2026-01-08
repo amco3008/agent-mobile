@@ -114,7 +114,8 @@ fi
 
 # 5. Active Ralph Loops
 echo ""
-RALPH_FILES=$(ls "$HOME/.claude/ralph-loop"*.local.md 2>/dev/null || true)
+# Look in both ~/.claude/ and any project .claude directories
+RALPH_FILES=$(find "$HOME/.claude" "$HOME/projects" -name "ralph-loop*.local.md" -type f 2>/dev/null | sort -u || true)
 
 if [[ -n "$RALPH_FILES" ]]; then
     echo "Active Ralph Loops:"
@@ -123,11 +124,21 @@ if [[ -n "$RALPH_FILES" ]]; then
             task_id=$(grep '^task_id:' "$file" 2>/dev/null | sed 's/task_id: *//' | sed 's/^"\(.*\)"$/\1/' || echo "unknown")
             iteration=$(grep '^iteration:' "$file" 2>/dev/null | sed 's/iteration: *//' || echo "?")
             max_iter=$(grep '^max_iterations:' "$file" 2>/dev/null | sed 's/max_iterations: *//' || echo "?")
+            # Get project name from path if in projects dir
+            project=$(echo "$file" | grep -oP 'projects/\K[^/]+' 2>/dev/null || echo "")
 
             if [[ "$max_iter" == "0" ]]; then
-                echo "  • $task_id (iteration $iteration/∞)"
+                if [[ -n "$project" ]]; then
+                    echo "  • $task_id @ $project (iteration $iteration/∞)"
+                else
+                    echo "  • $task_id (iteration $iteration/∞)"
+                fi
             else
-                echo "  • $task_id (iteration $iteration/$max_iter)"
+                if [[ -n "$project" ]]; then
+                    echo "  • $task_id @ $project (iteration $iteration/$max_iter)"
+                else
+                    echo "  • $task_id (iteration $iteration/$max_iter)"
+                fi
             fi
         fi
     done
