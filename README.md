@@ -198,31 +198,43 @@ Then use:
 > Manage the implementation of X using Gemini
 ```
 
-### Ralph Wiggum Loops
+### Ralph Loops (Autonomous Iteration)
 
-The **ralph-wiggum** plugin enables autonomous iteration - Claude keeps working until done without manual re-prompting.
+Ralph loops enable autonomous iteration - Claude keeps working until done without manual re-prompting. The ralph-loop skill is pre-installed in `skills/ralph-loop/`.
 
-**First-time setup** (run once inside Claude):
-```
-/plugin install ralph-loop@claude-plugins-official
-/plugin enable ralph-loop@claude-plugins-official
-```
-
-```bash
-# Check plugin is installed
-claude /plugin list
-
-# Start a loop (Claude can do this itself via the ralph-invoke skill)
-"$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0/scripts/setup-ralph-loop.sh" \
-  "Fix all TypeScript errors" \
-  --max-iterations 50 \
-  --completion-promise "ALL_ERRORS_FIXED"
-```
-
-Trigger phrases that activate the loop skill:
+**Trigger phrases:**
 - "start a ralph loop" or "run ralph"
 - "keep working until done"
 - "iterate until complete"
+
+**Example usage:**
+```bash
+# Basic loop
+"$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" \
+  "Fix all TypeScript errors" \
+  --task-id "type-fixes" \
+  --max-iterations 50 \
+  --completion-promise "ALL_ERRORS_FIXED"
+
+# With review mode (asks questions at decision points)
+"$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" \
+  "Build user authentication" \
+  --task-id "auth" \
+  --max-iterations 50 \
+  --mode review
+```
+
+**Parameters:**
+| Parameter | Description |
+|-----------|-------------|
+| `--task-id` | Unique ID for concurrent loops (enables multi-ralph) |
+| `--max-iterations` | Safety limit (recommended: 20-100) |
+| `--completion-promise` | Text to output when done: `<promise>TEXT</promise>` |
+| `--mode` | `yolo` (autonomous, default) or `review` (asks questions) |
+
+**Multi-Ralph:** Run multiple loops in parallel with different `--task-id` values. Each loop has its own state file at `.claude/ralph-loop-{task-id}.local.md`.
+
+**Interactive Planning:** The `ralph-invoke` skill requires Claude to research, plan, and ask clarifying questions before starting a loop.
 
 > [!WARNING]
 > Autonomous loops consume tokens rapidly. Always use `--max-iterations` as a safety net.
