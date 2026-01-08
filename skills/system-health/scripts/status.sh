@@ -98,8 +98,8 @@ fi
 NTFY_CONF="$HOME/.claude/ntfy.conf"
 
 if [[ -f "$NTFY_CONF" ]]; then
-    ntfy_topic=$(grep -E "^topic=" "$NTFY_CONF" 2>/dev/null | cut -d= -f2 || echo "")
-    ntfy_enabled=$(grep -E "^enabled=" "$NTFY_CONF" 2>/dev/null | cut -d= -f2 || echo "false")
+    ntfy_topic=$(grep -E "^NTFY_TOPIC=" "$NTFY_CONF" 2>/dev/null | cut -d= -f2 || echo "")
+    ntfy_enabled=$(grep -E "^NTFY_ENABLED=" "$NTFY_CONF" 2>/dev/null | cut -d= -f2 || echo "false")
 
     if [[ "$ntfy_enabled" == "true" ]] && [[ -n "$ntfy_topic" ]]; then
         echo "Notifications:   ${GREEN}✓${RESET} Enabled (topic: $ntfy_topic)"
