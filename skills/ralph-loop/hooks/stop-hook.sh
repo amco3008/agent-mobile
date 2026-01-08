@@ -27,7 +27,7 @@ fi
 
 # Find the loop that belongs to this session (or claim an unclaimed one)
 MY_LOOP=""
-UNCLAIMED_LOOP=""
+UNCLAIMED_LOOPS=()
 
 for STATE_FILE in $RALPH_STATE_FILES; do
   if [[ ! -f "$STATE_FILE" ]]; then
@@ -43,20 +43,33 @@ for STATE_FILE in $RALPH_STATE_FILES; do
     MY_LOOP="$STATE_FILE"
     break
   elif [[ "$SESSION" == "null" ]] || [[ -z "$SESSION" ]]; then
-    # Unclaimed loop - remember first one
-    if [[ -z "$UNCLAIMED_LOOP" ]]; then
-      UNCLAIMED_LOOP="$STATE_FILE"
-    fi
+    # Unclaimed loop - remember ALL unclaimed loops
+    UNCLAIMED_LOOPS+=("$STATE_FILE")
   fi
 done
 
-# If no claimed loop but there's an unclaimed one, claim it
-if [[ -z "$MY_LOOP" ]] && [[ -n "$UNCLAIMED_LOOP" ]]; then
-  MY_LOOP="$UNCLAIMED_LOOP"
-  # Claim by writing transcript path
-  TEMP_FILE="${MY_LOOP}.tmp.$$"
-  sed "s|^session_transcript: .*|session_transcript: \"$TRANSCRIPT_PATH\"|" "$MY_LOOP" > "$TEMP_FILE"
-  mv "$TEMP_FILE" "$MY_LOOP"
+# If no claimed loop, check unclaimed loops
+if [[ -z "$MY_LOOP" ]]; then
+  if [[ ${#UNCLAIMED_LOOPS[@]} -eq 1 ]]; then
+    # Exactly one unclaimed loop - safe to claim it
+    MY_LOOP="${UNCLAIMED_LOOPS[0]}"
+    # Claim by writing transcript path
+    TEMP_FILE="${MY_LOOP}.tmp.$$"
+    sed "s|^session_transcript: .*|session_transcript: \"$TRANSCRIPT_PATH\"|" "$MY_LOOP" > "$TEMP_FILE"
+    mv "$TEMP_FILE" "$MY_LOOP"
+  elif [[ ${#UNCLAIMED_LOOPS[@]} -gt 1 ]]; then
+    # Multiple unclaimed loops - don't auto-claim, could grab wrong one
+    echo "⚠️  Multiple unclaimed Ralph loops found. Cannot auto-bind session." >&2
+    echo "   Unclaimed loops:" >&2
+    for loop in "${UNCLAIMED_LOOPS[@]}"; do
+      task_id=$(grep '^task_id:' "$loop" 2>/dev/null | sed 's/task_id: *//' | sed 's/^"\(.*\)"$/\1/' || echo "unknown")
+      echo "     - $task_id ($loop)" >&2
+    done
+    echo "" >&2
+    echo "   Each Claude session should run setup-ralph-loop.sh to bind to a specific loop." >&2
+    echo "   Allowing exit for now." >&2
+    exit 0
+  fi
 fi
 
 if [[ -z "$MY_LOOP" ]]; then

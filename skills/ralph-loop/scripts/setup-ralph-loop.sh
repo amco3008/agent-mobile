@@ -167,15 +167,32 @@ fi
 # Create state file for stop hook (markdown with YAML frontmatter)
 mkdir -p .claude
 
-# Determine state file path based on task ID
+# Auto-generate unique task-id if "default" is used
 if [[ "$TASK_ID" == "default" ]]; then
-  # Backwards compatible - use original filename
-  RALPH_STATE_FILE=".claude/ralph-loop.local.md"
-else
-  RALPH_STATE_FILE=".claude/ralph-loop-${TASK_ID}.local.md"
+  # Generate unique ID: short hash of prompt + timestamp
+  HASH=$(echo "$PROMPT" | md5sum | cut -c1-6)
+  TASK_ID="task-${HASH}"
+  echo "ℹ️  Auto-generated task-id: $TASK_ID" >&2
 fi
 
-# Check if this loop already exists
+# Determine state file path based on task ID
+RALPH_STATE_FILE=".claude/ralph-loop-${TASK_ID}.local.md"
+
+# Check if this loop already exists - auto-append suffix to avoid collision
+if [[ -f "$RALPH_STATE_FILE" ]]; then
+  # Check if existing loop is for THIS session (same transcript) - allow restart
+  EXISTING_SESSION=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$RALPH_STATE_FILE" | grep '^session_transcript:' | sed 's/session_transcript: *//' | sed 's/^"\(.*\)"$/\1/')
+
+  # If unclaimed or different session, generate unique suffix
+  if [[ "$EXISTING_SESSION" == "null" ]] || [[ -z "$EXISTING_SESSION" ]]; then
+    SUFFIX=$(date +%s | tail -c 5)
+    TASK_ID="${TASK_ID}-${SUFFIX}"
+    RALPH_STATE_FILE=".claude/ralph-loop-${TASK_ID}.local.md"
+    echo "⚠️  Task-id collision detected. Using unique id: $TASK_ID" >&2
+  fi
+fi
+
+# Final check - if still exists after suffix, something is wrong
 if [[ -f "$RALPH_STATE_FILE" ]]; then
   echo "⚠️  Warning: Loop '$TASK_ID' already exists!" >&2
   echo "   File: $RALPH_STATE_FILE" >&2
