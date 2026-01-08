@@ -239,6 +239,36 @@ Ralph loops enable autonomous iteration - Claude keeps working until done withou
 > [!WARNING]
 > Autonomous loops consume tokens rapidly. Always use `--max-iterations` as a safety net.
 
+### System Status (`/status`)
+
+Quick health check for all agent-mobile systems. Run `/status` or say "show status" to see:
+
+```
+╭─────────────────────────────────────────────────────────╮
+│  AGENT-MOBILE STATUS                                    │
+╰─────────────────────────────────────────────────────────╯
+
+Credentials:     ✓ Valid (backup: 5 min ago)
+Skills Sync:     ✓ Clean (last commit: 2h ago)
+Tailscale:       ✓ Connected (agent-mobile.tail1234.ts.net)
+Notifications:   ✓ Enabled (topic: my-topic)
+
+Active Ralph Loops:
+  • task-abc123 (iteration 5/50)
+
+Deployed Services:
+  ● app-api (up 2h, port 3001)
+  ● redis (up 2h, port 6379)
+
+Backups:
+  • credentials: 5 min ago
+  • config: 5 min ago
+  • settings.local: 5 min ago
+```
+
+> [!TIP]
+> **Always check `/status` before deploying services** to avoid conflicts when multiple Claude sessions are running. The "Deployed Services" section shows what's already running.
+
 ### Claude SDK (Sub-Agents)
 
 The Anthropic Python SDK is pre-installed for programmatic API access:
@@ -491,6 +521,7 @@ Claude OAuth credentials and user config are automatically backed up to `./home/
 |-------------|----------|
 | `home/.claude-credentials-backup.json` | OAuth tokens (access/refresh) |
 | `home/.claude-config-backup.json` | Workspace trust, user settings |
+| `home/.claude-settings-local-backup.json` | User-granted command permissions |
 
 Backups are also created:
 - Every 5 minutes (background daemon)
