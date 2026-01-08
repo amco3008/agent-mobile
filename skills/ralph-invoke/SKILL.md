@@ -13,11 +13,20 @@ allowed-tools:
 
 ## Prerequisites
 
-The `ralph-wiggum` plugin must be installed and enabled:
+**IMPORTANT: Before using Ralph loops, you MUST ensure the plugin is installed.**
+
+### Check if plugin is installed:
+```bash
+ls "$HOME/.claude/plugins/cache/claude-code-plugins/ralph-wiggum" 2>/dev/null && echo "INSTALLED" || echo "NOT_INSTALLED"
 ```
-/plugin install ralph-wiggum@claude-code-plugins
-/plugin enable ralph-wiggum@claude-code-plugins
-```
+
+### If NOT_INSTALLED, tell the user:
+> The ralph-wiggum plugin is not installed. Please run these commands in your Claude session:
+> ```
+> /plugin install ralph-wiggum@claude-code-plugins
+> /plugin enable ralph-wiggum@claude-code-plugins
+> ```
+> Then try again.
 
 ## Triggers
 

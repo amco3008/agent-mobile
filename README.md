@@ -202,6 +202,12 @@ Then use:
 
 The **ralph-wiggum** plugin enables autonomous iteration - Claude keeps working until done without manual re-prompting.
 
+**First-time setup** (run once inside Claude):
+```
+/plugin install ralph-wiggum@claude-code-plugins
+/plugin enable ralph-wiggum@claude-code-plugins
+```
+
 ```bash
 # Check plugin is installed
 claude /plugin list

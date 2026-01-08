@@ -415,40 +415,10 @@ sync_default_skills
 update_claude_md
 init_skills_git
 
-# ==========================================
-# Plugin Installation
-# ==========================================
-
-# Install and enable ralph-wiggum plugin for autonomous loops
-setup_ralph_wiggum_plugin() {
-    echo "[plugins] Checking ralph-wiggum plugin..."
-    
-    # Check if plugin is already installed (skip if cache exists)
-    local PLUGIN_CACHE="/home/agent/.claude/plugins/cache/claude-code-plugins/ralph-wiggum"
-    if [ -d "$PLUGIN_CACHE" ]; then
-        echo "[plugins] ralph-wiggum already installed"
-        return 0
-    fi
-    
-    # Install plugin as agent user (requires network access)
-    echo "[plugins] Installing ralph-wiggum plugin..."
-    if su - agent -c "claude --dangerously-skip-permissions /plugin install ralph-wiggum@claude-code-plugins" 2>/dev/null; then
-        echo "[plugins] ralph-wiggum installed successfully"
-    else
-        echo "[plugins] Warning: ralph-wiggum installation failed (network issue or plugin not found)"
-        return 0
-    fi
-    
-    # Enable the plugin
-    echo "[plugins] Enabling ralph-wiggum plugin..."
-    if su - agent -c "claude --dangerously-skip-permissions /plugin enable ralph-wiggum@claude-code-plugins" 2>/dev/null; then
-        echo "[plugins] ralph-wiggum enabled successfully"
-    else
-        echo "[plugins] Warning: ralph-wiggum enable failed"
-    fi
-}
-
-setup_ralph_wiggum_plugin
+# NOTE: ralph-wiggum plugin must be installed interactively via:
+#   /plugin install ralph-wiggum@claude-code-plugins
+#   /plugin enable ralph-wiggum@claude-code-plugins
+# The skill `ralph-invoke` will instruct users to do this if the plugin is missing.
 
 # ==========================================
 # Docker Daemon Setup
