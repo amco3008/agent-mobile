@@ -416,8 +416,8 @@ update_claude_md
 init_skills_git
 
 # NOTE: ralph-wiggum plugin must be installed interactively via:
-#   /plugin install ralph-wiggum@claude-code-plugins
-#   /plugin enable ralph-wiggum@claude-code-plugins
+#   /plugin install ralph-loop@claude-plugins-official
+#   /plugin enable ralph-loop@claude-plugins-official
 # The skill `ralph-invoke` will instruct users to do this if the plugin is missing.
 
 # ==========================================

@@ -204,8 +204,8 @@ The **ralph-wiggum** plugin enables autonomous iteration - Claude keeps working 
 
 **First-time setup** (run once inside Claude):
 ```
-/plugin install ralph-wiggum@claude-code-plugins
-/plugin enable ralph-wiggum@claude-code-plugins
+/plugin install ralph-loop@claude-plugins-official
+/plugin enable ralph-loop@claude-plugins-official
 ```
 
 ```bash
@@ -213,7 +213,7 @@ The **ralph-wiggum** plugin enables autonomous iteration - Claude keeps working 
 claude /plugin list
 
 # Start a loop (Claude can do this itself via the ralph-invoke skill)
-"$HOME/.claude/plugins/cache/claude-code-plugins/ralph-wiggum/1.0.0/scripts/setup-ralph-loop.sh" \
+"$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0/scripts/setup-ralph-loop.sh" \
   "Fix all TypeScript errors" \
   --max-iterations 50 \
   --completion-promise "ALL_ERRORS_FIXED"

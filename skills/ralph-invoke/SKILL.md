@@ -17,14 +17,14 @@ allowed-tools:
 
 ### Check if plugin is installed:
 ```bash
-ls "$HOME/.claude/plugins/cache/claude-code-plugins/ralph-wiggum" 2>/dev/null && echo "INSTALLED" || echo "NOT_INSTALLED"
+ls "$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop" 2>/dev/null && echo "INSTALLED" || echo "NOT_INSTALLED"
 ```
 
 ### If NOT_INSTALLED, tell the user:
 > The ralph-wiggum plugin is not installed. Please run these commands in your Claude session:
 > ```
-> /plugin install ralph-wiggum@claude-code-plugins
-> /plugin enable ralph-wiggum@claude-code-plugins
+> /plugin install ralph-loop@claude-plugins-official
+> /plugin enable ralph-loop@claude-plugins-official
 > ```
 > Then try again.
 
@@ -42,7 +42,7 @@ Use this skill when:
 Run this bash command:
 
 ```bash
-"$HOME/.claude/plugins/cache/claude-code-plugins/ralph-wiggum/1.0.0/scripts/setup-ralph-loop.sh" \
+"$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0/scripts/setup-ralph-loop.sh" \
   "<TASK_DESCRIPTION>" \
   --max-iterations <N> \
   --completion-promise "<PROMISE_TEXT>"
@@ -60,7 +60,7 @@ Run this bash command:
 
 **Simple task:**
 ```bash
-"$HOME/.claude/plugins/cache/claude-code-plugins/ralph-wiggum/1.0.0/scripts/setup-ralph-loop.sh" \
+"$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0/scripts/setup-ralph-loop.sh" \
   "Fix all TypeScript type errors" \
   --max-iterations 50 \
   --completion-promise "ALL_ERRORS_FIXED"
@@ -68,7 +68,7 @@ Run this bash command:
 
 **Complex refactor:**
 ```bash
-"$HOME/.claude/plugins/cache/claude-code-plugins/ralph-wiggum/1.0.0/scripts/setup-ralph-loop.sh" \
+"$HOME/.claude/plugins/cache/claude-plugins-official/ralph-loop/1.0.0/scripts/setup-ralph-loop.sh" \
   "Migrate all API handlers to the new v2 pattern" \
   --max-iterations 100 \
   --completion-promise "MIGRATION_COMPLETE"
