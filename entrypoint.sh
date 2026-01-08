@@ -84,6 +84,10 @@ cleanup_and_backup() {
         cp "/home/agent/.claude.json" "/home/agent/projects/.claude-config-backup.json" 2>/dev/null && \
             echo "[shutdown] Config backed up"
     fi
+    if [ -f "/home/agent/.claude/settings.local.json" ] && [ -s "/home/agent/.claude/settings.local.json" ]; then
+        cp "/home/agent/.claude/settings.local.json" "/home/agent/projects/.claude-settings-local-backup.json" 2>/dev/null && \
+            echo "[shutdown] Settings.local backed up"
+    fi
 
     echo "[shutdown] Cleanup complete"
     exit 0
@@ -262,12 +266,42 @@ persist_claude_config() {
     fi
 }
 
+# Backup/restore settings.local.json (user-granted command permissions)
+# This file stores permissions like Bash(curl:*), Bash(tree:*) etc that user grants during sessions
+persist_settings_local() {
+    local SETTINGS_FILE="/home/agent/.claude/settings.local.json"
+    local BACKUP_FILE="/home/agent/projects/.claude-settings-local-backup.json"
+
+    echo "[settings.local] Checking settings.local.json persistence..."
+
+    # Restore from backup if exists and local file doesn't
+    if [ -f "$BACKUP_FILE" ] && [ -s "$BACKUP_FILE" ]; then
+        if [ ! -f "$SETTINGS_FILE" ] || [ ! -s "$SETTINGS_FILE" ]; then
+            echo "[settings.local] Restoring from backup..."
+            cp "$BACKUP_FILE" "$SETTINGS_FILE"
+            chown agent:agent "$SETTINGS_FILE"
+            chmod 600 "$SETTINGS_FILE"
+            echo "[settings.local] Restored ($(wc -c < "$SETTINGS_FILE") bytes)"
+            return 0
+        fi
+    fi
+
+    # If settings.local.json exists, back it up
+    if [ -f "$SETTINGS_FILE" ] && [ -s "$SETTINGS_FILE" ]; then
+        cp "$SETTINGS_FILE" "$BACKUP_FILE" 2>/dev/null || true
+        chown agent:agent "$BACKUP_FILE" 2>/dev/null || true
+        chmod 600 "$BACKUP_FILE" 2>/dev/null || true
+    fi
+}
+
 # Background daemon that periodically backs up credentials AND config
 start_credential_backup_daemon() {
     local CREDS_FILE="/home/agent/.claude/.credentials.json"
     local CREDS_BACKUP="/home/agent/projects/.claude-credentials-backup.json"
     local CONFIG_FILE="/home/agent/.claude.json"
     local CONFIG_BACKUP="/home/agent/projects/.claude-config-backup.json"
+    local SETTINGS_LOCAL_FILE="/home/agent/.claude/settings.local.json"
+    local SETTINGS_LOCAL_BACKUP="/home/agent/projects/.claude-settings-local-backup.json"
     local INTERVAL=300  # 5 minutes
 
     (
@@ -289,6 +323,14 @@ start_credential_backup_daemon() {
                     chmod 600 "$CONFIG_BACKUP" 2>/dev/null || true
                 fi
             fi
+            # Backup settings.local.json if changed (user-granted permissions)
+            if [ -f "$SETTINGS_LOCAL_FILE" ] && [ -s "$SETTINGS_LOCAL_FILE" ]; then
+                if ! cmp -s "$SETTINGS_LOCAL_FILE" "$SETTINGS_LOCAL_BACKUP" 2>/dev/null; then
+                    cp "$SETTINGS_LOCAL_FILE" "$SETTINGS_LOCAL_BACKUP" 2>/dev/null
+                    chown agent:agent "$SETTINGS_LOCAL_BACKUP" 2>/dev/null || true
+                    chmod 600 "$SETTINGS_LOCAL_BACKUP" 2>/dev/null || true
+                fi
+            fi
         done
     ) &
     echo "[backup] Background daemon started (interval: ${INTERVAL}s)"
@@ -296,6 +338,7 @@ start_credential_backup_daemon() {
 
 persist_credentials
 persist_claude_config
+persist_settings_local
 start_credential_backup_daemon
 
 # ==========================================
