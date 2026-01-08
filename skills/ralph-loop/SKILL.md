@@ -27,6 +27,7 @@ This fork ensures multi-ralph changes persist across container rebuilds.
 - **Session Binding**: Each loop binds to the first Claude session that claims it
 - **Completion Promises**: Exit loops by outputting `<promise>TEXT</promise>`
 - **Progress Tracking**: State files at `.claude/ralph-loop-{task-id}.local.md`
+- **Review Mode**: Ask user questions at decision points with `--mode review`
 
 ## Usage
 
@@ -34,6 +35,43 @@ Use via the `ralph-invoke` skill or directly:
 
 ```bash
 /ralph-loop "Your task description" --task-id myloop --max-iterations 50 --completion-promise "DONE"
+```
+
+## Review Mode
+
+Use `--mode review` when you want Ralph to ask questions at decision points instead of making autonomous choices.
+
+```bash
+/ralph-loop "Build feature X" --mode review --task-id myfeature --max-iterations 20
+```
+
+### How It Works
+
+1. Ralph writes a steering question to `.claude/ralph-steering-{task-id}.md` with `status: pending`
+2. On next iteration, the stop hook detects the pending question
+3. Ralph uses `AskUserQuestion` tool to wait for user response
+4. Ralph updates the steering file with `status: answered` and the response
+5. Ralph continues with the user's decision
+
+### Steering File Format
+
+```markdown
+---
+status: pending
+---
+
+## Question
+
+What approach should I use for the database layer?
+
+**Options:**
+1. PostgreSQL - robust, feature-rich
+2. SQLite - simple, portable
+3. MongoDB - document-based
+
+## Response
+
+(awaiting user response)
 ```
 
 ## Files

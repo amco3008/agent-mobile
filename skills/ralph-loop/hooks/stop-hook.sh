@@ -249,11 +249,18 @@ fi
 if [[ -n "$STEERING_QUESTION" ]]; then
   SYSTEM_MSG="$SYSTEM_MSG
 
-⚠️ PENDING QUESTION FOR USER - Please relay this to the user and wait for their answer:
+⚠️ PENDING QUESTION FOR USER - ACTION REQUIRED:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 $STEERING_QUESTION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-After user responds, update $STEERING_FILE with status: answered and add their response under ## Response"
+
+CRITICAL: You MUST use the AskUserQuestion tool to get the user's response.
+Do NOT just output text - the loop will continue without waiting!
+
+After getting the answer via AskUserQuestion:
+1. Update $STEERING_FILE with status: answered
+2. Add their response under ## Response
+3. Continue with the task using their decision"
 fi
 
 # Output JSON to block the stop and feed prompt back

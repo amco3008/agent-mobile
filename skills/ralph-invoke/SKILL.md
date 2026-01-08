@@ -6,11 +6,125 @@ allowed-tools:
   - Read
   - Write
   - Edit
+  - Glob
+  - Grep
+  - AskUserQuestion
+  - Task
 ---
 
 # Ralph Invoke Skill
 
 **Allows Claude to directly start Ralph-Wiggum autonomous loops without user commands.**
+
+## CRITICAL: Interactive Planning Phase
+
+**BEFORE starting any Ralph loop, you MUST complete the planning phase:**
+
+### Step 1: Research the Codebase
+
+Use Glob, Grep, Read, and Task (with Explore agent) to understand:
+- Relevant files and structure
+- Existing patterns and conventions
+- Dependencies and constraints
+- Potential challenges
+
+### Step 2: Design a Plan
+
+Create a clear plan with:
+- Specific steps to complete the task
+- Files that will be modified
+- Success criteria
+- Potential risks or blockers
+
+### Step 3: Ask Clarifying Questions
+
+Use `AskUserQuestion` to clarify:
+- Ambiguous requirements
+- Technical approach choices
+- Scope boundaries
+- Priority of sub-tasks
+
+**Ask at least 2-3 questions** even if the task seems clear. Users appreciate being consulted.
+
+### Step 4: Ask Yolo vs Review Mode
+
+**ALWAYS ask this question before starting:**
+
+```
+AskUserQuestion:
+  question: "How much autonomy should Ralph have?"
+  header: "Mode"
+  options:
+    - label: "Yolo Mode (Recommended)"
+      description: "Ralph works autonomously, only stops at completion or max iterations"
+    - label: "Review Mode"
+      description: "Ralph asks you questions at decision points throughout the task"
+```
+
+### Step 5: Confirm and Start
+
+Summarize the plan and get final confirmation before invoking the loop.
+
+---
+
+## Example Planning Flow
+
+**User says:** "Start a ralph loop to add user authentication"
+
+**Claude does:**
+
+1. **Research** (uses Task/Explore agent):
+   - Finds existing auth patterns in codebase
+   - Identifies relevant files (routes, middleware, models)
+   - Notes existing session/token handling
+
+2. **Presents plan:**
+   > Here's my plan for adding authentication:
+   > 1. Create User model with password hashing
+   > 2. Add login/register API endpoints
+   > 3. Create JWT middleware for protected routes
+   > 4. Update existing routes to use auth middleware
+
+3. **Asks clarifying questions:**
+   ```
+   AskUserQuestion:
+     questions:
+       - question: "What authentication method should we use?"
+         header: "Auth Type"
+         options:
+           - label: "JWT tokens (Recommended)"
+             description: "Stateless, good for APIs"
+           - label: "Session cookies"
+             description: "Traditional, requires session store"
+       - question: "Should we add OAuth providers (Google, GitHub)?"
+         header: "OAuth"
+         options:
+           - label: "No, just email/password"
+             description: "Simple auth only"
+           - label: "Yes, add OAuth"
+             description: "Social login support"
+   ```
+
+4. **Asks mode:**
+   ```
+   AskUserQuestion:
+     question: "How much autonomy should Ralph have?"
+     header: "Mode"
+     options:
+       - label: "Yolo Mode"
+         description: "Works autonomously until done"
+       - label: "Review Mode"
+         description: "Asks questions at decision points"
+   ```
+
+5. **Confirms and starts:**
+   > Great! Starting Ralph with:
+   > - JWT authentication
+   > - Email/password only (no OAuth)
+   > - Yolo mode, 50 max iterations
+   > - Completion promise: "AUTH_COMPLETE"
+
+---
 
 ## Prerequisites
 
@@ -31,6 +145,8 @@ Use this skill when:
 - User says "keep working until done" or "iterate until complete"
 - A complex task would benefit from multiple iterations
 - User explicitly requests Claude to invoke ralph
+
+**Remember: Always complete the Interactive Planning Phase first!**
 
 ## How to Start a Ralph Loop
 

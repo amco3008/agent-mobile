@@ -62,6 +62,15 @@ EXAMPLES:
   /ralph-loop --task-id refactor Refactor cache layer
   /ralph-loop --completion-promise 'TASK COMPLETE' Create a REST API
 
+REVIEW MODE:
+  Use --mode review to ask user questions at decision points.
+
+  To ask a question:
+    1. Write to .claude/ralph-steering-{task-id}.md with status: pending
+    2. On next iteration, use AskUserQuestion tool to wait for response
+    3. Update file with status: answered and the response
+    4. Continue with user's decision
+
 STOPPING:
   Only by reaching --max-iterations or detecting --completion-promise
   No manual stop - Ralph runs infinitely by default!
