@@ -21,7 +21,7 @@ Shows the health of all agent-mobile systems at a glance.
 When triggered, run the status script:
 
 ```bash
-$HOME/.claude/skills/system-status/scripts/status.sh
+$HOME/.claude/skills/system-health/scripts/status.sh
 ```
 
 ## What It Checks
@@ -36,7 +36,7 @@ $HOME/.claude/skills/system-status/scripts/status.sh
 
 ## IMPORTANT: Check Before Deploying
 
-**Always run `/status` before deploying any services** to avoid conflicts with other Claude sessions.
+**Always run `/health` before deploying any services** to avoid conflicts with other Claude sessions.
 
 If you see services already running in "Deployed Services", do NOT deploy again unless:
 - User explicitly asks to restart/redeploy
