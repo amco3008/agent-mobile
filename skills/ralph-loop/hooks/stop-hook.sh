@@ -86,10 +86,17 @@ MAX_ITERATIONS=$(echo "$FRONTMATTER" | grep '^max_iterations:' | sed 's/max_iter
 TASK_ID=$(echo "$FRONTMATTER" | grep '^task_id:' | sed 's/task_id: *//' | sed 's/^"\(.*\)"$/\1/')
 # Extract completion_promise and strip surrounding quotes if present
 COMPLETION_PROMISE=$(echo "$FRONTMATTER" | grep '^completion_promise:' | sed 's/completion_promise: *//' | sed 's/^"\(.*\)"$/\1/')
+# Extract mode (yolo or review)
+MODE=$(echo "$FRONTMATTER" | grep '^mode:' | sed 's/mode: *//' | sed 's/^"\(.*\)"$/\1/')
 
 # Default task_id for backwards compatibility
 if [[ -z "$TASK_ID" ]]; then
   TASK_ID="default"
+fi
+
+# Default mode for backwards compatibility
+if [[ -z "$MODE" ]]; then
+  MODE="yolo"
 fi
 
 # Validate numeric fields before arithmetic operations
@@ -220,10 +227,10 @@ TEMP_FILE="${RALPH_STATE_FILE}.tmp.$$"
 sed "s/^iteration: .*/iteration: $NEXT_ITERATION/" "$RALPH_STATE_FILE" > "$TEMP_FILE"
 mv "$TEMP_FILE" "$RALPH_STATE_FILE"
 
-# Check for pending steering questions
+# Check for pending steering questions (only in review mode)
 STEERING_FILE=".claude/ralph-steering-${TASK_ID}.md"
 STEERING_QUESTION=""
-if [[ -f "$STEERING_FILE" ]]; then
+if [[ "$MODE" == "review" ]] && [[ -f "$STEERING_FILE" ]]; then
   STEERING_STATUS=$(grep '^status:' "$STEERING_FILE" | sed 's/status: *//')
   if [[ "$STEERING_STATUS" == "pending" ]]; then
     # Extract the question and options

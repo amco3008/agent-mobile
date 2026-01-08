@@ -41,7 +41,8 @@ Run this bash command:
   "<TASK_DESCRIPTION>" \
   --task-id "<UNIQUE_ID>" \
   --max-iterations <N> \
-  --completion-promise "<PROMISE_TEXT>"
+  --completion-promise "<PROMISE_TEXT>" \
+  --mode <yolo|review>
 ```
 
 ### Parameters
@@ -52,6 +53,7 @@ Run this bash command:
 | --task-id | Recommended | "default" | Unique ID for concurrent loops |
 | --max-iterations | Recommended | unlimited | Safety limit (use 20-100) |
 | --completion-promise | Recommended | null | Text to output when truly done |
+| --mode | Optional | yolo | `yolo` = autonomous, `review` = ask questions |
 
 ### Example Invocations
 
@@ -71,6 +73,16 @@ Run this bash command:
   --task-id "api-migration" \
   --max-iterations 100 \
   --completion-promise "MIGRATION_COMPLETE"
+```
+
+**With review mode (asks questions):**
+```bash
+"$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" \
+  "Refactor auth system" \
+  --task-id "auth-refactor" \
+  --max-iterations 50 \
+  --completion-promise "AUTH_COMPLETE" \
+  --mode review
 ```
 
 ## Concurrent Loops (Multi-Ralph)

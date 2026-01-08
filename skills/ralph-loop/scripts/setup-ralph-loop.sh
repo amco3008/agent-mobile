@@ -11,6 +11,7 @@ PROMPT_PARTS=()
 MAX_ITERATIONS=0
 COMPLETION_PROMISE="null"
 TASK_ID="default"
+MODE="yolo"  # yolo = autonomous, review = ask questions at milestones
 
 # Parse options and positional arguments
 while [[ $# -gt 0 ]]; do
@@ -30,6 +31,7 @@ OPTIONS:
                                  Use different IDs to run multiple Ralphs concurrently!
   --max-iterations <n>           Maximum iterations before auto-stop (default: unlimited)
   --completion-promise '<text>'  Promise phrase (USE QUOTES for multi-word)
+  --mode <yolo|review>           yolo = autonomous (default), review = ask questions
   -h, --help                     Show this help message
 
 DESCRIPTION:
@@ -138,6 +140,21 @@ HELP_EOF
       COMPLETION_PROMISE="$2"
       shift 2
       ;;
+    --mode)
+      if [[ -z "${2:-}" ]]; then
+        echo "❌ Error: --mode requires 'yolo' or 'review'" >&2
+        exit 1
+      fi
+      if [[ "$2" != "yolo" ]] && [[ "$2" != "review" ]]; then
+        echo "❌ Error: --mode must be 'yolo' or 'review', got: $2" >&2
+        echo "" >&2
+        echo "   yolo   = autonomous, no questions (default)" >&2
+        echo "   review = ask questions at milestones" >&2
+        exit 1
+      fi
+      MODE="$2"
+      shift 2
+      ;;
     *)
       # Non-option argument - collect all as prompt parts
       PROMPT_PARTS+=("$1")
@@ -223,6 +240,7 @@ task_id: "$TASK_ID"
 iteration: 1
 max_iterations: $MAX_ITERATIONS
 completion_promise: $COMPLETION_PROMISE_YAML
+mode: "$MODE"
 session_transcript: null
 started_at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ---
@@ -238,6 +256,7 @@ Task ID: $TASK_ID
 State file: $RALPH_STATE_FILE
 Iteration: 1
 Max iterations: $(if [[ $MAX_ITERATIONS -gt 0 ]]; then echo $MAX_ITERATIONS; else echo "unlimited"; fi)
+Mode: $(if [[ "$MODE" == "review" ]]; then echo "review (will ask questions)"; else echo "yolo (autonomous)"; fi)
 Completion promise: $(if [[ "$COMPLETION_PROMISE" != "null" ]]; then echo "${COMPLETION_PROMISE//\"/} (ONLY output when TRUE - do not lie!)"; else echo "none (runs forever)"; fi)
 
 The stop hook is now active. When you try to exit, the SAME PROMPT will be
