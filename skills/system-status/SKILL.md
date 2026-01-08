@@ -32,7 +32,22 @@ $HOME/.claude/skills/system-status/scripts/status.sh
 3. **Tailscale** - Connection status and hostname
 4. **Notifications** - ntfy config and topic
 5. **Ralph Loops** - Active loops with iteration counts
-6. **Backups** - Age of credential, config, and settings backups
+6. **Deployed Services** - Running Docker containers with uptime and ports
+7. **Backups** - Age of credential, config, and settings backups
+
+## IMPORTANT: Check Before Deploying
+
+**Always run `/status` before deploying any services** to avoid conflicts with other Claude sessions.
+
+If you see services already running in "Deployed Services", do NOT deploy again unless:
+- User explicitly asks to restart/redeploy
+- You need to update to a new version
+
+Deploying when services are already running causes:
+- Duplicate containers
+- Port conflicts
+- Database corruption
+- Need for manual cleanup
 
 ## Output Format
 
@@ -49,6 +64,11 @@ Notifications:   ✓ Enabled (topic: my-claude-xyz)
 Active Ralph Loops:
   • trading (iteration 12/50)
   • zones (iteration 3/20)
+
+Deployed Services:
+  ● myria-api (up 2h, port 3001)
+  ● myria-web (up 2h, port 3000)
+  ● redis (up 2h, port 6379)
 
 Backups:
   • credentials: 5 min ago

@@ -135,7 +135,34 @@ else
     echo "Active Ralph Loops: none"
 fi
 
-# 6. Backups
+# 6. Deployed Services (Docker)
+echo ""
+if command -v docker &>/dev/null; then
+    # Get running containers with their project, name, status, and ports
+    CONTAINERS=$(docker ps --format '{{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null || true)
+
+    if [[ -n "$CONTAINERS" ]]; then
+        echo "Deployed Services:"
+        echo "$CONTAINERS" | while IFS=$'\t' read -r name status ports; do
+            # Extract uptime from status (e.g., "Up 2 hours" -> "2h")
+            uptime=$(echo "$status" | sed -E 's/Up ([0-9]+) (second|minute|hour|day).*/\1\2/' | sed 's/second/s/' | sed 's/minute/m/' | sed 's/hour/h/' | sed 's/day/d/')
+            # Extract main port if any
+            port=$(echo "$ports" | grep -oE '0\.0\.0\.0:[0-9]+' | head -1 | sed 's/0.0.0.0://' || echo "")
+
+            if [[ -n "$port" ]]; then
+                echo "  ${GREEN}●${RESET} $name (up $uptime, port $port)"
+            else
+                echo "  ${GREEN}●${RESET} $name (up $uptime)"
+            fi
+        done
+    else
+        echo "Deployed Services: none running"
+    fi
+else
+    echo "Deployed Services: ${YELLOW}!${RESET} Docker not available"
+fi
+
+# 7. Backups
 echo ""
 echo "Backups:"
 
