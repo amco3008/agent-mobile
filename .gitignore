@@ -9,6 +9,7 @@ skills/*
 !skills/ralph-invoke
 !skills/ralph-loop
 !skills/claude-sdk
+!skills/system-status
 !skills/.gitkeep
 !skills/README.md
 !skills/CLAUDE.local.md
