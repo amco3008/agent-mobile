@@ -10,7 +10,10 @@ set -euo pipefail
 HOOK_INPUT=$(cat)
 
 # Get transcript path from hook input - this is our session identifier
-TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path')
+TRANSCRIPT_PATH=$(echo "$HOOK_INPUT" | jq -r '.transcript_path' 2>/dev/null) || {
+  echo "⚠️  Ralph stop hook: Failed to parse hook input" >&2
+  exit 0
+}
 
 if [[ -z "$TRANSCRIPT_PATH" ]] || [[ "$TRANSCRIPT_PATH" == "null" ]]; then
   # No transcript - can't identify session, allow exit
@@ -48,28 +51,18 @@ for STATE_FILE in $RALPH_STATE_FILES; do
   fi
 done
 
-# If no claimed loop, check unclaimed loops
+# If no claimed loop, delete any unclaimed ones - they're stale from dead sessions
 if [[ -z "$MY_LOOP" ]]; then
-  if [[ ${#UNCLAIMED_LOOPS[@]} -eq 1 ]]; then
-    # Exactly one unclaimed loop - safe to claim it
-    MY_LOOP="${UNCLAIMED_LOOPS[0]}"
-    # Claim by writing transcript path
-    TEMP_FILE="${MY_LOOP}.tmp.$$"
-    sed "s|^session_transcript: .*|session_transcript: \"$TRANSCRIPT_PATH\"|" "$MY_LOOP" > "$TEMP_FILE"
-    mv "$TEMP_FILE" "$MY_LOOP"
-  elif [[ ${#UNCLAIMED_LOOPS[@]} -gt 1 ]]; then
-    # Multiple unclaimed loops - don't auto-claim, could grab wrong one
-    echo "⚠️  Multiple unclaimed Ralph loops found. Cannot auto-bind session." >&2
-    echo "   Unclaimed loops:" >&2
+  if [[ ${#UNCLAIMED_LOOPS[@]} -gt 0 ]]; then
+    echo "⚠️  Found ${#UNCLAIMED_LOOPS[@]} stale Ralph loop(s) - cleaning up:" >&2
     for loop in "${UNCLAIMED_LOOPS[@]}"; do
       task_id=$(grep '^task_id:' "$loop" 2>/dev/null | sed 's/task_id: *//' | sed 's/^"\(.*\)"$/\1/' || echo "unknown")
-      echo "     - $task_id ($loop)" >&2
+      echo "   Removing stale loop: $task_id ($loop)" >&2
+      rm -f "$loop"
     done
-    echo "" >&2
-    echo "   Each Claude session should run setup-ralph-loop.sh to bind to a specific loop." >&2
-    echo "   Allowing exit for now." >&2
-    exit 0
   fi
+  # No active loop for this session - allow exit
+  exit 0
 fi
 
 if [[ -z "$MY_LOOP" ]]; then
