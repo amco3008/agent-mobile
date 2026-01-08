@@ -37,8 +37,8 @@ for STATE_FILE in $RALPH_STATE_FILES; do
     continue
   fi
 
-  # Parse frontmatter
-  FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE")
+  # Parse frontmatter (file may disappear due to concurrent hooks, so handle gracefully)
+  FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$STATE_FILE" 2>/dev/null) || continue
   SESSION=$(echo "$FRONTMATTER" | grep '^session_transcript:' | sed 's/session_transcript: *//' | sed 's/^"\(.*\)"$/\1/')
 
   if [[ "$SESSION" == "$TRANSCRIPT_PATH" ]]; then
