@@ -7,6 +7,7 @@ certs/
 skills/*
 !skills/_skill-manager
 !skills/ralph-invoke
+!skills/ralph-loop
 !skills/claude-sdk
 !skills/.gitkeep
 !skills/README.md

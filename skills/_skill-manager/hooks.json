@@ -47,6 +47,15 @@
       "hooks": [
         {
           "type": "command",
+          "command": "/home/agent/.claude/skills/ralph-loop/hooks/stop-hook.sh",
+          "timeout": 30
+        }
+      ]
+    },
+    {
+      "hooks": [
+        {
+          "type": "command",
           "command": "python3 /home/agent/.claude/skills/_skill-manager/scripts/hooks/push_notify.py stop",
           "timeout": 5
         }
