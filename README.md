@@ -254,7 +254,7 @@ Tailscale:       ✓ Connected (agent-mobile.tail1234.ts.net)
 Notifications:   ✓ Enabled (topic: my-topic)
 
 Active Ralph Loops:
-  • task-abc123 (iteration 5/50)
+  • task-abc123 @ myproject (iteration 5/50)
 
 Deployed Services:
   ● app-api (up 2h, port 3001)
