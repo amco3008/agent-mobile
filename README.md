@@ -239,9 +239,9 @@ Ralph loops enable autonomous iteration - Claude keeps working until done withou
 > [!WARNING]
 > Autonomous loops consume tokens rapidly. Always use `--max-iterations` as a safety net.
 
-### System Status (`/status`)
+### System Health (`/health`)
 
-Quick health check for all agent-mobile systems. Run `/status` or say "show status" to see:
+Quick health check for all agent-mobile systems. Run `/health` or say "system health" to see:
 
 ```
 ╭─────────────────────────────────────────────────────────╮
@@ -267,7 +267,7 @@ Backups:
 ```
 
 > [!TIP]
-> **Always check `/status` before deploying services** to avoid conflicts when multiple Claude sessions are running. The "Deployed Services" section shows what's already running.
+> **Always check `/health` before deploying services** to avoid conflicts when multiple Claude sessions are running. The "Deployed Services" section shows what's already running.
 
 ### Claude SDK (Sub-Agents)
 

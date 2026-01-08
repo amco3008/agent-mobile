@@ -1,21 +1,20 @@
 ---
-name: system-status
-description: Show agent-mobile system health when user asks "status", "show status", "system health", "check status", or runs /status
+name: system-health
+description: Show agent-mobile system health when user asks "health", "system health", "check health", or runs /health
 allowed-tools:
   - Bash
 ---
 
-# System Status Skill
+# System Health Skill
 
 Shows the health of all agent-mobile systems at a glance.
 
 ## Trigger Phrases
 
-- "status" or "/status"
-- "show status"
+- "health" or "/health"
 - "system health"
-- "check status"
-- "what's the system status"
+- "check health"
+- "agent health"
 
 ## Usage
 
