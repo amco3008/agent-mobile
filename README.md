@@ -6,6 +6,8 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 
 - **Claude Code CLI** - Full Claude Code access from mobile
 - **Gemini CLI** - Google's Gemini CLI with OAuth
+- **Claude SDK** - Anthropic Python SDK for sub-agents and API access
+- **Ralph Wiggum Plugin** - Autonomous loop iterations (auto-installed)
 - **GitHub CLI (gh)** - Create PRs, manage issues, etc.
 - **ripgrep (rg)** - Fast text search, auto-allowed for Claude
 - **Passwordless sudo** - Agent can install missing packages without prompts
@@ -101,6 +103,7 @@ Select [1]:
 |----------|-------------|
 | `TAILSCALE_AUTHKEY` | Recommended - Tailscale authkey for automated Tailscale auth https://login.tailscale.com/admin/settings/keys |
 | `GITHUB_TOKEN` | Optional - GitHub PAT for git and gh CLI (needs `repo`, `read:org`, `workflow` scopes). Also enables auto-backup of skills folder to GitHub. |
+| `ANTHROPIC_API_KEY` | Optional - Anthropic API key for Claude SDK (sub-agents, programmatic access) |
 | `GIT_EMAIL` | Optional - Git commit email (use GitHub email for Vercel) |
 | `GIT_NAME` | Optional - Git commit author name |
 | `HTTP_PROXY` | Optional - Corporate proxy URL (e.g., `http://proxy:8080`) |
@@ -194,6 +197,50 @@ Then use:
 ```
 > Manage the implementation of X using Gemini
 ```
+
+### Ralph Wiggum Loops
+
+The **ralph-wiggum** plugin enables autonomous iteration - Claude keeps working until done without manual re-prompting.
+
+```bash
+# Check plugin is installed
+claude /plugin list
+
+# Start a loop (Claude can do this itself via the ralph-invoke skill)
+"$HOME/.claude/plugins/cache/claude-code-plugins/ralph-wiggum/1.0.0/scripts/setup-ralph-loop.sh" \
+  "Fix all TypeScript errors" \
+  --max-iterations 50 \
+  --completion-promise "ALL_ERRORS_FIXED"
+```
+
+Trigger phrases that activate the loop skill:
+- "start a ralph loop" or "run ralph"
+- "keep working until done"
+- "iterate until complete"
+
+> [!WARNING]
+> Autonomous loops consume tokens rapidly. Always use `--max-iterations` as a safety net.
+
+### Claude SDK (Sub-Agents)
+
+The Anthropic Python SDK is pre-installed for programmatic API access:
+
+```python
+from anthropic import Anthropic
+
+client = Anthropic()  # Uses ANTHROPIC_API_KEY env var
+
+# Spawn a sub-agent for a focused task
+response = client.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=4096,
+    system="You are a focused sub-agent.",
+    messages=[{"role": "user", "content": "Review this code for bugs"}]
+)
+print(response.content[0].text)
+```
+
+See `skills/claude-sdk/SKILL.md` for parallel processing and advanced patterns.
 
 ## Skill System (Auto-Learning) [BETA]
 

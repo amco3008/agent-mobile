@@ -6,6 +6,8 @@ certs/
 # Skills folder - keep structure, ignore cloned repos
 skills/*
 !skills/_skill-manager
+!skills/ralph-invoke
+!skills/claude-sdk
 !skills/.gitkeep
 !skills/README.md
 !skills/CLAUDE.local.md

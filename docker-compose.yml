@@ -50,6 +50,7 @@ services:
 
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY:-}
       - GIT_EMAIL=${GIT_EMAIL:-}
       - GIT_NAME=${GIT_NAME:-}
