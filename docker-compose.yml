@@ -21,10 +21,13 @@ services:
           memory: ${AGENT_RESERVATION_MEMORY:-512M}
 
     volumes:
+      # Persist entire home directory (catch-all for any work outside ~/projects)
+      - agent-home:/home/agent
+
       # Persist Tailscale state (so you don't re-auth every restart)
       - tailscale-state:/var/lib/tailscale
 
-      # Persist Claude config and auth
+      # Persist Claude config and auth (overrides agent-home for this path)
       - claude-config:/home/agent/.claude
 
       # Skills folder (optional - add skills here)
@@ -92,3 +95,4 @@ volumes:
   claude-config:
   config:
   ssh-keys:
+  agent-home:  # Persist entire home directory
