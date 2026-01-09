@@ -73,7 +73,11 @@ fi
 RALPH_STATE_FILE="$MY_LOOP"
 
 # Parse markdown frontmatter (YAML between ---) and extract values
-FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$RALPH_STATE_FILE")
+# Add error suppression in case file was deleted by concurrent hook
+FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$RALPH_STATE_FILE" 2>/dev/null) || {
+  # File disappeared - allow exit
+  exit 0
+}
 ITERATION=$(echo "$FRONTMATTER" | grep '^iteration:' | sed 's/iteration: *//')
 MAX_ITERATIONS=$(echo "$FRONTMATTER" | grep '^max_iterations:' | sed 's/max_iterations: *//')
 TASK_ID=$(echo "$FRONTMATTER" | grep '^task_id:' | sed 's/task_id: *//' | sed 's/^"\(.*\)"$/\1/')
@@ -198,7 +202,10 @@ NEXT_ITERATION=$((ITERATION + 1))
 # Extract prompt (everything after the closing ---)
 # Skip first --- line, skip until second --- line, then print everything after
 # Use i>=2 instead of i==2 to handle --- in prompt content
-PROMPT_TEXT=$(awk '/^---$/{i++; next} i>=2' "$RALPH_STATE_FILE")
+PROMPT_TEXT=$(awk '/^---$/{i++; next} i>=2' "$RALPH_STATE_FILE" 2>/dev/null) || {
+  # File disappeared - allow exit
+  exit 0
+}
 
 if [[ -z "$PROMPT_TEXT" ]]; then
   echo "⚠️  Ralph loop [$TASK_ID]: State file corrupted or incomplete" >&2
@@ -217,7 +224,11 @@ fi
 # Update iteration in frontmatter (portable across macOS and Linux)
 # Create temp file, then atomically replace
 TEMP_FILE="${RALPH_STATE_FILE}.tmp.$$"
-sed "s/^iteration: .*/iteration: $NEXT_ITERATION/" "$RALPH_STATE_FILE" > "$TEMP_FILE"
+if ! sed "s/^iteration: .*/iteration: $NEXT_ITERATION/" "$RALPH_STATE_FILE" > "$TEMP_FILE" 2>/dev/null; then
+  # File disappeared - allow exit
+  rm -f "$TEMP_FILE"
+  exit 0
+fi
 mv "$TEMP_FILE" "$RALPH_STATE_FILE"
 
 # Check for pending steering questions (only in review mode)
