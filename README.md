@@ -4,7 +4,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 
 ## Features
 
-- **Claude Code CLI** - Full Claude Code access from mobile
+- **Claude Code CLI** - Full Claude Code access from mobile (runs in autonomous mode by default)
 - **Gemini CLI** - Google's Gemini CLI with OAuth
 - **Claude SDK** - Anthropic Python SDK for sub-agents and API access
 - **Ralph Wiggum Plugin** - Autonomous loop iterations (auto-installed)
@@ -155,11 +155,17 @@ When Claude Code runs inside this container, it has access to:
 - Manage containers: `docker ps`, `docker stop`, `docker rm`, `docker logs`
 - Useful for spinning up Redis, PostgreSQL, or other dev services
 
-### Workspace Trust
-- `/home/agent` and `/home/agent/projects` are pre-trusted (no trust dialog)
-- Custom folders you trust are **persisted** across container restarts
-- Safe commands (git, ls, cat, etc.) run without prompts
-- Dangerous commands (rm, chmod, etc.) still require approval
+### Autonomous Mode
+
+Claude runs with `--dangerously-skip-permissions` by default via bash alias. This means:
+- **No permission prompts** - All tools run without asking
+- **Fully autonomous** - Ideal for Ralph loops and unattended operation
+- **Pre-trusted workspaces** - `/home/agent` and `/home/agent/projects`
+
+To run Claude normally (with permission prompts):
+```bash
+command claude    # Bypasses the alias
+```
 
 ### Custom Directives (CLAUDE.local.md)
 
