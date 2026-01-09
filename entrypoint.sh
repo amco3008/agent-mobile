@@ -595,6 +595,13 @@ if ! grep -q "tmux-picker" /home/agent/.bashrc 2>/dev/null; then
     echo "source ~/.tmux-picker.sh" >> /home/agent/.bashrc
 fi
 
+# Add claude alias to skip permissions by default (autonomous agent mode)
+if ! grep -q "alias claude=" /home/agent/.bashrc 2>/dev/null; then
+    echo "" >> /home/agent/.bashrc
+    echo "# Run Claude in autonomous mode (skip permission prompts)" >> /home/agent/.bashrc
+    echo "alias claude='claude --dangerously-skip-permissions'" >> /home/agent/.bashrc
+fi
+
 # Setup skill system hooks (merge into Claude settings without replacing existing config)
 setup_skill_hooks() {
     local CLAUDE_DIR="/home/agent/.claude"
