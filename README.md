@@ -7,7 +7,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Claude Code CLI** - Full Claude Code access from mobile (runs in autonomous mode by default)
 - **Gemini CLI** - Google's Gemini CLI with OAuth
 - **Claude SDK** - Anthropic Python SDK for sub-agents and API access
-- **Ralph Wiggum Plugin** - Autonomous loop iterations (auto-installed)
+- **Ralph Loops** - Custom fork with multi-ralph support (no plugin required)
 - **GitHub CLI (gh)** - Create PRs, manage issues, etc.
 - **ripgrep (rg)** - Fast text search, auto-allowed for Claude
 - **Passwordless sudo** - Agent can install missing packages without prompts
@@ -206,7 +206,10 @@ Then use:
 
 ### Ralph Loops (Autonomous Iteration)
 
-Ralph loops enable autonomous iteration - Claude keeps working until done without manual re-prompting. The ralph-loop skill is pre-installed in `skills/ralph-loop/`.
+Ralph loops enable autonomous iteration - Claude keeps working until done without manual re-prompting.
+
+> [!NOTE]
+> This is a **custom fork** of `ralph-loop@claude-plugins-official`, stored in `skills/ralph-loop/`. It's fully self-contained and does **not** require the official plugin. The fork adds multi-ralph support, better error handling, and persists with your skills folder.
 
 **Trigger phrases:**
 - "start a ralph loop" or "run ralph"
