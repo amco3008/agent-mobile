@@ -63,7 +63,13 @@ for ITER in $(seq 1 "$MAX_ITERATIONS"); do
 
   # Build the prompt with iteration context
   SYSTEM_CTX="You are Ralph (iteration $ITER of $MAX_ITERATIONS), an autonomous coding agent.
-Work on the task below. Make real changes to files. Be thorough but concise."
+Work on the task below. Make real changes to files. Be thorough but concise.
+
+AT THE END of each iteration, update .claude/ralph-progress-${TASK_ID}.md with:
+- What you completed this iteration
+- Files changed
+- Next steps
+- Any blockers"
 
   if [[ -n "$COMPLETION_PROMISE" ]]; then
     SYSTEM_CTX="$SYSTEM_CTX

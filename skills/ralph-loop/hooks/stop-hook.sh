@@ -250,9 +250,21 @@ fi
 
 # Build system message with iteration count and completion promise info
 if [[ "$COMPLETION_PROMISE" != "null" ]] && [[ -n "$COMPLETION_PROMISE" ]]; then
-  SYSTEM_MSG="🔄 Ralph [$TASK_ID] iteration $NEXT_ITERATION | To stop: output <promise>$COMPLETION_PROMISE</promise> (ONLY when statement is TRUE - do not lie to exit!)"
+  SYSTEM_MSG="🔄 Ralph [$TASK_ID] iteration $NEXT_ITERATION | To stop: output <promise>$COMPLETION_PROMISE</promise> (ONLY when statement is TRUE - do not lie to exit!)
+
+AT THE END of this iteration, update .claude/ralph-progress-${TASK_ID}.md with:
+- What you completed this iteration
+- Files changed
+- Next steps
+- Any blockers"
 else
-  SYSTEM_MSG="🔄 Ralph [$TASK_ID] iteration $NEXT_ITERATION | No completion promise set - loop runs infinitely"
+  SYSTEM_MSG="🔄 Ralph [$TASK_ID] iteration $NEXT_ITERATION | No completion promise set - loop runs infinitely
+
+AT THE END of this iteration, update .claude/ralph-progress-${TASK_ID}.md with:
+- What you completed this iteration
+- Files changed
+- Next steps
+- Any blockers"
 fi
 
 # Append steering question to system message if pending

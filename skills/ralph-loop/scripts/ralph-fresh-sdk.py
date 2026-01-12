@@ -20,13 +20,20 @@ def parse_args():
     parser.add_argument('--model', default='claude-sonnet-4-20250514', help='Model to use')
     return parser.parse_args()
 
-def call_claude(client, prompt: str, iteration: int, promise: str, model: str) -> str:
+def call_claude(client, prompt: str, iteration: int, promise: str, model: str, task_id: str) -> str:
     """Make a single Claude API call with fresh context."""
 
     system_prompt = f"""You are Ralph (iteration {iteration}), an autonomous coding agent.
 You have access to the filesystem and can create/edit files directly.
 Work on the task systematically. Make real changes to files.
 Be concise but thorough.
+
+AT THE END of this iteration, update .claude/ralph-progress-{task_id}.md with:
+- What you completed this iteration
+- Files changed
+- Next steps
+- Any blockers
+
 {"Output <promise>" + promise + "</promise> ONLY when ALL work is genuinely complete." if promise else ""}
 
 IMPORTANT: You are running via API, not CLI. To modify files, output the file content in this format:
@@ -101,7 +108,8 @@ def main():
             args.prompt,
             iteration,
             args.completion_promise,
-            args.model
+            args.model,
+            args.task_id
         )
 
         # Print output (truncated)

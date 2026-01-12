@@ -96,9 +96,18 @@ while true; do
 
   # Construct the message for Claude
   # We include the iteration count and promise info in the prompt
-  SYSTEM_CTX="You are Ralph (iteration $ITER). Work on the task below."
+  SYSTEM_CTX="You are Ralph (iteration $ITER). Work on the task below.
+
+AT THE END of each iteration, update .claude/ralph-progress-${TASK_ID}.md with:
+- What you completed this iteration
+- Files changed
+- Next steps
+- Any blockers"
+
   if [[ -n "$COMPLETION_PROMISE" ]]; then
-    SYSTEM_CTX="$SYSTEM_CTX Output <promise>$COMPLETION_PROMISE</promise> ONLY when work is complete."
+    SYSTEM_CTX="$SYSTEM_CTX
+
+Output <promise>$COMPLETION_PROMISE</promise> ONLY when work is complete."
   fi
 
   # Run Claude with the prompt in non-interactive print mode
