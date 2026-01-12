@@ -6,6 +6,12 @@
 
 set -euo pipefail
 
+# Skip hook entirely for fresh context loops
+# Fresh loops spawn new Claude instances and need clean exits
+if [[ "${RALPH_FRESH_MODE:-}" == "1" ]]; then
+  exit 0
+fi
+
 # Read hook input from stdin (advanced stop hook API)
 HOOK_INPUT=$(cat)
 

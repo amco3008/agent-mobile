@@ -179,7 +179,9 @@ Use this skill when:
 
 ## How to Start a Ralph Loop
 
-### Option A: Persistent Context (In-Session)
+### Option A: Persistent Context (In-Session) - RECOMMENDED FOR MOST TASKS
+
+Use this when you want quick iteration in the current session:
 
 ```bash
 "$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" \
@@ -190,16 +192,49 @@ Use this skill when:
   --mode <yolo|review>
 ```
 
-### Option B: Fresh Context (New Session per iteration)
+### Option B: Fresh Context via `ralph` Command - FOR LONG/COMPLEX TASKS
+
+**IMPORTANT**: Fresh context loops cannot be started from within a Claude session (Claude blocks concurrent instances). Instead, Claude prepares a spec file and the USER runs the `ralph` command in a separate terminal.
+
+**Step 1: Claude creates the spec file**
 
 ```bash
-"$HOME/.claude/skills/ralph-loop/scripts/setup-fresh-loop.sh" \
-  "<TASK_DESCRIPTION>" \
-  --task-id "<UNIQUE_ID>" \
-  --max-iterations <N> \
-  --completion-promise "<PROMISE_TEXT>" \
-  --mode <yolo|review>
+mkdir -p .claude
+cat > .claude/ralph-spec-<TASK_ID>.md << 'EOF'
+---
+max_iterations: 50
+completion_promise: "TASK_COMPLETE"
+mode: yolo
+---
+
+<FULL TASK DESCRIPTION HERE>
+
+Include:
+- What needs to be done
+- Success criteria
+- File paths involved
+- Any constraints
+EOF
 ```
+
+**Step 2: Claude tells user to run the command**
+
+Output this message to the user:
+```
+📋 Ralph spec prepared! To start the fresh context loop, run this in a NEW terminal:
+
+    cd /path/to/project && ralph <TASK_ID>
+
+This will start an interactive Claude session that loops until completion.
+```
+
+**Step 3: User runs `ralph <task-id>` in external terminal**
+
+The `ralph` command:
+1. Reads the spec file (.claude/ralph-spec-{task-id}.md)
+2. Creates a logs directory (.claude/ralph-logs-{task-id}/)
+3. Runs Claude in print mode (`claude -p`) for each iteration
+4. Checks for completion promise in output between iterations
 
 ### Parameters
 
@@ -280,33 +315,57 @@ rm .claude/ralph-loop-{task-id}.local.md
 
 ## Fresh Context Loops (Out-of-Session)
 
-For tasks where you want to **clear context** between iterations (no history), use the `ralph-fresh` utility. This starts a completely new Claude session for every iteration.
+For tasks where you want **truly fresh context** (new Claude session per iteration), use the `ralph` command. This MUST be run from an external terminal, not from within Claude.
 
 ### When to use Fresh Context:
 - Avoiding history-based hallucinations
 - Large tasks where context window fills up
 - Resetting the "mental state" of the agent at each step
+- Long-running tasks (>20 iterations)
 
-### Trigger Fresh Loop:
+### How to Set Up (Claude prepares, User executes):
+
+**Claude creates the spec:**
 ```bash
-"$HOME/.claude/skills/ralph-loop/scripts/setup-fresh-loop.sh" \
-  "<TASK_DESCRIPTION>" \
-  --task-id "<UNIQUE_ID>" \
-  --max-iterations <N> \
-  --completion-promise "<PROMISE_TEXT>"
+cat > .claude/ralph-spec-myfeature.md << 'EOF'
+---
+max_iterations: 50
+completion_promise: "FEATURE_COMPLETE"
+mode: yolo
+---
+
+Implement the new feature...
+(full task description)
+EOF
 ```
+
+**Claude tells user:**
+```
+To start the fresh loop, run in a NEW terminal:
+    cd ~/projects/myproject && ralph myfeature
+```
+
+**User runs externally** - this spawns fresh Claude sessions in a loop, checking for completion between iterations.
 
 ---
 
-## How the Loop Works
+## How the Loops Work
+
+### Persistent Context (`/ralph-loop`)
 
 1. **Claude runs the setup script** → Creates state file at `.claude/ralph-loop-{task-id}.local.md`
 2. **Claude works on the task** → Normal operation
 3. **Claude tries to exit** → Stop hook intercepts
 4. **Hook re-injects prompt** → Claude continues with same task
-5. **Repeat** until:
-   - Max iterations reached, OR
-   - Claude outputs `<promise>PROMISE_TEXT</promise>`
+5. **Repeat** until max iterations or completion promise
+
+### Fresh Context (`ralph` command)
+
+1. **User runs `ralph <task-id>`** → Reads spec file
+2. **Script spawns `claude -p`** → Fresh Claude session for iteration
+3. **Claude outputs response** → Script captures and logs it
+4. **Script checks for promise** → If found, loop ends
+5. **Repeat** until max iterations or completion promise
 
 ## Completing the Loop
 

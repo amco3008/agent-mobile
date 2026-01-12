@@ -602,6 +602,14 @@ if ! grep -q "alias claude=" /home/agent/.bashrc 2>/dev/null; then
     echo "alias claude='claude --dangerously-skip-permissions'" >> /home/agent/.bashrc
 fi
 
+# Add ralph command to PATH (fresh context loops)
+RALPH_SCRIPT="/home/agent/.claude/skills/ralph-loop/scripts/ralph"
+if [ -f "$RALPH_SCRIPT" ] && [ ! -L /usr/local/bin/ralph ]; then
+    ln -sf "$RALPH_SCRIPT" /usr/local/bin/ralph
+    chmod +x "$RALPH_SCRIPT"
+    echo "Ralph command installed: ralph <task-id>"
+fi
+
 # Setup skill system hooks (merge into Claude settings without replacing existing config)
 setup_skill_hooks() {
     local CLAUDE_DIR="/home/agent/.claude"

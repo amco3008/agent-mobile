@@ -101,9 +101,16 @@ while true; do
     SYSTEM_CTX="$SYSTEM_CTX Output <promise>$COMPLETION_PROMISE</promise> ONLY when work is complete."
   fi
 
-  # Run Claude with the prompt and dangerously-skip-permissions
-  # Use --dangerously-skip-permissions to ensure autonomy in the shell loop
-  echo -e "$SYSTEM_CTX\n\nTASK:\n$PROMPT" | claude --dangerously-skip-permissions > /tmp/ralph-fresh-last-output 2>&1 || {
+  # Run Claude with the prompt in non-interactive print mode
+  # Use -p (print mode) for non-interactive execution
+  # Use --dangerously-skip-permissions to ensure autonomy
+  # Export RALPH_FRESH_MODE=1 so the stop hook allows clean exit (new Claude per iteration)
+  export RALPH_FRESH_MODE=1
+  FULL_PROMPT="$SYSTEM_CTX
+
+TASK:
+$PROMPT"
+  claude -p --dangerously-skip-permissions "$FULL_PROMPT" > /tmp/ralph-fresh-last-output 2>&1 || {
     echo "⚠️ Claude session exited with error. Retrying next iteration..."
   }
 

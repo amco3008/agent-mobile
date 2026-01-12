@@ -242,6 +242,12 @@ Ralph loops enable autonomous iteration - Claude keeps working until done withou
 
 **Multi-Ralph:** Run multiple loops in parallel with different `--task-id` values. Each loop has its own state file at `.claude/ralph-loop-{task-id}.local.md`.
 
+**External Fresh Loops:** For fresh context loops run outside of Claude (e.g., Claude prepares the task, user executes), use the `ralph` command:
+```bash
+# Claude creates spec at .claude/ralph-spec-myfeature.md
+ralph myfeature    # Run in separate terminal
+```
+
 **Interactive Planning:** The `ralph-invoke` skill requires Claude to research and plan before starting. It will explicitly ask if you want **Persistent** vs **Fresh** context to prevent history confusion on long tasks.
 
 > [!WARNING]
