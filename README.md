@@ -222,21 +222,14 @@ Ralph loops enable autonomous iteration - Claude keeps working until done withou
 - "keep working until done"
 - "iterate until complete"
 
-**Example usage:**
+**Standard Loops (Persistent Context):**
 ```bash
-# Basic loop
-"$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" \
-  "Fix all TypeScript errors" \
-  --task-id "type-fixes" \
-  --max-iterations 50 \
-  --completion-promise "ALL_ERRORS_FIXED"
+/ralph-loop "Fix all TypeScript errors" --task-id "type-fixes" --max-iterations 50 --completion-promise "ALL_ERRORS_FIXED"
+```
 
-# With review mode (asks questions at decision points)
-"$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" \
-  "Build user authentication" \
-  --task-id "auth" \
-  --max-iterations 50 \
-  --mode review
+**Fresh Context Loops (New Session per iteration):**
+```bash
+/ralph-fresh "Research and write documentation" --task-id "docs" --max-iterations 20
 ```
 
 **Parameters:**
@@ -249,9 +242,7 @@ Ralph loops enable autonomous iteration - Claude keeps working until done withou
 
 **Multi-Ralph:** Run multiple loops in parallel with different `--task-id` values. Each loop has its own state file at `.claude/ralph-loop-{task-id}.local.md`.
 
-**Fresh Context Loops:** Use `/ralph-fresh` (or the `setup-fresh-loop.sh` script) to run loops that clear session history between every iteration. Ideal for preventing hallucination loops.
-
-**Interactive Planning:** The `ralph-invoke` skill requires Claude to research, plan, and ask clarifying questions before starting a loop.
+**Interactive Planning:** The `ralph-invoke` skill requires Claude to research and plan before starting. It will explicitly ask if you want **Persistent** vs **Fresh** context to prevent history confusion on long tasks.
 
 > [!WARNING]
 > Autonomous loops consume tokens rapidly. Always use `--max-iterations` as a safety net.
