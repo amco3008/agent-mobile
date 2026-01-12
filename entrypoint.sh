@@ -412,16 +412,16 @@ init_skills_git() {
 
     cd "$SKILLS_DIR" || return 1
 
-    # Set git identity for commits (use env vars or defaults)
-    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
-    git config user.name "${GIT_NAME:-Agent Mobile}"
-
     # Initialize git if needed
     if [ ! -d ".git" ]; then
         echo "[skills-git] Initializing git repository..."
         git init
         git branch -M master
     fi
+
+    # Set git identity for commits (use env vars or defaults)
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
 
     # Set/update remote origin
     if git remote get-url origin &>/dev/null; then
