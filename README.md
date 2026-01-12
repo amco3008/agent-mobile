@@ -208,8 +208,14 @@ Then use:
 
 Ralph loops enable autonomous iteration - Claude keeps working until done without manual re-prompting.
 
+> [!IMPORTANT]
+> **Uninstall Official Plugin**: If you have the official `ralph-loop@claude-plugins-official` installed, you **MUST** uninstall it to avoid conflicts with this custom fork:
+> ```bash
+> /plugin uninstall ralph-loop@claude-plugins-official
+> ```
+
 > [!NOTE]
-> This is a **custom fork** of `ralph-loop@claude-plugins-official`, stored in `skills/ralph-loop/`. It's fully self-contained and does **not** require the official plugin. The fork adds multi-ralph support, better error handling, and persists with your skills folder.
+> This is a **custom fork** of `ralph-loop@claude-plugins-official`, stored in `skills/ralph-loop/`. It's fully self-contained and does **not** require the official plugin. The fork adds multi-ralph support, fresh-context loops (`/ralph-fresh`), better error handling, and persists with your skills folder.
 
 **Trigger phrases:**
 - "start a ralph loop" or "run ralph"
@@ -242,6 +248,8 @@ Ralph loops enable autonomous iteration - Claude keeps working until done withou
 | `--mode` | `yolo` (autonomous, default) or `review` (asks questions) |
 
 **Multi-Ralph:** Run multiple loops in parallel with different `--task-id` values. Each loop has its own state file at `.claude/ralph-loop-{task-id}.local.md`.
+
+**Fresh Context Loops:** Use `/ralph-fresh` (or the `setup-fresh-loop.sh` script) to run loops that clear session history between every iteration. Ideal for preventing hallucination loops.
 
 **Interactive Planning:** The `ralph-invoke` skill requires Claude to research, plan, and ask clarifying questions before starting a loop.
 

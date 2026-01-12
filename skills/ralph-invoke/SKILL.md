@@ -61,7 +61,22 @@ AskUserQuestion:
       description: "Ralph asks you questions at decision points throughout the task"
 ```
 
-### Step 5: Confirm and Start
+### Step 5: Ask Context Type (Fresh vs Persistent)
+
+**ALWAYS ask this to prevent context pollution in long tasks:**
+
+```
+AskUserQuestion:
+  question: "Should each iteration start with a fresh context?"
+  header: "Context Type"
+  options:
+    - label: "Persistent Context (Standard)"
+      description: "Fastest, keeps history in one session. Good for small/medium tasks."
+    - label: "Fresh Context (Recommended for long tasks)"
+      description: "Starts a NEW session per iteration. Prevents history-based confusion."
+```
+
+### Step 6: Confirm and Start
 
 Summarize the plan and get final confirmation before invoking the loop.
 
@@ -117,11 +132,24 @@ Summarize the plan and get final confirmation before invoking the loop.
          description: "Asks questions at decision points"
    ```
 
-5. **Confirms and starts:**
+5. **Asks context type:**
+   ```
+   AskUserQuestion:
+     question: "Should each iteration start with a fresh context?"
+     header: "Context Type"
+     options:
+       - label: "Persistent Context"
+         description: "Keeps history in one session"
+       - label: "Fresh Context"
+         description: "New session per iteration"
+   ```
+
+6. **Confirms and starts:**
    > Great! Starting Ralph with:
    > - JWT authentication
    > - Email/password only (no OAuth)
    > - Yolo mode, 50 max iterations
+   > - Fresh context (New session per iteration)
    > - Completion promise: "AUTH_COMPLETE"
 
 ---
@@ -132,7 +160,8 @@ The Ralph loop scripts are included in the `skills/ralph-loop/` folder (forked f
 
 ### Verify scripts are available:
 ```bash
-ls "$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" 2>/dev/null && echo "READY" || echo "NOT_FOUND"
+ls "$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" 2>/dev/null && echo "PERSISTENT_READY"
+ls "$HOME/.claude/skills/ralph-loop/scripts/setup-fresh-loop.sh" 2>/dev/null && echo "FRESH_READY"
 ```
 
 If NOT_FOUND, the skills folder may not be properly mounted.
@@ -150,10 +179,21 @@ Use this skill when:
 
 ## How to Start a Ralph Loop
 
-Run this bash command:
+### Option A: Persistent Context (In-Session)
 
 ```bash
 "$HOME/.claude/skills/ralph-loop/scripts/setup-ralph-loop.sh" \
+  "<TASK_DESCRIPTION>" \
+  --task-id "<UNIQUE_ID>" \
+  --max-iterations <N> \
+  --completion-promise "<PROMISE_TEXT>" \
+  --mode <yolo|review>
+```
+
+### Option B: Fresh Context (New Session per iteration)
+
+```bash
+"$HOME/.claude/skills/ralph-loop/scripts/setup-fresh-loop.sh" \
   "<TASK_DESCRIPTION>" \
   --task-id "<UNIQUE_ID>" \
   --max-iterations <N> \
@@ -237,6 +277,26 @@ head -15 .claude/ralph-loop-{task-id}.local.md
 ```bash
 rm .claude/ralph-loop-{task-id}.local.md
 ```
+
+## Fresh Context Loops (Out-of-Session)
+
+For tasks where you want to **clear context** between iterations (no history), use the `ralph-fresh` utility. This starts a completely new Claude session for every iteration.
+
+### When to use Fresh Context:
+- Avoiding history-based hallucinations
+- Large tasks where context window fills up
+- Resetting the "mental state" of the agent at each step
+
+### Trigger Fresh Loop:
+```bash
+"$HOME/.claude/skills/ralph-loop/scripts/setup-fresh-loop.sh" \
+  "<TASK_DESCRIPTION>" \
+  --task-id "<UNIQUE_ID>" \
+  --max-iterations <N> \
+  --completion-promise "<PROMISE_TEXT>"
+```
+
+---
 
 ## How the Loop Works
 

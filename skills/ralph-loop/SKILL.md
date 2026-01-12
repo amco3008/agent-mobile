@@ -28,6 +28,7 @@ This fork ensures multi-ralph changes persist across container rebuilds.
 - **Completion Promises**: Exit loops by outputting `<promise>TEXT</promise>`
 - **Progress Tracking**: State files at `.claude/ralph-loop-{task-id}.local.md`
 - **Review Mode**: Ask user questions at decision points with `--mode review`
+- **Fresh Context**: Clear history between iterations using `/ralph-fresh` or `setup-fresh-loop.sh`
 
 ## Usage
 
@@ -76,7 +77,9 @@ What approach should I use for the database layer?
 
 ## Files
 
-- `scripts/setup-ralph-loop.sh` - Initializes a ralph loop
+- `scripts/setup-ralph-loop.sh` - Initializes a ralph loop (persistent context)
+- `scripts/setup-fresh-loop.sh` - Initializes a ralph loop (fresh context per iteration)
 - `hooks/stop-hook.sh` - Stop hook that intercepts exit and re-injects prompt
 - `commands/ralph-loop.md` - Slash command definition
+- `commands/ralph-fresh.md` - Slash command definition for fresh loops
 - `commands/cancel-ralph.md` - Cancel command definition
