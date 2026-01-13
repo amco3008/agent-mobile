@@ -568,6 +568,11 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
+# Fix Claude infinite scroll issue (requires 256color terminal)
+if ! grep -q "TERM=xterm-256color" /home/agent/.bashrc 2>/dev/null; then
+    echo "export TERM=xterm-256color" >> /home/agent/.bashrc
+fi
+
 # Configure push notifications (ntfy.sh)
 # Write config file that hooks can read (env vars don't propagate to hook subprocesses)
 if [ -n "$NTFY_ENABLED" ] && [ "$NTFY_ENABLED" = "true" ]; then
