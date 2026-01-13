@@ -75,6 +75,8 @@ services:
       - NTFY_TOPIC=${NTFY_TOPIC:-}
       - NTFY_SERVER=${NTFY_SERVER:-https://ntfy.sh}
       - NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-15}
+      # Webtmux browser-based terminal (disabled by default to save CPU)
+      - WEBTMUX_ENABLED=${WEBTMUX_ENABLED:-false}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:

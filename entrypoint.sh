@@ -489,11 +489,16 @@ init_skills_git
 # ==========================================
 
 start_webtmux() {
+    if [ "${WEBTMUX_ENABLED:-false}" != "true" ]; then
+        echo "webtmux disabled (set WEBTMUX_ENABLED=true to enable)"
+        return
+    fi
+
     if ! command -v webtmux &>/dev/null; then
         echo "webtmux not found, skipping..."
         return
     fi
-    
+
     echo "Starting webtmux on port 9090..."
     # Start as agent user in background
     # Use -w for write access, --no-auth for easy access (dev env), -p 9090

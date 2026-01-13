@@ -131,6 +131,7 @@ Select [1]:
 | `NTFY_TOPIC` | Optional - Your unique ntfy.sh topic name |
 | `NTFY_SERVER` | Optional - ntfy server URL (default: `https://ntfy.sh`) |
 | `NTFY_RATE_LIMIT` | Optional - Min seconds between notifications (default: `15`) |
+| `WEBTMUX_ENABLED` | Optional - Enable browser-based terminal on port 9090 (default: `false`) |
 
 ## Resource Configuration
 
