@@ -349,6 +349,137 @@ To start the fresh loop, run in a NEW terminal:
 
 ---
 
+## Fresh Context Spec Best Practices (CRITICAL)
+
+When writing specs for fresh context loops, follow these rules to prevent premature loop termination:
+
+### 1. NEVER Include Promise Text in Spec Body
+
+The `ralph` script echoes the spec to Claude, then checks the output for the promise. If the promise text appears in the spec body, it gets detected immediately and the loop exits after one iteration.
+
+**BAD** - Promise visible in spec (loop exits after 1 iteration):
+```markdown
+When done, output: TASK_COMPLETE
+```
+
+**GOOD** - Promise only in frontmatter, referenced indirectly:
+```markdown
+---
+completion_promise: "TASK_COMPLETE_XYZ123"
+---
+
+When all conditions are met, output the completion promise on its own line.
+```
+
+### 2. Frame Spec as Single Iteration
+
+Fresh loops spawn a NEW Claude for each iteration. The spec should be written as if each Claude is doing ONE iteration of work:
+
+**BAD** - Implies continuous work:
+```markdown
+Keep iterating until all tests pass...
+```
+
+**GOOD** - Frames as single iteration:
+```markdown
+You are running ONE iteration of this task.
+After your work, the loop will spawn a NEW Claude to continue.
+Just do this iteration's work and end your response normally.
+```
+
+### 3. Require Audit Before Promise Output
+
+The Claude should verify completion before outputting the promise:
+
+```markdown
+## CRITICAL: When to Output the Completion Promise
+
+ONLY output the promise if ALL of these are true:
+1. [Specific condition 1]
+2. [Specific condition 2]
+3. All changes committed and pushed
+
+If ANY condition is NOT met, do NOT output the promise.
+Just end your response normally and let the next iteration continue.
+
+## AUDIT CHECKLIST (Required before promise)
+
+Before outputting the promise, run these verification commands:
+1. Verify condition 1: `command`
+2. Verify condition 2: `command`
+3. Verify git status: `git status`
+
+Only AFTER completing this audit AND confirming all conditions, output the promise.
+```
+
+### 4. Make Stop Conditions Explicit
+
+Be crystal clear about when the loop should stop:
+
+```markdown
+## When to Stop (Output Promise)
+
+ONLY stop if:
+- System is paused, OR
+- Budget is exhausted, OR
+- All tasks are genuinely complete
+
+If budget available and work remains, let the loop continue naturally.
+```
+
+### 5. Use Unique Promise Strings
+
+Avoid common words that might appear in normal output:
+
+**BAD**: `DONE`, `COMPLETE`, `FINISHED`
+**GOOD**: `TASK_XYZ_AUDIT_COMPLETE_ALL_DONE`, `AUTH_REFACTOR_VERIFIED_COMPLETE`
+
+### Example: Well-Structured Fresh Context Spec
+
+```markdown
+---
+max_iterations: 100
+completion_promise: "MYPROJECT_AUDIT_COMPLETE_ALL_DONE"
+mode: yolo
+---
+
+# MyProject Autonomous Loop
+
+You are running ONE iteration of the MyProject system.
+
+This is a CONTINUOUS LOOP with fresh Claude sessions. After you complete
+your work, the loop will spawn a NEW Claude to continue. You do NOT need
+to stop - just do your iteration's work.
+
+## Your Iteration Tasks
+
+1. Check system status
+2. Do the work
+3. Commit and push progress
+
+## CRITICAL: When to Output the Completion Promise
+
+ONLY output the completion promise if ALL of these are true:
+
+1. System status shows Paused: YES OR budget exhausted
+2. All work is complete
+3. All changes committed and pushed
+
+If ANY of the above are NOT met, do NOT output the promise.
+Just end your response normally.
+
+## AUDIT CHECKLIST (Required before promise)
+
+If system should stop, perform this audit:
+1. Verify status: `command`
+2. Verify git clean: `git status`
+3. Verify pushed: `git log origin/master -1`
+
+Only AFTER completing this audit, output the promise text on its own line.
+```
+
+---
+
 ## How the Loops Work
 
 ### Persistent Context (`/ralph-loop`)
