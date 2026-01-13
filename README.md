@@ -63,6 +63,20 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 
 tmux keeps your session alive when you disconnect - essential for mobile use since Android suspends Termux when backgrounded.
 
+### Web Access (webtmux)
+
+You can access your terminal directly from a browser without SSH apps, which is often easier on mobile devices or locked-down machines.
+
+**URL:** `http://<tailscale-ip>:9090` (or `http://agent-mobile:9090` or `http://localhost:9090`)
+
+- **Port:** 9090
+- **Session:** Connects directly to the `main` tmux session
+- **Auth:** None (run in trusted Tailscale network)
+- **Features:**
+  - Full write access
+  - Resizable terminal (matches browser window)
+  - Works on mobile browsers (Safari, Chrome)
+
 ### Session Picker
 
 On SSH login, you'll see an interactive session picker:

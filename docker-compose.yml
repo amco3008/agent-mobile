@@ -79,6 +79,7 @@ services:
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
       - "2222:22"
+      - "9090:9090"
 
     restart: unless-stopped
 

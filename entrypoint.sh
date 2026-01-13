@@ -464,6 +464,27 @@ init_skills_git
 # The skill `ralph-invoke` will instruct users to do this if the plugin is missing.
 
 # ==========================================
+# Webtmux Setup
+# ==========================================
+
+start_webtmux() {
+    if ! command -v webtmux &>/dev/null; then
+        echo "webtmux not found, skipping..."
+        return
+    fi
+    
+    echo "Starting webtmux on port 9090..."
+    # Start as agent user in background
+    # Use -w for write access, --no-auth for easy access (dev env), -p 9090
+    # We use nohup to ensure it stays running
+    su - agent -c "nohup webtmux -p 9090 -w --no-auth tmux new-session -A -s main > /home/agent/webtmux.log 2>&1 &"
+    
+    echo "webtmux started at http://localhost:9090 (log: /home/agent/webtmux.log)"
+}
+
+start_webtmux
+
+# ==========================================
 # Docker Daemon Setup
 # ==========================================
 

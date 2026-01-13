@@ -58,6 +58,12 @@ RUN useradd -m -s /bin/bash agent && \
     echo "agent:agent" | chpasswd && \
     usermod -aG sudo agent
 
+# Install webtmux
+RUN git clone https://github.com/chrismccord/webtmux /opt/webtmux \
+    && cp /opt/webtmux/builds/webtmux-linux-amd64 /usr/local/bin/webtmux \
+    && chmod +x /usr/local/bin/webtmux \
+    && rm -rf /opt/webtmux
+
 # Clone awesome-Claude-skills repository (must be after user creation for chown)
 RUN git clone https://github.com/ComposioHQ/awesome-Claude-skills /opt/awesome-claude-skills \
     && chown -R agent:agent /opt/awesome-claude-skills
