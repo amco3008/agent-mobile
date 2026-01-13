@@ -154,6 +154,27 @@ else
 fi
 
 # ==========================================
+# Fix Volume Permissions
+# ==========================================
+# Ensure agent owns config directories (critical for claude CLI state)
+echo "Fixing permissions for persistent volumes..."
+mkdir -p /home/agent/.config
+mkdir -p /home/agent/.local
+mkdir -p /home/agent/.claude
+
+# Symlink potential config paths to the one we persist (~/.claude.json)
+# This handles ambiguity where CLI might look in ~/.claude/ but we backup ~/.claude.json
+if [ -f "/home/agent/.claude.json" ]; then
+    echo "Symlinking Claude config paths..."
+    ln -sf /home/agent/.claude.json /home/agent/.claude/claude.json
+    ln -sf /home/agent/.claude.json /home/agent/.claude/config.json
+fi
+
+chown -R agent:agent /home/agent/.config 2>/dev/null || true
+chown -R agent:agent /home/agent/.local 2>/dev/null || true
+chown -R agent:agent /home/agent/.claude 2>/dev/null || true
+
+# ==========================================
 # Credential Persistence
 # ==========================================
 
