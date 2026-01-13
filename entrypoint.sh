@@ -562,7 +562,7 @@ done
 [ -S /var/run/tailscale/tailscaled.sock ] && echo "Tailscale ready (${WAIT_COUNT}00ms)" || echo "Warning: Tailscale socket timeout"
 
 # Authenticate Tailscale (Non-blocking with timeout)
-LOGIN_FLAGS="--hostname=agent-mobile"
+LOGIN_FLAGS="--hostname=agent-mobile --force-reauth"
 if [ -n "$TAILSCALE_EXIT_NODE" ]; then
     echo "Configuring exit node: $TAILSCALE_EXIT_NODE"
     LOGIN_FLAGS="$LOGIN_FLAGS --exit-node=$TAILSCALE_EXIT_NODE --exit-node-allow-lan-access"
