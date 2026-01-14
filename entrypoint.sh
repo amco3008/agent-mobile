@@ -1,6 +1,39 @@
 #!/bin/bash
 set -e
 
+# Ensure skills repo tracks everything (overriding parent ignores) via .git/info/exclude
+# This stays local to the inner repo and doesn't pollute parent repo behavior
+configure_skills_git_excludes() {
+    local EXCLUDE_FILE="/home/agent/.claude/skills/.git/info/exclude"
+    local GITIGNORE_FILE="/home/agent/.claude/skills/.gitignore"
+    
+    # 1. Ensure .gitignore has basic secret protection (if missing)
+    if [ ! -f "$GITIGNORE_FILE" ]; then
+        echo "[skills-git] Creating base .gitignore..."
+        cat > "$GITIGNORE_FILE" << EOF
+# Ignore secrets
+.credentials-backup.json
+.env
+.env.*
+*.log
+EOF
+        chown agent:agent "$GITIGNORE_FILE"
+    fi
+
+    # 2. Force inclusion of everything else via local exclude file
+    if [ -d "$(dirname "$EXCLUDE_FILE")" ]; then
+        # Check if !* is present
+        if ! grep -q "!*" "$EXCLUDE_FILE" 2>/dev/null; then
+            echo "[skills-git] OTA: Configuring local exclusion to track all files..."
+            # Append !* to the end to ensure it wins
+            echo "" >> "$EXCLUDE_FILE"
+            echo "# Force track everything (added by entrypoint)" >> "$EXCLUDE_FILE"
+            echo "!*" >> "$EXCLUDE_FILE"
+            chown agent:agent "$EXCLUDE_FILE"
+        fi
+    fi
+}
+
 # Commit skills repo to GitHub (called on shutdown)
 commit_skills_repo() {
     # Skip if no GITHUB_TOKEN
@@ -25,6 +58,7 @@ commit_skills_repo() {
     fi
 
     echo "[skills-git] Committing skills changes..."
+    configure_skills_git_excludes
     git add -A
     git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S')" || {
         echo "[skills-git] Commit failed"
@@ -463,6 +497,7 @@ init_skills_git() {
     # Commit any uncommitted changes from previous crash
     if [ -n "$(git status --porcelain)" ]; then
         echo "[skills-git] Found uncommitted changes, committing..."
+        configure_skills_git_excludes
         git add -A
         git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [startup recovery]" || true
         git push -u origin master 2>/dev/null || echo "[skills-git] Push failed, will retry on shutdown"
