@@ -515,16 +515,27 @@ init_skills_git() {
         git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [local changes]" || true
     fi
 
-    # Now safe to pull remote (local changes are committed, merge will preserve both)
-    echo "[skills-git] Syncing with remote..."
-    git fetch origin master 2>/dev/null && git merge origin/master --no-edit 2>/dev/null || true
+    # Now safe to pull remote (local changes are committed, rebase puts them on top)
+    echo "[skills-git] Pulling from remote..."
+    if git pull --rebase origin master 2>&1; then
+        echo "[skills-git] Pull successful"
+    else
+        echo "[skills-git] Pull failed or conflicts - will push with force if needed"
+        # If rebase fails, abort and try force push (local changes take priority)
+        git rebase --abort 2>/dev/null || true
+    fi
 
-    # Push merged result
+    # Push merged result (use force-with-lease if normal push fails - local is source of truth)
     echo "[skills-git] Pushing to remote..."
     if git push -u origin master 2>&1; then
         echo "[skills-git] Push successful"
     else
-        echo "[skills-git] Push failed, will retry on shutdown"
+        echo "[skills-git] Normal push failed, trying force push (local changes take priority)..."
+        if git push -u origin master --force-with-lease 2>&1; then
+            echo "[skills-git] Force push successful"
+        else
+            echo "[skills-git] Push failed, will retry on shutdown"
+        fi
     fi
 
     cd - >/dev/null
