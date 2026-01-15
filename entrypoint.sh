@@ -507,12 +507,12 @@ init_skills_git() {
     echo "[skills-git] Skills repo initialized"
 }
 
-echo "Initializing skill system..."
+echo "Initializing skill system (local only - remote sync happens after network setup)..."
 # Mark skills directory as safe early (fixes ownership issues with mounted volumes)
 git config --global --add safe.directory /home/agent/.claude/skills 2>/dev/null || true
 sync_default_skills
 update_claude_md
-init_skills_git
+# NOTE: init_skills_git is called AFTER Tailscale/GitHub auth to avoid race condition
 
 # NOTE: ralph-wiggum plugin must be installed interactively via:
 #   /plugin install ralph-loop@claude-plugins-official
@@ -649,6 +649,12 @@ if [ -n "$GITHUB_TOKEN" ]; then
         fi
     fi
 fi
+
+# Now that network and GitHub auth are ready, sync skills with GitHub repo
+echo "Syncing skills with GitHub (post-network init)..."
+init_skills_git
+# Re-discover skills in case remote sync brought new ones
+update_claude_md
 
 # Fix Claude infinite scroll issue (requires 256color terminal)
 if ! grep -q "TERM=xterm-256color" /home/agent/.bashrc 2>/dev/null; then
