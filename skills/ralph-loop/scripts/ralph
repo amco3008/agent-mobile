@@ -29,8 +29,8 @@ if [[ ! -f "$SPEC_FILE" ]]; then
   exit 1
 fi
 
-# Parse frontmatter
-FRONTMATTER=$(sed -n '/^---$/,/^---$/{ /^---$/d; p; }' "$SPEC_FILE")
+# Parse frontmatter (strip CRLF for Windows compatibility)
+FRONTMATTER=$(tr -d '\r' < "$SPEC_FILE" | sed -n '/^---$/,/^---$/{ /^---$/d; p; }')
 MAX_ITERATIONS=$(echo "$FRONTMATTER" | grep '^max_iterations:' | sed 's/max_iterations: *//' || echo "50")
 COMPLETION_PROMISE=$(echo "$FRONTMATTER" | grep '^completion_promise:' | sed 's/completion_promise: *//' | sed 's/^"\(.*\)"$/\1/')
 MODE=$(echo "$FRONTMATTER" | grep '^mode:' | sed 's/mode: *//' | sed 's/^"\(.*\)"$/\1/' || echo "yolo")
@@ -39,8 +39,8 @@ MODE=$(echo "$FRONTMATTER" | grep '^mode:' | sed 's/mode: *//' | sed 's/^"\(.*\)
 MAX_ITERATIONS="${MAX_ITERATIONS:-50}"
 MODE="${MODE:-yolo}"
 
-# Extract task content (everything after frontmatter)
-TASK_CONTENT=$(awk '/^---$/{i++; next} i>=2' "$SPEC_FILE")
+# Extract task content (everything after frontmatter, strip CRLF)
+TASK_CONTENT=$(tr -d '\r' < "$SPEC_FILE" | awk '/^---$/{i++; next} i>=2')
 
 # Output directory for iteration logs
 LOG_DIR=".claude/ralph-logs-${TASK_ID}"
