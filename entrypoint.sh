@@ -50,24 +50,21 @@ commit_skills_repo() {
 
     cd "$SKILLS_DIR" || return 1
 
-    # Check for changes
-    if [ -z "$(git status --porcelain)" ]; then
-        echo "[skills-git] No changes to commit"
-        cd - >/dev/null
-        return 0
+    # Commit any uncommitted changes
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "[skills-git] Committing skills changes..."
+        configure_skills_git_excludes
+        git add -A
+        git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [shutdown]" || true
     fi
 
-    echo "[skills-git] Committing skills changes..."
-    configure_skills_git_excludes
-    git add -A
-    git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S')" || {
-        echo "[skills-git] Commit failed"
-        cd - >/dev/null
-        return 0
-    }
-
+    # Always try to push (in case startup push failed)
     echo "[skills-git] Pushing to remote..."
-    git push origin master 2>/dev/null || echo "[skills-git] Push failed (network issue?)"
+    if git push origin master 2>&1; then
+        echo "[skills-git] Push successful"
+    else
+        echo "[skills-git] Push failed (network issue or remote doesn't exist)"
+    fi
 
     cd - >/dev/null
 }
@@ -511,7 +508,12 @@ init_skills_git() {
     git fetch origin master 2>/dev/null && git merge origin/master --no-edit 2>/dev/null || true
 
     # Push merged result
-    git push -u origin master 2>/dev/null || echo "[skills-git] Push failed, will retry on shutdown"
+    echo "[skills-git] Pushing to remote..."
+    if git push -u origin master 2>&1; then
+        echo "[skills-git] Push successful"
+    else
+        echo "[skills-git] Push failed, will retry on shutdown"
+    fi
 
     cd - >/dev/null
     echo "[skills-git] Skills repo initialized"
