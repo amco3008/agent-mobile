@@ -511,6 +511,17 @@ echo "Initializing skill system (local only - remote sync happens after network 
 # Mark skills directory as safe early (fixes ownership issues with mounted volumes)
 git config --global --add safe.directory /home/agent/.claude/skills 2>/dev/null || true
 sync_default_skills
+
+# Fix Windows CRLF line endings on all skill scripts (common when mounted from Windows host)
+fix_skill_line_endings() {
+    local SKILLS_DIR="/home/agent/.claude/skills"
+    if [ -d "$SKILLS_DIR" ]; then
+        find "$SKILLS_DIR" -type f \( -name "*.sh" -o -name "*.py" -o -name "ralph" \) -exec sed -i 's/\r$//' {} \; 2>/dev/null || true
+        echo "Fixed line endings for skill scripts"
+    fi
+}
+fix_skill_line_endings
+
 update_claude_md
 # NOTE: init_skills_git is called AFTER Tailscale/GitHub auth to avoid race condition
 
@@ -697,10 +708,14 @@ fi
 
 # Add ralph command to PATH (fresh context loops)
 RALPH_SCRIPT="/home/agent/.claude/skills/ralph-loop/scripts/ralph"
-if [ -f "$RALPH_SCRIPT" ] && [ ! -L /usr/local/bin/ralph ]; then
-    ln -sf "$RALPH_SCRIPT" /usr/local/bin/ralph
+if [ -f "$RALPH_SCRIPT" ]; then
+    # Fix Windows CRLF line endings (common when skills folder is mounted from Windows host)
+    sed -i 's/\r$//' "$RALPH_SCRIPT" 2>/dev/null || true
     chmod +x "$RALPH_SCRIPT"
-    echo "Ralph command installed: ralph <task-id>"
+    if [ ! -L /usr/local/bin/ralph ]; then
+        ln -sf "$RALPH_SCRIPT" /usr/local/bin/ralph
+        echo "Ralph command installed: ralph <task-id>"
+    fi
 fi
 
 # Setup skill system hooks (merge into Claude settings without replacing existing config)
