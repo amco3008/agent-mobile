@@ -517,14 +517,31 @@ init_skills_git() {
 
     # Pull remote with merge (preserves both local and remote history - no data loss)
     echo "[skills-git] Pulling from remote (merge strategy)..."
-    if git pull origin master --no-rebase --no-edit 2>&1; then
-        echo "[skills-git] Pull successful"
+    git fetch origin master 2>/dev/null || true
+
+    # Check if branches have diverged
+    LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
+    REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
+
+    if [ "$REMOTE_COMMITS" = "0" ]; then
+        echo "[skills-git] Already up to date with remote"
+    elif [ "$LOCAL_COMMITS" = "0" ]; then
+        echo "[skills-git] Fast-forward merge possible"
+        git merge origin/master --no-edit 2>/dev/null || true
     else
-        echo "[skills-git] Pull failed (conflicts or network issue)"
-        # If merge conflicts, accept local version for conflicted files
-        git checkout --ours . 2>/dev/null || true
-        git add -A 2>/dev/null || true
-        git commit -m "Merge conflict resolved: local changes preserved" 2>/dev/null || true
+        echo "[skills-git] Branches diverged (local: $LOCAL_COMMITS, remote: $REMOTE_COMMITS) - merging..."
+        # Use theirs strategy for conflicts (remote wins), allow unrelated histories, keep history
+        if git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>&1; then
+            echo "[skills-git] Merge successful (remote changes preserved for conflicts)"
+        else
+            echo "[skills-git] Merge failed, resolving conflicts..."
+            # Abort any in-progress merge and try again with manual resolution
+            git merge --abort 2>/dev/null || true
+            git merge origin/master --no-commit --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+            git checkout --theirs . 2>/dev/null || true
+            git add -A 2>/dev/null || true
+            git commit -m "Merge remote: remote changes preserved for conflicts" 2>/dev/null || true
+        fi
     fi
 
     # Push (never force - preserves remote history)
