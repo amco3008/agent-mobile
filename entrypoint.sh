@@ -7,15 +7,27 @@ configure_skills_git_excludes() {
     local EXCLUDE_FILE="/home/agent/.claude/skills/.git/info/exclude"
     local GITIGNORE_FILE="/home/agent/.claude/skills/.gitignore"
     
-    # 1. Ensure .gitignore has basic secret protection (if missing)
+    # 1. Ensure .gitignore has basic secret protection (if missing or incomplete)
+    local NEEDS_UPDATE=false
     if [ ! -f "$GITIGNORE_FILE" ]; then
-        echo "[skills-git] Creating base .gitignore..."
+        NEEDS_UPDATE=true
+    elif ! grep -q "tmpclaude-" "$GITIGNORE_FILE" 2>/dev/null; then
+        NEEDS_UPDATE=true
+    fi
+
+    if [ "$NEEDS_UPDATE" = true ]; then
+        echo "[skills-git] Updating .gitignore..."
         cat > "$GITIGNORE_FILE" << EOF
 # Ignore secrets
 .credentials-backup.json
 .env
 .env.*
 *.log
+
+# Ignore temp files
+tmpclaude-*
+*.tmp
+*.bak
 EOF
         chown agent:agent "$GITIGNORE_FILE"
     fi
