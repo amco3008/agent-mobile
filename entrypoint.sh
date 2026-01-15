@@ -497,17 +497,21 @@ init_skills_git() {
         gh repo create "$REPO_NAME" --private --source=. --push 2>/dev/null || true
     fi
 
-    # Pull latest (if exists)
-    git fetch origin master 2>/dev/null && git merge origin/master --no-edit 2>/dev/null || true
-
-    # Commit any uncommitted changes from previous crash
+    # IMPORTANT: Commit local changes FIRST to preserve them before pulling remote
+    # This ensures skills edited on the host machine are never overwritten by remote
     if [ -n "$(git status --porcelain)" ]; then
-        echo "[skills-git] Found uncommitted changes, committing..."
+        echo "[skills-git] Committing local changes first (preserves host edits)..."
         configure_skills_git_excludes
         git add -A
-        git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [startup recovery]" || true
-        git push -u origin master 2>/dev/null || echo "[skills-git] Push failed, will retry on shutdown"
+        git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [local changes]" || true
     fi
+
+    # Now safe to pull remote (local changes are committed, merge will preserve both)
+    echo "[skills-git] Syncing with remote..."
+    git fetch origin master 2>/dev/null && git merge origin/master --no-edit 2>/dev/null || true
+
+    # Push merged result
+    git push -u origin master 2>/dev/null || echo "[skills-git] Push failed, will retry on shutdown"
 
     cd - >/dev/null
     echo "[skills-git] Skills repo initialized"
