@@ -467,6 +467,12 @@ init_skills_git() {
 
     cd "$SKILLS_DIR" || return 1
 
+    # Remove stale git lock files from previous crash/unclean shutdown
+    if [ -f ".git/index.lock" ]; then
+        echo "[skills-git] Removing stale index.lock from previous crash"
+        rm -f ".git/index.lock"
+    fi
+
     # Initialize git if needed
     if [ ! -d ".git" ]; then
         echo "[skills-git] Initializing git repository..."
