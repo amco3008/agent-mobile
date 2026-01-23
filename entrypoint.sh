@@ -650,9 +650,14 @@ start_docker_daemon
 create_update_claude_command() {
     cat > /usr/local/bin/update-claude << 'SCRIPT'
 #!/bin/bash
-echo "Updating Claude Code..."
-claude update
-echo "Current version: $(claude --version 2>/dev/null | head -1)"
+# Run as agent user to use correct home directory for credentials
+if [ "$(id -u)" = "0" ]; then
+    exec su - agent -c "claude update"
+else
+    echo "Updating Claude Code..."
+    claude update
+    echo "Current version: $(claude --version 2>/dev/null | head -1)"
+fi
 SCRIPT
     chmod +x /usr/local/bin/update-claude
 }
