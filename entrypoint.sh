@@ -131,6 +131,11 @@ cleanup_and_backup() {
         cp "/home/agent/.claude/settings.local.json" "/home/agent/projects/.claude-settings-local-backup.json" 2>/dev/null && \
             echo "[shutdown] Settings.local backed up"
     fi
+    # Backup native installer XDG config if exists (~/.config/claude/)
+    if [ -d "/home/agent/.config/claude" ]; then
+        cp -r "/home/agent/.config/claude" "/home/agent/projects/.claude-native-config-backup" 2>/dev/null && \
+            echo "[shutdown] Native config (~/.config/claude/) backed up"
+    fi
 
     echo "[shutdown] Cleanup complete"
     exit 0
@@ -366,6 +371,8 @@ start_credential_backup_daemon() {
     local CONFIG_BACKUP="/home/agent/projects/.claude-config-backup.json"
     local SETTINGS_LOCAL_FILE="/home/agent/.claude/settings.local.json"
     local SETTINGS_LOCAL_BACKUP="/home/agent/projects/.claude-settings-local-backup.json"
+    local NATIVE_CONFIG_DIR="/home/agent/.config/claude"
+    local NATIVE_CONFIG_BACKUP="/home/agent/projects/.claude-native-config-backup"
     local INTERVAL=300  # 5 minutes
 
     (
@@ -395,14 +402,49 @@ start_credential_backup_daemon() {
                     chmod 600 "$SETTINGS_LOCAL_BACKUP" 2>/dev/null || true
                 fi
             fi
+            # Backup native installer config if changed (~/.config/claude/)
+            if [ -d "$NATIVE_CONFIG_DIR" ] && [ "$(ls -A "$NATIVE_CONFIG_DIR" 2>/dev/null)" ]; then
+                mkdir -p "$NATIVE_CONFIG_BACKUP"
+                cp -r "$NATIVE_CONFIG_DIR"/. "$NATIVE_CONFIG_BACKUP"/ 2>/dev/null || true
+                chown -R agent:agent "$NATIVE_CONFIG_BACKUP" 2>/dev/null || true
+            fi
         done
     ) &
     echo "[backup] Background daemon started (interval: ${INTERVAL}s)"
 }
 
+# Backup/restore native installer XDG config (~/.config/claude/)
+# Native installer may store additional auth data here
+persist_native_config() {
+    local CONFIG_DIR="/home/agent/.config/claude"
+    local BACKUP_DIR="/home/agent/projects/.claude-native-config-backup"
+
+    echo "[native-config] Checking ~/.config/claude/ persistence..."
+
+    # Restore from backup if exists and local doesn't
+    if [ -d "$BACKUP_DIR" ] && [ "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]; then
+        if [ ! -d "$CONFIG_DIR" ] || [ -z "$(ls -A "$CONFIG_DIR" 2>/dev/null)" ]; then
+            echo "[native-config] Restoring from backup..."
+            mkdir -p "$CONFIG_DIR"
+            cp -r "$BACKUP_DIR"/. "$CONFIG_DIR"/ 2>/dev/null || true
+            chown -R agent:agent "$CONFIG_DIR"
+            echo "[native-config] Restored"
+            return 0
+        fi
+    fi
+
+    # If config exists, back it up
+    if [ -d "$CONFIG_DIR" ] && [ "$(ls -A "$CONFIG_DIR" 2>/dev/null)" ]; then
+        mkdir -p "$BACKUP_DIR"
+        cp -r "$CONFIG_DIR"/. "$BACKUP_DIR"/ 2>/dev/null || true
+        chown -R agent:agent "$BACKUP_DIR" 2>/dev/null || true
+    fi
+}
+
 persist_credentials
 persist_claude_config
 persist_settings_local
+persist_native_config
 start_credential_backup_daemon
 
 # ==========================================
@@ -759,6 +801,12 @@ if [ "${CLAUDE_STARTUP_UPDATE:-true}" = "true" ]; then
     fi
 fi
 
+# Re-run credential persistence after update (in case update reset credentials)
+# This is critical for native installer which may overwrite config during update
+echo "Re-checking credential persistence after update..."
+persist_credentials
+persist_native_config
+
 # Fix Claude infinite scroll issue (requires 256color terminal)
 if ! grep -q "TERM=xterm-256color" /home/agent/.bashrc 2>/dev/null; then
     echo "export TERM=xterm-256color" >> /home/agent/.bashrc
@@ -997,9 +1045,16 @@ for path in DEFAULT_PATHS:
         if "allowedTools" not in config["projects"][path]:
             config["projects"][path]["allowedTools"] = ALLOWED_TOOLS
 
+# Set theme and onboarding flags to skip first-run setup screen
+# Without these, native installer shows theme picker + sign-in even if OAuth is valid
+if "theme" not in config:
+    config["theme"] = "dark"
+if "hasCompletedOnboarding" not in config:
+    config["hasCompletedOnboarding"] = True
+
 # Write back
 CLAUDE_JSON.write_text(json.dumps(config, indent=2))
-print(f"Trust configured for {len(config['projects'])} project(s)")
+print(f"Trust configured for {len(config['projects'])} project(s), onboarding skipped")
 PYTHON_SCRIPT
 
     chown agent:agent "$CLAUDE_JSON"
