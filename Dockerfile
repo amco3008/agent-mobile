@@ -46,6 +46,9 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 # Install Gemini CLI (via npm)
 RUN npm install -g @google/gemini-cli && npm cache clean --force
 
+# Claude Code install method: "native" (recommended) or "npm"
+ARG CLAUDE_INSTALL_METHOD=native
+
 # Install Claude SDK (Python) for programmatic API access
 RUN pip3 install --no-cache-dir anthropic
 
@@ -71,13 +74,21 @@ RUN git clone https://github.com/ComposioHQ/awesome-Claude-skills /opt/awesome-c
 RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
     chmod 0440 /etc/sudoers.d/agent
 
-# Install Claude Code CLI (native installer - recommended by Anthropic)
-# Must run as agent user since it installs to ~/.local/bin
-USER agent
-RUN curl -fsSL https://claude.ai/install.sh | bash
-USER root
-# Create symlink so claude is available system-wide (not just in agent's PATH)
-RUN ln -sf /home/agent/.local/bin/claude /usr/local/bin/claude
+# Install Claude Code CLI
+# Method controlled by CLAUDE_INSTALL_METHOD build arg: "native" (default) or "npm"
+# Native: installs to ~/.local/bin, auto-updates work better
+# NPM: installs globally, may need manual updates
+RUN if [ "$CLAUDE_INSTALL_METHOD" = "npm" ]; then \
+        echo "Installing Claude Code via npm..." && \
+        npm install -g @anthropic-ai/claude-code && \
+        npm cache clean --force; \
+    else \
+        echo "Installing Claude Code via native installer..." && \
+        su - agent -c "curl -fsSL https://claude.ai/install.sh | bash" && \
+        ln -sf /home/agent/.local/bin/claude /usr/local/bin/claude; \
+    fi
+# Store install method for entrypoint.sh to use correct update command
+RUN echo "$CLAUDE_INSTALL_METHOD" > /etc/claude-install-method
 
 # Setup SSH
 RUN mkdir /var/run/sshd && \

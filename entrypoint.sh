@@ -647,16 +647,30 @@ start_docker_daemon
 # ==========================================
 # Claude Code Update Command
 # ==========================================
+# Detect install method (set during docker build)
+CLAUDE_INSTALL_METHOD=$(cat /etc/claude-install-method 2>/dev/null || echo "native")
+
 create_update_claude_command() {
-    cat > /usr/local/bin/update-claude << 'SCRIPT'
+    cat > /usr/local/bin/update-claude << SCRIPT
 #!/bin/bash
 # Run as agent user to use correct home directory for credentials
-if [ "$(id -u)" = "0" ]; then
-    exec su - agent -c "claude update"
+INSTALL_METHOD="$CLAUDE_INSTALL_METHOD"
+
+do_update() {
+    if [ "\$INSTALL_METHOD" = "npm" ]; then
+        echo "Updating Claude Code via npm..."
+        sudo npm install -g @anthropic-ai/claude-code@latest
+    else
+        echo "Updating Claude Code via native updater..."
+        claude update
+    fi
+    echo "Current version: \$(claude --version 2>/dev/null | head -1)"
+}
+
+if [ "\$(id -u)" = "0" ]; then
+    exec su - agent -c "\$0"
 else
-    echo "Updating Claude Code..."
-    claude update
-    echo "Current version: $(claude --version 2>/dev/null | head -1)"
+    do_update
 fi
 SCRIPT
     chmod +x /usr/local/bin/update-claude
@@ -737,8 +751,12 @@ update_claude_md
 
 # Update Claude Code on startup (after network confirmed ready)
 if [ "${CLAUDE_STARTUP_UPDATE:-true}" = "true" ]; then
-    echo "Checking for Claude Code updates..."
-    su - agent -c "claude update" || echo "Update check failed (run 'update-claude' manually)"
+    echo "Checking for Claude Code updates (method: $CLAUDE_INSTALL_METHOD)..."
+    if [ "$CLAUDE_INSTALL_METHOD" = "npm" ]; then
+        npm install -g @anthropic-ai/claude-code@latest 2>/dev/null || echo "Update check failed (run 'update-claude' manually)"
+    else
+        su - agent -c "claude update" || echo "Update check failed (run 'update-claude' manually)"
+    fi
 fi
 
 # Fix Claude infinite scroll issue (requires 256color terminal)
