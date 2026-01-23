@@ -132,6 +132,22 @@ Select [1]:
 | `NTFY_SERVER` | Optional - ntfy server URL (default: `https://ntfy.sh`) |
 | `NTFY_RATE_LIMIT` | Optional - Min seconds between notifications (default: `15`) |
 | `WEBTMUX_ENABLED` | Optional - Enable browser-based terminal on port 9090 (default: `false`) |
+| `CLAUDE_STARTUP_UPDATE` | Optional - Check for Claude Code updates on container start (default: `true`) |
+| `DISABLE_AUTOUPDATER` | Optional - Disable Claude's built-in auto-updater (default: `1`) |
+
+## Build Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `CLAUDE_INSTALL_METHOD` | Installation method: `native` (default, recommended) or `npm` |
+
+```bash
+# Use native installer (default, recommended by Anthropic)
+docker-compose build
+
+# Use npm installer (legacy)
+docker-compose build --build-arg CLAUDE_INSTALL_METHOD=npm
+```
 
 ## Resource Configuration
 
