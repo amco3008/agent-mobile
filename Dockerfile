@@ -43,9 +43,8 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && apt-get install -y --no-install-recommends gh \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Claude Code CLI and Gemini CLI
-RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli \
-    && npm cache clean --force
+# Install Gemini CLI (via npm)
+RUN npm install -g @google/gemini-cli && npm cache clean --force
 
 # Install Claude SDK (Python) for programmatic API access
 RUN pip3 install --no-cache-dir anthropic
@@ -71,6 +70,12 @@ RUN git clone https://github.com/ComposioHQ/awesome-Claude-skills /opt/awesome-c
 # Allow agent user to run sudo without password
 RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
     chmod 0440 /etc/sudoers.d/agent
+
+# Install Claude Code CLI (native installer - recommended by Anthropic)
+# Must run as agent user since it installs to ~/.local/bin
+USER agent
+RUN curl -fsSL https://claude.ai/install.sh | bash
+USER root
 
 # Setup SSH
 RUN mkdir /var/run/sshd && \

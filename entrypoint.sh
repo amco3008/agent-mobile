@@ -650,18 +650,9 @@ start_docker_daemon
 create_update_claude_command() {
     cat > /usr/local/bin/update-claude << 'SCRIPT'
 #!/bin/bash
-echo "Checking for Claude Code updates..."
-CURRENT=$(claude --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-LATEST=$(npm view @anthropic-ai/claude-code version 2>/dev/null || echo "unknown")
-echo "Current: $CURRENT"
-echo "Latest:  $LATEST"
-if [ "$CURRENT" = "$LATEST" ]; then
-    echo "Already at latest version!"
-    exit 0
-fi
 echo "Updating Claude Code..."
-sudo npm install -g @anthropic-ai/claude-code@latest
-echo "Done! New version: $(claude --version 2>/dev/null | head -1)"
+claude update
+echo "Current version: $(claude --version 2>/dev/null | head -1)"
 SCRIPT
     chmod +x /usr/local/bin/update-claude
 }
@@ -742,19 +733,17 @@ update_claude_md
 # Update Claude Code on startup (after network confirmed ready)
 if [ "${CLAUDE_STARTUP_UPDATE:-true}" = "true" ]; then
     echo "Checking for Claude Code updates..."
-    CURRENT_VER=$(claude --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "")
-    LATEST_VER=$(timeout 10s npm view @anthropic-ai/claude-code version 2>/dev/null || echo "")
-    if [ -n "$CURRENT_VER" ] && [ -n "$LATEST_VER" ] && [ "$CURRENT_VER" != "$LATEST_VER" ]; then
-        echo "Updating Claude Code: $CURRENT_VER -> $LATEST_VER"
-        sudo npm install -g @anthropic-ai/claude-code@latest || echo "Update failed (run 'update-claude' manually)"
-    elif [ -n "$CURRENT_VER" ]; then
-        echo "Claude Code is up to date ($CURRENT_VER)"
-    fi
+    su - agent -c "claude update" || echo "Update check failed (run 'update-claude' manually)"
 fi
 
 # Fix Claude infinite scroll issue (requires 256color terminal)
 if ! grep -q "TERM=xterm-256color" /home/agent/.bashrc 2>/dev/null; then
     echo "export TERM=xterm-256color" >> /home/agent/.bashrc
+fi
+
+# Ensure Claude native installer path is in PATH
+if ! grep -q '\.local/bin' /home/agent/.bashrc 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/agent/.bashrc
 fi
 
 # Disable Claude auto-updater (use 'update-claude' command instead)
