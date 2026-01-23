@@ -136,6 +136,12 @@ cleanup_and_backup() {
         cp -r "/home/agent/.config/claude" "/home/agent/projects/.claude-native-config-backup" 2>/dev/null && \
             echo "[shutdown] Native config (~/.config/claude/) backed up"
     fi
+    # Backup conversation history (~/.claude/projects/)
+    if [ -d "/home/agent/.claude/projects" ] && [ "$(ls -A /home/agent/.claude/projects 2>/dev/null)" ]; then
+        mkdir -p "/home/agent/projects/.claude-conversations-backup"
+        cp -r "/home/agent/.claude/projects"/. "/home/agent/projects/.claude-conversations-backup"/ 2>/dev/null && \
+            echo "[shutdown] Conversations backed up"
+    fi
 
     echo "[shutdown] Cleanup complete"
     exit 0
@@ -408,6 +414,12 @@ start_credential_backup_daemon() {
                 cp -r "$NATIVE_CONFIG_DIR"/. "$NATIVE_CONFIG_BACKUP"/ 2>/dev/null || true
                 chown -R agent:agent "$NATIVE_CONFIG_BACKUP" 2>/dev/null || true
             fi
+            # Backup conversation history (~/.claude/projects/)
+            if [ -d "/home/agent/.claude/projects" ] && [ "$(ls -A /home/agent/.claude/projects 2>/dev/null)" ]; then
+                mkdir -p "/home/agent/projects/.claude-conversations-backup"
+                cp -r "/home/agent/.claude/projects"/. "/home/agent/projects/.claude-conversations-backup"/ 2>/dev/null || true
+                chown -R agent:agent "/home/agent/projects/.claude-conversations-backup" 2>/dev/null || true
+            fi
         done
     ) &
     echo "[backup] Background daemon started (interval: ${INTERVAL}s)"
@@ -441,10 +453,39 @@ persist_native_config() {
     fi
 }
 
+# Backup/restore conversation history (~/.claude/projects/)
+# Conversations are stored as .jsonl files per working directory
+persist_conversations() {
+    local CONV_DIR="/home/agent/.claude/projects"
+    local BACKUP_DIR="/home/agent/projects/.claude-conversations-backup"
+
+    echo "[conversations] Checking conversation history persistence..."
+
+    # Restore from backup if exists and local is empty
+    if [ -d "$BACKUP_DIR" ] && [ "$(ls -A "$BACKUP_DIR" 2>/dev/null)" ]; then
+        if [ ! -d "$CONV_DIR" ] || [ -z "$(ls -A "$CONV_DIR" 2>/dev/null)" ]; then
+            echo "[conversations] Restoring from backup..."
+            mkdir -p "$CONV_DIR"
+            cp -r "$BACKUP_DIR"/. "$CONV_DIR"/ 2>/dev/null || true
+            chown -R agent:agent "$CONV_DIR"
+            echo "[conversations] Restored $(find "$CONV_DIR" -name "*.jsonl" 2>/dev/null | wc -l) session files"
+            return 0
+        fi
+    fi
+
+    # If conversations exist, back them up
+    if [ -d "$CONV_DIR" ] && [ "$(ls -A "$CONV_DIR" 2>/dev/null)" ]; then
+        mkdir -p "$BACKUP_DIR"
+        cp -r "$CONV_DIR"/. "$BACKUP_DIR"/ 2>/dev/null || true
+        chown -R agent:agent "$BACKUP_DIR" 2>/dev/null || true
+    fi
+}
+
 persist_credentials
 persist_claude_config
 persist_settings_local
 persist_native_config
+persist_conversations
 start_credential_backup_daemon
 
 # ==========================================
