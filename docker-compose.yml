@@ -77,6 +77,10 @@ services:
       - NTFY_RATE_LIMIT=${NTFY_RATE_LIMIT:-15}
       # Webtmux browser-based terminal (disabled by default to save CPU)
       - WEBTMUX_ENABLED=${WEBTMUX_ENABLED:-false}
+      # Disable Claude Code auto-updater (use 'update-claude' command instead)
+      - DISABLE_AUTOUPDATER=${DISABLE_AUTOUPDATER:-1}
+      # Check for updates on container startup (after network ready)
+      - CLAUDE_STARTUP_UPDATE=${CLAUDE_STARTUP_UPDATE:-true}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
