@@ -76,6 +76,8 @@ RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
 USER agent
 RUN curl -fsSL https://claude.ai/install.sh | bash
 USER root
+# Create symlink so claude is available system-wide (not just in agent's PATH)
+RUN ln -sf /home/agent/.local/bin/claude /usr/local/bin/claude
 
 # Setup SSH
 RUN mkdir /var/run/sshd && \
