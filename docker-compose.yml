@@ -89,6 +89,9 @@ services:
 
     restart: unless-stopped
 
+    # Give container time to backup data on shutdown
+    stop_grace_period: 30s
+
     # Health check
     healthcheck:
       test: ["CMD", "tailscale", "status"]

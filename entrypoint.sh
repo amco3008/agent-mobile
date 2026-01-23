@@ -146,7 +146,7 @@ cleanup_and_backup() {
     echo "[shutdown] Cleanup complete"
     exit 0
 }
-trap cleanup_and_backup SIGTERM SIGINT
+trap cleanup_and_backup SIGTERM SIGINT EXIT
 
 echo "Starting agent-mobile container..."
 
@@ -379,7 +379,7 @@ start_credential_backup_daemon() {
     local SETTINGS_LOCAL_BACKUP="/home/agent/projects/.claude-settings-local-backup.json"
     local NATIVE_CONFIG_DIR="/home/agent/.config/claude"
     local NATIVE_CONFIG_BACKUP="/home/agent/projects/.claude-native-config-backup"
-    local INTERVAL=300  # 5 minutes
+    local INTERVAL=60  # 1 minute - frequent backups to survive unexpected shutdowns
 
     (
         while true; do
@@ -778,7 +778,7 @@ done
 [ -S /var/run/tailscale/tailscaled.sock ] && echo "Tailscale ready (${WAIT_COUNT}00ms)" || echo "Warning: Tailscale socket timeout"
 
 # Authenticate Tailscale (Non-blocking with timeout)
-LOGIN_FLAGS="--hostname=agent-mobile --force-reauth"
+LOGIN_FLAGS="--hostname=agent-mobile"
 if [ -n "$TAILSCALE_EXIT_NODE" ]; then
     echo "Configuring exit node: $TAILSCALE_EXIT_NODE"
     LOGIN_FLAGS="$LOGIN_FLAGS --exit-node=$TAILSCALE_EXIT_NODE --exit-node-allow-lan-access"
