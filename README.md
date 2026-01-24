@@ -124,8 +124,9 @@ Select [1]:
 | `HTTPS_PROXY` | Optional - Corporate proxy URL for secure traffic |
 | `NO_PROXY` | Optional - Domains to bypass proxy (default: `localhost,127.0.0.1`) |
 | `TAILSCALE_EXIT_NODE` | Optional - Tailscale IP of a node to use as a gateway (bypass firewalls) |
-| `AGENT_CPUS` | Optional - Max CPU cores (default: `2.0`) |
+| `AGENT_CPUS` | Optional - Max CPU cores (default: `2.0`, recommended: `8.0` for deploys) |
 | `AGENT_MEMORY` | Optional - Max RAM limit (default: `3G`) |
+| `AGENT_RESERVATION_CPUS` | Optional - Guaranteed CPU cores (default: `0.5`, recommended: `1.0`) |
 | `AGENT_NODE_MEMORY` | Optional - Node.js heap size in MB (default: `2048`) |
 | `NTFY_ENABLED` | Optional - Enable push notifications (default: `false`) |
 | `NTFY_TOPIC` | Optional - Your unique ntfy.sh topic name |
@@ -153,11 +154,11 @@ docker-compose build --build-arg CLAUDE_INSTALL_METHOD=npm
 
 You can dynamically adjust the agent's resources based on your host machine's specs via the `.env` file.
 
-| Host RAM | AGENT_MEMORY | AGENT_NODE_MEMORY | Use Case |
-| :--- | :--- | :--- | :--- |
-| **8 GB** | `2G` | `1024` | Basic tasks, small repos |
-| **16 GB** | `4G` | `2048` | Standard development |
-| **32 GB+** | `8G` | `6144` | Large codebases, high performance |
+| Host RAM | AGENT_CPUS | AGENT_MEMORY | AGENT_NODE_MEMORY | Use Case |
+| :--- | :--- | :--- | :--- | :--- |
+| **8 GB** | `2.0` | `2G` | `1024` | Basic tasks, small repos |
+| **16 GB** | `4.0` | `4G` | `2048` | Standard development |
+| **32 GB+** | `8.0` | `8G` | `6144` | Large codebases, deploys |
 
 > [!NOTE]
 > Changes to these variables require a container restart: `docker-compose up -d`.
