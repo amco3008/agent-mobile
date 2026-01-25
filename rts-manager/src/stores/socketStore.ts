@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TmuxSession, RalphLoop, SystemStats } from '../types'
+import type { TmuxSession, RalphLoop, SystemStats, SteeringQuestion, RalphProgress, RalphSummary } from '../types'
 
 interface SocketState {
   // Connection state
@@ -11,10 +11,10 @@ interface SocketState {
   ralphLoops: Map<string, RalphLoop>
   systemStats: SystemStats | null
 
-  // Ralph progress/steering content (keyed by taskId)
-  ralphProgress: Map<string, string>
-  ralphSteering: Map<string, { status: 'pending' | 'answered'; content: string }>
-  ralphSummaries: Map<string, string>
+  // Ralph progress/steering/summary (keyed by taskId) - now using parsed types
+  ralphProgress: Map<string, RalphProgress>
+  ralphSteering: Map<string, SteeringQuestion>
+  ralphSummaries: Map<string, RalphSummary>
 
   // Actions
   setConnected: (connected: boolean) => void
@@ -23,9 +23,9 @@ interface SocketState {
   updateRalphLoop: (loop: RalphLoop) => void
   removeRalphLoop: (taskId: string) => void
   setSystemStats: (stats: SystemStats) => void
-  updateRalphProgress: (taskId: string, content: string) => void
-  updateRalphSteering: (taskId: string, status: 'pending' | 'answered', content: string) => void
-  updateRalphSummary: (taskId: string, content: string) => void
+  updateRalphProgress: (taskId: string, progress: RalphProgress) => void
+  updateRalphSteering: (steering: SteeringQuestion) => void
+  updateRalphSummary: (taskId: string, summary: RalphSummary) => void
 
   // Selectors
   getRalphLoopsArray: () => RalphLoop[]
@@ -63,21 +63,21 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
   setSystemStats: (stats) => set({ systemStats: stats }),
 
-  updateRalphProgress: (taskId, content) => set((state) => {
+  updateRalphProgress: (taskId, progress) => set((state) => {
     const newProgress = new Map(state.ralphProgress)
-    newProgress.set(taskId, content)
+    newProgress.set(taskId, progress)
     return { ralphProgress: newProgress }
   }),
 
-  updateRalphSteering: (taskId, status, content) => set((state) => {
+  updateRalphSteering: (steering) => set((state) => {
     const newSteering = new Map(state.ralphSteering)
-    newSteering.set(taskId, { status, content })
+    newSteering.set(steering.taskId, steering)
     return { ralphSteering: newSteering }
   }),
 
-  updateRalphSummary: (taskId, content) => set((state) => {
+  updateRalphSummary: (taskId, summary) => set((state) => {
     const newSummaries = new Map(state.ralphSummaries)
-    newSummaries.set(taskId, content)
+    newSummaries.set(taskId, summary)
     return { ralphSummaries: newSummaries }
   }),
 

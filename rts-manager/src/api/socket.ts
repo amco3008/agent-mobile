@@ -62,12 +62,12 @@ function setupSocketListeners(socket: TypedSocket) {
     }
   })
 
-  socket.on('ralph:progress:update', ({ taskId, content }) => {
-    store.updateRalphProgress(taskId, content)
+  socket.on('ralph:progress:update', ({ taskId, progress }) => {
+    store.updateRalphProgress(taskId, progress)
   })
 
-  socket.on('ralph:steering:pending', ({ taskId, content }) => {
-    store.updateRalphSteering(taskId, 'pending', content)
+  socket.on('ralph:steering:pending', ({ taskId, steering }) => {
+    store.updateRalphSteering(steering)
     // Also update the loop's steering status
     const loops = useSocketStore.getState().ralphLoops
     const loop = loops.get(taskId)
@@ -76,8 +76,8 @@ function setupSocketListeners(socket: TypedSocket) {
     }
   })
 
-  socket.on('ralph:steering:answered', ({ taskId, content }) => {
-    store.updateRalphSteering(taskId, 'answered', content)
+  socket.on('ralph:steering:answered', ({ taskId, steering }) => {
+    store.updateRalphSteering(steering)
     // Also update the loop's steering status
     const loops = useSocketStore.getState().ralphLoops
     const loop = loops.get(taskId)
@@ -86,8 +86,8 @@ function setupSocketListeners(socket: TypedSocket) {
     }
   })
 
-  socket.on('ralph:summary:created', ({ taskId, content }) => {
-    store.updateRalphSummary(taskId, content)
+  socket.on('ralph:summary:created', ({ taskId, summary }) => {
+    store.updateRalphSummary(taskId, summary)
   })
 
   // System stats

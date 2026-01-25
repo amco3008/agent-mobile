@@ -77,28 +77,29 @@ export function setupSocketHandlers(io: IOServer) {
         completionPromise: null,
         mode: 'yolo',
         startedAt: new Date(),
-        stateFile: '',
+        stateFile: null,
         projectPath: '',
         progressFile: null,
         steeringFile: null,
         steeringStatus: 'none',
+        loopType: 'persistent',
       })
     })
 
-    ralphWatcher.on('progress:update', (taskId, content) => {
-      io.to(`ralph:${taskId}`).emit('ralph:progress:update', { taskId, content })
+    ralphWatcher.on('progress:update', (taskId, progress) => {
+      io.to(`ralph:${taskId}`).emit('ralph:progress:update', { taskId, progress })
     })
 
-    ralphWatcher.on('steering:pending', (taskId, content) => {
-      io.emit('ralph:steering:pending', { taskId, content })
+    ralphWatcher.on('steering:pending', (taskId, steering) => {
+      io.emit('ralph:steering:pending', { taskId, steering })
     })
 
-    ralphWatcher.on('steering:answered', (taskId, content) => {
-      io.emit('ralph:steering:answered', { taskId, content })
+    ralphWatcher.on('steering:answered', (taskId, steering) => {
+      io.emit('ralph:steering:answered', { taskId, steering })
     })
 
-    ralphWatcher.on('summary:created', (taskId, content) => {
-      io.to(`ralph:${taskId}`).emit('ralph:summary:created', { taskId, content })
+    ralphWatcher.on('summary:created', (taskId, summary) => {
+      io.to(`ralph:${taskId}`).emit('ralph:summary:created', { taskId, summary })
     })
 
     ralphWatcher.startWatching()

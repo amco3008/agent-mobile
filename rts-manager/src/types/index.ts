@@ -25,6 +25,17 @@ export interface TmuxPane {
   title: string
 }
 
+// Ralph spec parsed from ralph-spec-{task-id}.md
+export interface RalphSpec {
+  taskId: string
+  maxIterations: number
+  completionPromise: string | null
+  mode: 'yolo' | 'review'
+  taskContent: string        // The task body (after frontmatter)
+  taskSummary: string        // First paragraph for preview
+  specFile: string           // Full path to spec file
+}
+
 // Ralph types
 export interface RalphLoop {
   taskId: string
@@ -34,11 +45,42 @@ export interface RalphLoop {
   completionPromise: string | null
   mode: 'yolo' | 'review'
   startedAt: Date
-  stateFile: string
+  stateFile: string | null   // null for fresh mode
   progressFile: string | null
   steeringFile: string | null
   steeringStatus: 'none' | 'pending' | 'answered'
   status: 'running' | 'completed' | 'cancelled' | 'max_reached'
+  loopType: 'persistent' | 'fresh'  // Which mode the loop is running in
+  spec?: RalphSpec           // Parsed spec if available
+  logsDir?: string           // For fresh mode: ralph-logs-{task-id}/
+}
+
+// Parsed steering question from ralph-steering-{task-id}.md
+export interface SteeringQuestion {
+  taskId: string
+  status: 'pending' | 'answered'
+  iteration: number
+  timestamp: string
+  question: string
+  context?: string
+  options?: string[]
+  response?: string
+}
+
+// Parsed progress from ralph-progress-{task-id}.md
+export interface RalphProgress {
+  taskId: string
+  content: string      // Raw markdown content
+  summary?: string     // Extracted first paragraph/summary
+  lastUpdate: Date
+}
+
+// Parsed summary from ralph-summary-{task-id}.md
+export interface RalphSummary {
+  taskId: string
+  content: string      // Raw markdown content
+  outcome: 'success' | 'failure' | 'partial' | 'unknown'
+  completedAt: Date
 }
 
 // System types
@@ -68,11 +110,10 @@ export interface ServerToClientEvents {
   'tmux:sessions:update': (sessions: TmuxSession[]) => void
   'tmux:pane:output': (data: { sessionId: string; paneId: string; data: string }) => void
   'ralph:loop:update': (loop: RalphLoop) => void
-  'ralph:iteration': (data: { taskId: string; iteration: number; max: number }) => void
-  'ralph:progress:update': (data: { taskId: string; content: string }) => void
-  'ralph:steering:pending': (data: { taskId: string; content: string }) => void
-  'ralph:steering:answered': (data: { taskId: string; content: string }) => void
-  'ralph:summary:created': (data: { taskId: string; content: string }) => void
+  'ralph:progress:update': (data: { taskId: string; progress: RalphProgress }) => void
+  'ralph:steering:pending': (data: { taskId: string; steering: SteeringQuestion }) => void
+  'ralph:steering:answered': (data: { taskId: string; steering: SteeringQuestion }) => void
+  'ralph:summary:created': (data: { taskId: string; summary: RalphSummary }) => void
   'system:stats': (stats: SystemStats) => void
 }
 
