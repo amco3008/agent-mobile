@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { motion } from 'framer-motion'
 import { useTmuxSessions } from '../../api/hooks/useTmuxSessions'
 import { useRalphLoops } from '../../api/hooks/useRalphLoops'
@@ -6,9 +7,29 @@ interface MiniMapProps {
   onSelectSession?: (sessionId: string) => void
 }
 
-export function MiniMap({ onSelectSession }: MiniMapProps) {
-  const { data: sessions } = useTmuxSessions()
-  const { data: loops } = useRalphLoops()
+export const MiniMap = memo(function MiniMap({ onSelectSession }: MiniMapProps) {
+  const { data: sessions, error: sessionsError, isLoading: sessionsLoading } = useTmuxSessions()
+  const { data: loops, error: loopsError, isLoading: loopsLoading } = useRalphLoops()
+
+  // Safe access with defaults
+  const sessionsArray = sessions ?? []
+  const loopsArray = loops ?? []
+  const hasError = sessionsError || loopsError
+  const isLoading = sessionsLoading || loopsLoading
+
+  // Show error state
+  if (hasError) {
+    return (
+      <div className="factory-panel p-2">
+        <div className="text-[10px] text-gray-500 uppercase tracking-wider mb-2">
+          Mini Map
+        </div>
+        <div className="relative w-full h-24 bg-factory-bg rounded border border-signal-red/50 overflow-hidden flex items-center justify-center">
+          <span className="text-xs text-signal-red">Failed to load</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="factory-panel p-2">
@@ -25,8 +46,15 @@ export function MiniMap({ onSelectSession }: MiniMapProps) {
           }}
         />
 
+        {/* Loading indicator */}
+        {isLoading && sessionsArray.length === 0 && loopsArray.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-xs text-gray-500 animate-pulse">Loading...</span>
+          </div>
+        )}
+
         {/* Session markers */}
-        {sessions?.map((session, i) => (
+        {sessionsArray.map((session, i) => (
           <motion.div
             key={session.id}
             className={`absolute w-4 h-4 rounded cursor-pointer ${
@@ -43,7 +71,7 @@ export function MiniMap({ onSelectSession }: MiniMapProps) {
         ))}
 
         {/* Ralph loop markers */}
-        {loops?.map((loop, i) => (
+        {loopsArray.map((loop, i) => (
           <motion.div
             key={loop.taskId}
             className={`absolute w-3 h-3 rounded-full ${
@@ -69,4 +97,4 @@ export function MiniMap({ onSelectSession }: MiniMapProps) {
       </div>
     </div>
   )
-}
+})

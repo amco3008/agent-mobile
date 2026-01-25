@@ -1,7 +1,25 @@
-import { useSystemStats } from '../../api/hooks/useSystemStats'
+import { useSystemStats, useConnectionStatus } from '../../api/hooks/useSystemStats'
 
 export function ResourceMonitor() {
-  const { data: stats, isLoading } = useSystemStats()
+  const { data: stats, isLoading, error } = useSystemStats()
+  const { connected, error: connectionError } = useConnectionStatus()
+
+  // Show error state
+  if (error || connectionError) {
+    return (
+      <div className="factory-panel p-4">
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+          System Resources
+        </h3>
+        <div className="text-signal-red text-sm">
+          {connectionError ? 'Connection lost' : 'Failed to load stats'}
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          {error?.message || connectionError}
+        </div>
+      </div>
+    )
+  }
 
   if (isLoading || !stats) {
     return (
@@ -10,7 +28,7 @@ export function ResourceMonitor() {
           System Resources
         </h3>
         <div className="text-signal-yellow animate-pulse text-sm">
-          Loading...
+          {connected ? 'Loading...' : 'Connecting...'}
         </div>
       </div>
     )

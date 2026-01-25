@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { TmuxSession, TmuxPane } from '../../types'
 import { PanePreview } from './PanePreview'
 
@@ -8,8 +9,11 @@ interface SessionCardProps {
   onOpenTerminal?: (sessionId: string, pane: TmuxPane) => void
 }
 
-export function SessionCard({ session, isSelected, onSelect, onOpenTerminal }: SessionCardProps) {
-  const activeWindow = session.windows.find(w => w.active) || session.windows[0]
+export const SessionCard = memo(function SessionCard({ session, isSelected, onSelect, onOpenTerminal }: SessionCardProps) {
+  const activeWindow = useMemo(() =>
+    session.windows.find(w => w.active) || session.windows[0],
+    [session.windows]
+  )
 
   return (
     <div
@@ -76,4 +80,4 @@ export function SessionCard({ session, isSelected, onSelect, onOpenTerminal }: S
       )}
     </div>
   )
-}
+})

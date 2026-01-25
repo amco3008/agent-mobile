@@ -44,7 +44,25 @@ router.get('/loops/:taskId/progress', async (req, res) => {
 router.post('/loops/:taskId/steer', async (req, res) => {
   try {
     const { response } = req.body
-    await ralphWatcher.answerSteering(req.params.taskId, response)
+
+    // Validate response field
+    if (typeof response !== 'string') {
+      return res.status(400).json({ error: 'response is required and must be a string' })
+    }
+    if (!response.trim()) {
+      return res.status(400).json({ error: 'response cannot be empty' })
+    }
+    // Limit response length to prevent abuse
+    if (response.length > 50000) {
+      return res.status(400).json({ error: 'response exceeds maximum length of 50000 characters' })
+    }
+
+    // Sanitize response - remove null bytes and control characters except newlines/tabs
+    const sanitizedResponse = response
+      .replace(/\0/g, '')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+
+    await ralphWatcher.answerSteering(req.params.taskId, sanitizedResponse)
     res.json({ success: true })
   } catch (error) {
     console.error('Error steering loop:', error)

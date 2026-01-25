@@ -1,23 +1,26 @@
+import { memo, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useRalphLoops } from '../../api/hooks/useRalphLoops'
 
-export function ThroughputStats() {
+export const ThroughputStats = memo(function ThroughputStats() {
   const { data: loops } = useRalphLoops()
 
-  // Calculate stats
-  const runningLoops = loops?.filter(l => l.status === 'running').length || 0
-  const completedLoops = loops?.filter(l => l.status === 'completed').length || 0
-  const totalIterations = loops?.reduce((acc, l) => acc + l.iteration, 0) || 0
+  // Memoize calculated stats
+  const { runningLoops, completedLoops, totalIterations, avgIterationsPerLoop } = useMemo(() => {
+    const loopsArray = loops ?? []
+    const running = loopsArray.filter(l => l.status === 'running').length
+    const completed = loopsArray.filter(l => l.status === 'completed').length
+    const total = loopsArray.reduce((acc, l) => acc + l.iteration, 0)
+    const avg = loopsArray.length ? total / loopsArray.length : 0
+    return { runningLoops: running, completedLoops: completed, totalIterations: total, avgIterationsPerLoop: avg }
+  }, [loops])
 
-  // Estimate iterations per hour (simplified)
-  const avgIterationsPerLoop = loops?.length ? totalIterations / loops.length : 0
-
-  const stats = [
+  const stats = useMemo(() => [
     { label: 'Active Loops', value: runningLoops, color: 'text-signal-green' },
     { label: 'Completed', value: completedLoops, color: 'text-signal-blue' },
     { label: 'Total Iterations', value: totalIterations, color: 'text-signal-yellow' },
     { label: 'Avg/Loop', value: avgIterationsPerLoop.toFixed(1), color: 'text-ore-copper' },
-  ]
+  ], [runningLoops, completedLoops, totalIterations, avgIterationsPerLoop])
 
   return (
     <div className="factory-panel p-3">
@@ -59,4 +62,4 @@ export function ThroughputStats() {
       )}
     </div>
   )
-}
+})

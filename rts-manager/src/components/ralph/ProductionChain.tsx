@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import type { RalphLoop } from '../../types'
 
@@ -5,10 +6,11 @@ interface ProductionChainProps {
   loop: RalphLoop
 }
 
-export function ProductionChain({ loop }: ProductionChainProps) {
-  const progress = loop.maxIterations > 0
-    ? (loop.iteration / loop.maxIterations) * 100
-    : 50
+export const ProductionChain = memo(function ProductionChain({ loop }: ProductionChainProps) {
+  const progress = useMemo(() =>
+    loop.maxIterations > 0 ? (loop.iteration / loop.maxIterations) * 100 : 50,
+    [loop.iteration, loop.maxIterations]
+  )
 
   return (
     <div className="factory-panel p-4">
@@ -121,9 +123,9 @@ export function ProductionChain({ loop }: ProductionChainProps) {
           animate={{ opacity: 1, y: 0 }}
           className="mt-3 p-2 bg-signal-yellow/10 border border-signal-yellow/30 rounded text-xs text-signal-yellow"
         >
-          ⚠️ Awaiting user input - check steering panel
+          Awaiting user input - check steering panel
         </motion.div>
       )}
     </div>
   )
-}
+})

@@ -1,20 +1,24 @@
+import { memo, useMemo } from 'react'
 import { RalphLoop } from '../../types'
 
 interface LoopCardProps {
   loop: RalphLoop
 }
 
-export function LoopCard({ loop }: LoopCardProps) {
-  const progress = loop.maxIterations > 0
-    ? (loop.iteration / loop.maxIterations) * 100
-    : 0
+const STATUS_COLORS: Record<RalphLoop['status'], string> = {
+  running: 'text-signal-green',
+  completed: 'text-signal-blue',
+  cancelled: 'text-signal-red',
+  max_reached: 'text-signal-yellow',
+}
 
-  const statusColor = {
-    running: 'text-signal-green',
-    completed: 'text-signal-blue',
-    cancelled: 'text-signal-red',
-    max_reached: 'text-signal-yellow',
-  }[loop.status]
+export const LoopCard = memo(function LoopCard({ loop }: LoopCardProps) {
+  const progress = useMemo(() =>
+    loop.maxIterations > 0 ? (loop.iteration / loop.maxIterations) * 100 : 0,
+    [loop.iteration, loop.maxIterations]
+  )
+
+  const statusColor = STATUS_COLORS[loop.status]
 
   return (
     <div className="factory-panel p-2">
@@ -54,4 +58,4 @@ export function LoopCard({ loop }: LoopCardProps) {
       )}
     </div>
   )
-}
+})

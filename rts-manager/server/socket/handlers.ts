@@ -18,10 +18,13 @@ export function setupSocketHandlers(io: IOServer) {
   terminalManager.setIO(io)
 
   // Start background polling for tmux and system (Ralph uses file watching)
-  let tmuxInterval: NodeJS.Timeout
-  let systemInterval: NodeJS.Timeout
+  let tmuxInterval: NodeJS.Timeout | null = null
+  let systemInterval: NodeJS.Timeout | null = null
 
   function startPolling() {
+    // Clear any existing intervals to prevent leaks
+    if (tmuxInterval) clearInterval(tmuxInterval)
+    if (systemInterval) clearInterval(systemInterval)
     // Tmux sessions polling
     tmuxInterval = setInterval(async () => {
       if (io.engine.clientsCount > 0) {
@@ -48,8 +51,14 @@ export function setupSocketHandlers(io: IOServer) {
   }
 
   function stopPolling() {
-    clearInterval(tmuxInterval)
-    clearInterval(systemInterval)
+    if (tmuxInterval) {
+      clearInterval(tmuxInterval)
+      tmuxInterval = null
+    }
+    if (systemInterval) {
+      clearInterval(systemInterval)
+      systemInterval = null
+    }
   }
 
   // Set up Ralph file watching (instant updates instead of polling)
@@ -112,6 +121,11 @@ export function setupSocketHandlers(io: IOServer) {
       socket.emit('tmux:sessions:update', sessions)
       loops.forEach((loop) => socket.emit('ralph:loop:update', loop))
       socket.emit('system:stats', stats)
+    }).catch((error) => {
+      console.error('Error fetching initial data for client:', error)
+      // Still try to send partial data or empty arrays
+      socket.emit('tmux:sessions:update', [])
+      socket.emit('system:stats', { cpu: 0, memory: { used: 0, total: 0, percent: 0 }, processes: [] })
     })
 
     // Handle terminal subscription - connects PTY to tmux pane

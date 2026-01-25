@@ -1,4 +1,4 @@
-import { MouseEvent } from 'react'
+import { memo, MouseEvent } from 'react'
 import { TmuxPane } from '../../types'
 
 interface PanePreviewProps {
@@ -6,7 +6,7 @@ interface PanePreviewProps {
   onClick?: (e: MouseEvent) => void
 }
 
-export function PanePreview({ pane, onClick }: PanePreviewProps) {
+export const PanePreview = memo(function PanePreview({ pane, onClick }: PanePreviewProps) {
   return (
     <div
       className={`bg-black/50 rounded text-[8px] leading-tight p-1 font-mono overflow-hidden cursor-pointer hover:bg-black/70 transition-colors ${
@@ -30,4 +30,4 @@ export function PanePreview({ pane, onClick }: PanePreviewProps) {
       </div>
     </div>
   )
-}
+})

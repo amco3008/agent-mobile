@@ -1,10 +1,12 @@
 import { io, Socket } from 'socket.io-client'
 import type { ServerToClientEvents, ClientToServerEvents } from '../types'
+import { useSocketStore } from '../stores/socketStore'
 
 type TypedSocket = Socket<ServerToClientEvents, ClientToServerEvents>
 
 // Singleton socket instance
 let socket: TypedSocket | null = null
+let initialized = false
 
 export function getSocket(): TypedSocket {
   if (!socket) {
@@ -14,21 +16,90 @@ export function getSocket(): TypedSocket {
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     })
+  }
 
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket?.id)
-    })
-
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected')
-    })
-
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error)
-    })
+  // Set up event listeners only once
+  if (!initialized && socket) {
+    initialized = true
+    setupSocketListeners(socket)
   }
 
   return socket
+}
+
+function setupSocketListeners(socket: TypedSocket) {
+  const store = useSocketStore.getState()
+
+  // Connection events
+  socket.on('connect', () => {
+    console.log('Socket connected:', socket.id)
+    store.setConnected(true)
+    store.setConnectionError(null)
+  })
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected')
+    store.setConnected(false)
+  })
+
+  socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error)
+    store.setConnectionError(error.message)
+  })
+
+  // Tmux events
+  socket.on('tmux:sessions:update', (sessions) => {
+    store.setTmuxSessions(sessions)
+  })
+
+  // Ralph events
+  socket.on('ralph:loop:update', (loop) => {
+    // Handle the "removed" state (cancelled with empty data)
+    if (loop.status === 'cancelled' && loop.iteration === 0 && loop.maxIterations === 0) {
+      store.removeRalphLoop(loop.taskId)
+    } else {
+      store.updateRalphLoop(loop)
+    }
+  })
+
+  socket.on('ralph:progress:update', ({ taskId, content }) => {
+    store.updateRalphProgress(taskId, content)
+  })
+
+  socket.on('ralph:steering:pending', ({ taskId, content }) => {
+    store.updateRalphSteering(taskId, 'pending', content)
+    // Also update the loop's steering status
+    const loops = useSocketStore.getState().ralphLoops
+    const loop = loops.get(taskId)
+    if (loop) {
+      store.updateRalphLoop({ ...loop, steeringStatus: 'pending' })
+    }
+  })
+
+  socket.on('ralph:steering:answered', ({ taskId, content }) => {
+    store.updateRalphSteering(taskId, 'answered', content)
+    // Also update the loop's steering status
+    const loops = useSocketStore.getState().ralphLoops
+    const loop = loops.get(taskId)
+    if (loop) {
+      store.updateRalphLoop({ ...loop, steeringStatus: 'answered' })
+    }
+  })
+
+  socket.on('ralph:summary:created', ({ taskId, content }) => {
+    store.updateRalphSummary(taskId, content)
+  })
+
+  // System stats
+  socket.on('system:stats', (stats) => {
+    store.setSystemStats(stats)
+  })
+}
+
+// Initialize socket on module load to start receiving events immediately
+// This ensures we don't miss any initial data pushed by the server
+if (typeof window !== 'undefined') {
+  getSocket()
 }
 
 export function subscribeToTerminal(sessionId: string, paneId: string) {

@@ -1,7 +1,8 @@
-import { ReactNode } from 'react'
+import { memo, ReactNode, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useTmuxSessions } from '../../api/hooks/useTmuxSessions'
 import { MiniMap } from '../factorio/MiniMap'
+import type { TmuxSession } from '../../types'
 
 interface SidebarProps {
   children: ReactNode
@@ -9,8 +10,51 @@ interface SidebarProps {
   onSelectSession?: (sessionId: string) => void
 }
 
-export function Sidebar({ children, selectedSession, onSelectSession }: SidebarProps) {
-  const { data: sessions, isLoading } = useTmuxSessions()
+// Memoized session item component
+interface SessionItemProps {
+  session: TmuxSession
+  index: number
+  isSelected: boolean
+  onSelect: () => void
+}
+
+const SessionItem = memo(function SessionItem({ session, index, isSelected, onSelect }: SessionItemProps) {
+  return (
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      onClick={onSelect}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-left ${
+        isSelected
+          ? 'bg-signal-green/10 border border-signal-green/30'
+          : 'hover:bg-factory-highlight border border-transparent'
+      }`}
+      aria-pressed={isSelected}
+      aria-label={`Session ${session.name}${session.attached ? ' (attached)' : ''}`}
+    >
+      <span
+        className={`w-2 h-2 rounded-full flex-shrink-0 ${
+          session.attached ? 'bg-signal-green' : 'bg-signal-yellow'
+        }`}
+        aria-hidden="true"
+      />
+      <span className="text-xs truncate flex-1">{session.name}</span>
+      <span className="text-[10px] text-gray-500">
+        {session.windows.length}w
+      </span>
+    </motion.button>
+  )
+})
+
+export const Sidebar = memo(function Sidebar({ children, selectedSession, onSelectSession }: SidebarProps) {
+  const { data: sessions, isLoading, error } = useTmuxSessions()
+
+  // Memoize callback creator
+  const handleSelectSession = useCallback((sessionId: string) => {
+    onSelectSession?.(sessionId)
+  }, [onSelectSession])
 
   return (
     <aside className="w-64 border-r border-factory-border flex flex-col bg-factory-panel/50">
@@ -24,35 +68,22 @@ export function Sidebar({ children, selectedSession, onSelectSession }: SidebarP
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
           Tmux Sessions
         </h2>
-        {isLoading ? (
+        {error ? (
+          <div className="text-xs text-signal-red">Failed to load</div>
+        ) : isLoading ? (
           <div className="text-xs text-signal-yellow animate-pulse">Loading...</div>
         ) : !sessions || sessions.length === 0 ? (
           <div className="text-xs text-gray-500 italic">No sessions</div>
         ) : (
           <div className="space-y-1">
             {sessions.map((session, i) => (
-              <motion.div
+              <SessionItem
                 key={session.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => onSelectSession?.(session.id)}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors ${
-                  selectedSession === session.id
-                    ? 'bg-signal-green/10 border border-signal-green/30'
-                    : 'hover:bg-factory-highlight border border-transparent'
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    session.attached ? 'bg-signal-green' : 'bg-signal-yellow'
-                  }`}
-                />
-                <span className="text-xs truncate flex-1">{session.name}</span>
-                <span className="text-[10px] text-gray-500">
-                  {session.windows.length}w
-                </span>
-              </motion.div>
+                session={session}
+                index={i}
+                isSelected={selectedSession === session.id}
+                onSelect={() => handleSelectSession(session.id)}
+              />
             ))}
           </div>
         )}
@@ -67,4 +98,4 @@ export function Sidebar({ children, selectedSession, onSelectSession }: SidebarP
       </div>
     </aside>
   )
-}
+})
