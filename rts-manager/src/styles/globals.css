@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Factorio-inspired base styles */
+:root {
+  --factory-bg: #1a1a1a;
+  --factory-panel: #2d2d2d;
+  --factory-border: #404040;
+  --signal-green: #00ff00;
+  --signal-yellow: #ffcc00;
+  --signal-red: #ff3333;
+}
+
+body {
+  @apply bg-factory-bg text-gray-100 font-mono;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar styling for industrial look */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-factory-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-factory-border rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-factory-highlight;
+}
+
+/* Terminal styling */
+.xterm {
+  padding: 4px;
+}
+
+.xterm-viewport {
+  @apply bg-factory-bg !important;
+}
+
+/* Glow effects for status indicators */
+.status-running {
+  @apply text-signal-green;
+  text-shadow: 0 0 8px rgba(0, 255, 0, 0.5);
+}
+
+.status-pending {
+  @apply text-signal-yellow;
+  text-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
+}
+
+.status-error {
+  @apply text-signal-red;
+  text-shadow: 0 0 8px rgba(255, 51, 51, 0.5);
+}
+
+/* Belt animation for progress bars */
+.belt-progress {
+  background: repeating-linear-gradient(
+    90deg,
+    #d4a017 0px,
+    #d4a017 10px,
+    #8b6914 10px,
+    #8b6914 20px
+  );
+  background-size: 40px 100%;
+  animation: flow 1s linear infinite;
+}
+
+@keyframes flow {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 0; }
+}
+
+/* Panel styling */
+.factory-panel {
+  @apply bg-factory-panel border border-factory-border rounded-lg;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Grid styling for session cards */
+.session-card {
+  @apply factory-panel p-3 cursor-pointer transition-all duration-200;
+}
+
+.session-card:hover {
+  @apply border-signal-yellow;
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.2);
+}
+
+.session-card.selected {
+  @apply border-signal-green;
+  box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+}
