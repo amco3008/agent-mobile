@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
-import { getSocket, subscribeToTerminal, unsubscribeFromTerminal, sendTerminalInput } from '../../api/socket'
+import { getSocket, subscribeToTerminal, unsubscribeFromTerminal, sendTerminalInput, sendTerminalResize } from '../../api/socket'
 import type { TmuxPane } from '../../types'
 import 'xterm/css/xterm.css'
 
@@ -77,11 +77,19 @@ export function PaneTerminal({ sessionId, pane, onClose }: PaneTerminalProps) {
       sendTerminalInput(sessionId, paneId, data)
     })
 
-    // Handle resize
+    // Handle resize - notify server of new dimensions
     const handleResize = () => {
       fitAddon.fit()
+      const { cols, rows } = terminal
+      sendTerminalResize(sessionId, paneId, cols, rows)
     }
     window.addEventListener('resize', handleResize)
+
+    // Send initial dimensions after terminal is ready
+    setTimeout(() => {
+      const { cols, rows } = terminal
+      sendTerminalResize(sessionId, paneId, cols, rows)
+    }, 100)
 
     // Cleanup
     return () => {
@@ -96,10 +104,12 @@ export function PaneTerminal({ sessionId, pane, onClose }: PaneTerminalProps) {
 
   // Handle resize when container size changes
   const handleContainerResize = useCallback(() => {
-    if (fitAddonRef.current) {
+    if (fitAddonRef.current && xtermRef.current) {
       fitAddonRef.current.fit()
+      const { cols, rows } = xtermRef.current
+      sendTerminalResize(sessionId, paneId, cols, rows)
     }
-  }, [])
+  }, [sessionId, paneId])
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver(handleContainerResize)

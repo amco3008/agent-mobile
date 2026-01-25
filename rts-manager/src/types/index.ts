@@ -69,6 +69,10 @@ export interface ServerToClientEvents {
   'tmux:pane:output': (data: { sessionId: string; paneId: string; data: string }) => void
   'ralph:loop:update': (loop: RalphLoop) => void
   'ralph:iteration': (data: { taskId: string; iteration: number; max: number }) => void
+  'ralph:progress:update': (data: { taskId: string; content: string }) => void
+  'ralph:steering:pending': (data: { taskId: string; content: string }) => void
+  'ralph:steering:answered': (data: { taskId: string; content: string }) => void
+  'ralph:summary:created': (data: { taskId: string; content: string }) => void
   'system:stats': (stats: SystemStats) => void
 }
 
@@ -76,5 +80,6 @@ export interface ClientToServerEvents {
   'tmux:subscribe': (data: { sessionId: string; paneId: string }) => void
   'tmux:unsubscribe': (data: { sessionId: string; paneId: string }) => void
   'tmux:input': (data: { sessionId: string; paneId: string; data: string }) => void
+  'tmux:resize': (data: { sessionId: string; paneId: string; cols: number; rows: number }) => void
   'ralph:subscribe': (data: { taskId: string }) => void
 }

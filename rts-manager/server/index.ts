@@ -6,9 +6,8 @@ import { tmuxRouter } from './routes/tmux'
 import { ralphRouter } from './routes/ralph'
 import { systemRouter } from './routes/system'
 import { setupSocketHandlers } from './socket/handlers'
+import { config } from './config'
 import type { ServerToClientEvents, ClientToServerEvents } from '../src/types'
-
-const PORT = process.env.PORT || 9091
 
 const app = express()
 const httpServer = createServer(app)
@@ -16,7 +15,7 @@ const httpServer = createServer(app)
 // Socket.io setup with typed events
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
   cors: {
-    origin: ['http://localhost:5173', 'http://localhost:9091'],
+    origin: config.getCorsOrigins(),
     methods: ['GET', 'POST'],
   },
 })
@@ -39,10 +38,11 @@ app.get('/api/health', (_req, res) => {
 setupSocketHandlers(io)
 
 // Start server
-httpServer.listen(PORT, () => {
-  console.log(`🎮 RTS Manager server running on http://localhost:${PORT}`)
-  console.log(`   API: http://localhost:${PORT}/api`)
-  console.log(`   Socket.io: ws://localhost:${PORT}`)
+httpServer.listen(config.port, () => {
+  console.log(`RTS Manager server running on http://localhost:${config.port}`)
+  console.log(`   API: http://localhost:${config.port}/api`)
+  console.log(`   Socket.io: ws://localhost:${config.port}`)
+  console.log(`   CORS origins: ${config.getCorsOrigins().join(', ')}`)
 })
 
 export { io }

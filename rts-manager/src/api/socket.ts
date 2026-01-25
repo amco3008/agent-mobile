@@ -46,6 +46,11 @@ export function sendTerminalInput(sessionId: string, paneId: string, data: strin
   s.emit('tmux:input', { sessionId, paneId, data })
 }
 
+export function sendTerminalResize(sessionId: string, paneId: string, cols: number, rows: number) {
+  const s = getSocket()
+  s.emit('tmux:resize', { sessionId, paneId, cols, rows })
+}
+
 export function subscribeToRalphLoop(taskId: string) {
   const s = getSocket()
   s.emit('ralph:subscribe', { taskId })

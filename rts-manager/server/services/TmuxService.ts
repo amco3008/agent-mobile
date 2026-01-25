@@ -4,7 +4,47 @@ import type { TmuxSession, TmuxWindow, TmuxPane } from '../../src/types'
 
 const execAsync = promisify(exec)
 
+// Valid patterns for tmux identifiers
+const SESSION_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/
+const PANE_ID_PATTERN = /^[a-zA-Z0-9_%-]+$/
+const SESSION_ID_PATTERN = /^[$@%]?[a-zA-Z0-9_-]+$/
+
 export class TmuxService {
+  /**
+   * Validate a session name/ID to prevent command injection
+   */
+  private validateSessionId(sessionId: string): void {
+    if (!sessionId || !SESSION_ID_PATTERN.test(sessionId)) {
+      throw new Error(`Invalid session identifier: ${sessionId}`)
+    }
+  }
+
+  /**
+   * Validate a pane ID
+   */
+  private validatePaneId(paneId: string): void {
+    if (!paneId || !PANE_ID_PATTERN.test(paneId)) {
+      throw new Error(`Invalid pane identifier: ${paneId}`)
+    }
+  }
+
+  /**
+   * Validate a session name for creation
+   */
+  private validateSessionName(name: string): void {
+    if (!name || !SESSION_NAME_PATTERN.test(name)) {
+      throw new Error(`Invalid session name: ${name}. Must contain only alphanumeric, underscore, and hyphen.`)
+    }
+  }
+
+  /**
+   * Escape a string for use in double quotes in shell
+   * Only used for safe, validated strings
+   */
+  private shellEscape(str: string): string {
+    // Replace special chars that could break out of double quotes
+    return str.replace(/[`$"\\!]/g, '\\$&')
+  }
   /**
    * List all tmux sessions with their windows and panes
    */
@@ -50,9 +90,11 @@ export class TmuxService {
    * List windows for a session
    */
   async listWindows(sessionName: string): Promise<TmuxWindow[]> {
+    this.validateSessionId(sessionName)
+
     try {
       const { stdout: windowsRaw } = await execAsync(
-        `tmux list-windows -t "${sessionName}" -F "#{window_id}|#{window_name}|#{window_active}|#{window_layout}"`
+        `tmux list-windows -t "${this.shellEscape(sessionName)}" -F "#{window_id}|#{window_name}|#{window_active}|#{window_layout}"`
       )
 
       const windows: TmuxWindow[] = []
@@ -82,9 +124,16 @@ export class TmuxService {
    * List panes for a window
    */
   async listPanes(sessionName: string, windowId: number): Promise<TmuxPane[]> {
+    this.validateSessionId(sessionName)
+
+    // windowId is a number, so it's safe from injection
+    if (!Number.isInteger(windowId) || windowId < 0) {
+      throw new Error(`Invalid window ID: ${windowId}`)
+    }
+
     try {
       const { stdout: panesRaw } = await execAsync(
-        `tmux list-panes -t "${sessionName}:${windowId}" -F "#{pane_id}|#{pane_active}|#{pane_width}|#{pane_height}|#{pane_current_command}|#{pane_pid}|#{pane_title}"`
+        `tmux list-panes -t "${this.shellEscape(sessionName)}:${windowId}" -F "#{pane_id}|#{pane_active}|#{pane_width}|#{pane_height}|#{pane_current_command}|#{pane_pid}|#{pane_title}"`
       )
 
       const panes: TmuxPane[] = []
@@ -123,8 +172,15 @@ export class TmuxService {
    * Capture pane content
    */
   async capturePane(sessionId: string, paneId?: string): Promise<string> {
+    this.validateSessionId(sessionId)
+    if (paneId) {
+      this.validatePaneId(paneId)
+    }
+
     try {
-      const target = paneId ? `${sessionId}:${paneId}` : sessionId
+      const target = paneId
+        ? `${this.shellEscape(sessionId)}:${this.shellEscape(paneId)}`
+        : this.shellEscape(sessionId)
       const { stdout } = await execAsync(
         `tmux capture-pane -t "${target}" -p -e`
       )
@@ -136,11 +192,36 @@ export class TmuxService {
 
   /**
    * Send keys to a pane
+   * Note: This uses tmux's literal key sending, not shell interpolation
    */
   async sendKeys(sessionId: string, paneId: string, keys: string): Promise<void> {
-    await execAsync(
-      `tmux send-keys -t "${sessionId}:${paneId}" "${keys}"`
-    )
+    this.validateSessionId(sessionId)
+    this.validatePaneId(paneId)
+
+    // Use tmux send-keys with -l flag for literal interpretation
+    // This avoids shell escaping issues by passing keys via stdin
+    const target = `${this.shellEscape(sessionId)}:${this.shellEscape(paneId)}`
+
+    // For safety, use spawn with arguments array instead of shell string
+    const { spawn } = await import('child_process')
+    return new Promise((resolve, reject) => {
+      const proc = spawn('tmux', ['send-keys', '-t', target, '-l', keys], {
+        stdio: ['ignore', 'ignore', 'pipe'],
+      })
+
+      let stderr = ''
+      proc.stderr?.on('data', (data) => { stderr += data.toString() })
+
+      proc.on('close', (code) => {
+        if (code === 0) {
+          resolve()
+        } else {
+          reject(new Error(`tmux send-keys failed: ${stderr}`))
+        }
+      })
+
+      proc.on('error', reject)
+    })
   }
 
   /**
@@ -148,7 +229,9 @@ export class TmuxService {
    */
   async createSession(name?: string): Promise<TmuxSession> {
     const sessionName = name || `session-${Date.now()}`
-    await execAsync(`tmux new-session -d -s "${sessionName}"`)
+    this.validateSessionName(sessionName)
+
+    await execAsync(`tmux new-session -d -s "${this.shellEscape(sessionName)}"`)
     const session = await this.getSession(sessionName)
     if (!session) {
       throw new Error('Failed to create session')
@@ -160,6 +243,7 @@ export class TmuxService {
    * Kill a session
    */
   async killSession(sessionId: string): Promise<void> {
-    await execAsync(`tmux kill-session -t "${sessionId}"`)
+    this.validateSessionId(sessionId)
+    await execAsync(`tmux kill-session -t "${this.shellEscape(sessionId)}"`)
   }
 }

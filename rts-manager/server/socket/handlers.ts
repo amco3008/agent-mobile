@@ -2,6 +2,8 @@ import { Server, Socket } from 'socket.io'
 import { TmuxService } from '../services/TmuxService'
 import { RalphWatcher } from '../services/RalphWatcher'
 import { SystemMonitor } from '../services/SystemMonitor'
+import { terminalManager } from '../services/TerminalManager'
+import { config } from '../config'
 import type { ServerToClientEvents, ClientToServerEvents } from '../../src/types'
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>
@@ -11,15 +13,12 @@ const tmuxService = new TmuxService()
 const ralphWatcher = new RalphWatcher()
 const systemMonitor = new SystemMonitor()
 
-// Polling intervals
-const TMUX_POLL_INTERVAL = 2000
-const RALPH_POLL_INTERVAL = 3000
-const SYSTEM_POLL_INTERVAL = 5000
-
 export function setupSocketHandlers(io: IOServer) {
-  // Start background polling for all connected clients
+  // Initialize terminal manager with socket.io server
+  terminalManager.setIO(io)
+
+  // Start background polling for tmux and system (Ralph uses file watching)
   let tmuxInterval: NodeJS.Timeout
-  let ralphInterval: NodeJS.Timeout
   let systemInterval: NodeJS.Timeout
 
   function startPolling() {
@@ -33,21 +32,7 @@ export function setupSocketHandlers(io: IOServer) {
           console.error('Error polling tmux:', error)
         }
       }
-    }, TMUX_POLL_INTERVAL)
-
-    // Ralph loops polling
-    ralphInterval = setInterval(async () => {
-      if (io.engine.clientsCount > 0) {
-        try {
-          const loops = await ralphWatcher.listLoops()
-          for (const loop of loops) {
-            io.emit('ralph:loop:update', loop)
-          }
-        } catch (error) {
-          console.error('Error polling ralph:', error)
-        }
-      }
-    }, RALPH_POLL_INTERVAL)
+    }, config.polling.tmux)
 
     // System stats polling
     systemInterval = setInterval(async () => {
@@ -59,13 +44,59 @@ export function setupSocketHandlers(io: IOServer) {
           console.error('Error polling system:', error)
         }
       }
-    }, SYSTEM_POLL_INTERVAL)
+    }, config.polling.system)
   }
 
   function stopPolling() {
     clearInterval(tmuxInterval)
-    clearInterval(ralphInterval)
     clearInterval(systemInterval)
+  }
+
+  // Set up Ralph file watching (instant updates instead of polling)
+  function startRalphWatching() {
+    ralphWatcher.on('loop:update', (loop) => {
+      io.emit('ralph:loop:update', loop)
+    })
+
+    ralphWatcher.on('loop:removed', (taskId) => {
+      // Emit a "removed" state to clients
+      io.emit('ralph:loop:update', {
+        taskId,
+        status: 'cancelled',
+        iteration: 0,
+        maxIterations: 0,
+        completionPromise: null,
+        mode: 'yolo',
+        startedAt: new Date(),
+        stateFile: '',
+        projectPath: '',
+        progressFile: null,
+        steeringFile: null,
+        steeringStatus: 'none',
+      })
+    })
+
+    ralphWatcher.on('progress:update', (taskId, content) => {
+      io.to(`ralph:${taskId}`).emit('ralph:progress:update', { taskId, content })
+    })
+
+    ralphWatcher.on('steering:pending', (taskId, content) => {
+      io.emit('ralph:steering:pending', { taskId, content })
+    })
+
+    ralphWatcher.on('steering:answered', (taskId, content) => {
+      io.emit('ralph:steering:answered', { taskId, content })
+    })
+
+    ralphWatcher.on('summary:created', (taskId, content) => {
+      io.to(`ralph:${taskId}`).emit('ralph:summary:created', { taskId, content })
+    })
+
+    ralphWatcher.startWatching()
+  }
+
+  async function stopRalphWatching() {
+    await ralphWatcher.stopWatching()
   }
 
   // Start polling on first connection
@@ -83,25 +114,23 @@ export function setupSocketHandlers(io: IOServer) {
       socket.emit('system:stats', stats)
     })
 
-    // Handle terminal subscription
+    // Handle terminal subscription - connects PTY to tmux pane
     socket.on('tmux:subscribe', ({ sessionId, paneId }) => {
-      const room = `terminal:${sessionId}:${paneId}`
-      socket.join(room)
-      console.log(`Client ${socket.id} subscribed to ${room}`)
+      terminalManager.subscribe(socket.id, sessionId, paneId)
     })
 
     socket.on('tmux:unsubscribe', ({ sessionId, paneId }) => {
-      const room = `terminal:${sessionId}:${paneId}`
-      socket.leave(room)
-      console.log(`Client ${socket.id} unsubscribed from ${room}`)
+      terminalManager.unsubscribe(socket.id, sessionId, paneId)
     })
 
-    socket.on('tmux:input', async ({ sessionId, paneId, data }) => {
-      try {
-        await tmuxService.sendKeys(sessionId, paneId, data)
-      } catch (error) {
-        console.error('Error sending keys:', error)
-      }
+    // Handle terminal input - writes directly to PTY
+    socket.on('tmux:input', ({ sessionId, paneId, data }) => {
+      terminalManager.write(sessionId, paneId, data)
+    })
+
+    // Handle terminal resize
+    socket.on('tmux:resize', ({ sessionId, paneId, cols, rows }) => {
+      terminalManager.resize(sessionId, paneId, cols, rows)
     })
 
     socket.on('ralph:subscribe', ({ taskId }) => {
@@ -112,13 +141,24 @@ export function setupSocketHandlers(io: IOServer) {
 
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`)
+      // Clean up any PTY connections for this socket
+      terminalManager.cleanupSocket(socket.id)
     })
   })
 
-  // Start polling
+  // Start polling and file watching
   startPolling()
+  startRalphWatching()
 
   // Cleanup on server shutdown
-  process.on('SIGTERM', stopPolling)
-  process.on('SIGINT', stopPolling)
+  process.on('SIGTERM', async () => {
+    stopPolling()
+    await stopRalphWatching()
+    terminalManager.cleanup()
+  })
+  process.on('SIGINT', async () => {
+    stopPolling()
+    await stopRalphWatching()
+    terminalManager.cleanup()
+  })
 }

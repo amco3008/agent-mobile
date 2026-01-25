@@ -1,16 +1,143 @@
 import { readFile, readdir, writeFile } from 'fs/promises'
-import { join, basename } from 'path'
+import { join, basename, dirname } from 'path'
 import { existsSync } from 'fs'
+import { watch, FSWatcher } from 'chokidar'
 import matter from 'gray-matter'
+import { EventEmitter } from 'events'
+import { config } from '../config'
 import type { RalphLoop } from '../../src/types'
 
-// Paths to search for Ralph state files
+// Paths to search for Ralph state files (from config)
 const SEARCH_PATHS = [
-  process.env.HOME || '/home/agent',
-  join(process.env.HOME || '/home/agent', 'projects'),
+  config.homeDir,
+  join(config.homeDir, config.projectsDir),
 ]
 
-export class RalphWatcher {
+// Events emitted by RalphWatcher
+export interface RalphWatcherEvents {
+  'loop:update': (loop: RalphLoop) => void
+  'loop:removed': (taskId: string) => void
+  'progress:update': (taskId: string, content: string) => void
+  'steering:pending': (taskId: string, content: string) => void
+  'steering:answered': (taskId: string, content: string) => void
+  'summary:created': (taskId: string, content: string) => void
+}
+
+export class RalphWatcher extends EventEmitter {
+  private watcher: FSWatcher | null = null
+  private watching = false
+
+  /**
+   * Start watching for Ralph file changes
+   */
+  startWatching(): void {
+    if (this.watching) return
+    this.watching = true
+
+    // Build glob patterns for all Ralph-related files
+    const patterns = SEARCH_PATHS.flatMap(basePath => [
+      join(basePath, '.claude', 'ralph-loop-*.local.md'),
+      join(basePath, '.claude', 'ralph-spec-*.md'),
+      join(basePath, '.claude', 'ralph-progress-*.md'),
+      join(basePath, '.claude', 'ralph-steering-*.md'),
+      join(basePath, '.claude', 'ralph-summary-*.md'),
+      join(basePath, '*', '.claude', 'ralph-loop-*.local.md'),
+      join(basePath, '*', '.claude', 'ralph-spec-*.md'),
+      join(basePath, '*', '.claude', 'ralph-progress-*.md'),
+      join(basePath, '*', '.claude', 'ralph-steering-*.md'),
+      join(basePath, '*', '.claude', 'ralph-summary-*.md'),
+    ])
+
+    this.watcher = watch(patterns, {
+      ignoreInitial: false,
+      persistent: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 200,
+        pollInterval: 100,
+      },
+    })
+
+    this.watcher.on('add', (path) => this.handleFileChange(path, 'add'))
+    this.watcher.on('change', (path) => this.handleFileChange(path, 'change'))
+    this.watcher.on('unlink', (path) => this.handleFileRemove(path))
+    this.watcher.on('error', (error) => console.error('Ralph watcher error:', error))
+
+    console.log('Ralph watcher started')
+  }
+
+  /**
+   * Stop watching for file changes
+   */
+  async stopWatching(): Promise<void> {
+    if (this.watcher) {
+      await this.watcher.close()
+      this.watcher = null
+      this.watching = false
+      console.log('Ralph watcher stopped')
+    }
+  }
+
+  /**
+   * Handle file add/change events
+   */
+  private async handleFileChange(filepath: string, event: 'add' | 'change'): Promise<void> {
+    const filename = basename(filepath)
+
+    try {
+      // Ralph loop state files
+      if (filename.startsWith('ralph-loop-') && filename.endsWith('.local.md')) {
+        const loop = await this.parseStateFile(filepath)
+        if (loop) {
+          this.emit('loop:update', loop)
+        }
+      }
+      // Progress files
+      else if (filename.startsWith('ralph-progress-') && filename.endsWith('.md')) {
+        const match = filename.match(/ralph-progress-(.+)\.md/)
+        if (match) {
+          const content = await readFile(filepath, 'utf-8')
+          this.emit('progress:update', match[1], content)
+        }
+      }
+      // Steering files
+      else if (filename.startsWith('ralph-steering-') && filename.endsWith('.md')) {
+        const match = filename.match(/ralph-steering-(.+)\.md/)
+        if (match) {
+          const content = await readFile(filepath, 'utf-8')
+          if (content.includes('status: pending')) {
+            this.emit('steering:pending', match[1], content)
+          } else if (content.includes('status: answered')) {
+            this.emit('steering:answered', match[1], content)
+          }
+        }
+      }
+      // Summary files
+      else if (filename.startsWith('ralph-summary-') && filename.endsWith('.md')) {
+        const match = filename.match(/ralph-summary-(.+)\.md/)
+        if (match) {
+          const content = await readFile(filepath, 'utf-8')
+          this.emit('summary:created', match[1], content)
+        }
+      }
+    } catch (error) {
+      console.error(`Error handling file ${filepath}:`, error)
+    }
+  }
+
+  /**
+   * Handle file removal
+   */
+  private handleFileRemove(filepath: string): void {
+    const filename = basename(filepath)
+
+    if (filename.startsWith('ralph-loop-') && filename.endsWith('.local.md')) {
+      const match = filename.match(/ralph-loop-(.+)\.local\.md/)
+      if (match) {
+        this.emit('loop:removed', match[1])
+      }
+    }
+  }
+
   /**
    * Find all Ralph loop state files
    */
