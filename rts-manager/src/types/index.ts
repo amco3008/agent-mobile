@@ -108,6 +108,14 @@ export interface ProcessInfo {
   memory: number
 }
 
+// Pending spec notification (for auto-launch feature)
+export interface PendingSpec {
+  taskId: string
+  spec: RalphSpec
+  projectPath: string
+  createdAt: Date
+}
+
 // Socket events
 export interface ServerToClientEvents {
   'tmux:sessions:update': (sessions: TmuxSession[]) => void
@@ -117,6 +125,7 @@ export interface ServerToClientEvents {
   'ralph:steering:pending': (data: { taskId: string; steering: SteeringQuestion }) => void
   'ralph:steering:answered': (data: { taskId: string; steering: SteeringQuestion }) => void
   'ralph:summary:created': (data: { taskId: string; summary: RalphSummary }) => void
+  'ralph:spec:created': (data: { taskId: string; spec: RalphSpec; projectPath: string }) => void
   'system:stats': (stats: SystemStats) => void
   'containers:update': (containers: import('./container').Container[]) => void
 }

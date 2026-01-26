@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TmuxSession, RalphLoop, SystemStats, SteeringQuestion, RalphProgress, RalphSummary, Container } from '../types'
+import type { TmuxSession, RalphLoop, SystemStats, SteeringQuestion, RalphProgress, RalphSummary, Container, PendingSpec } from '../types'
 
 interface SocketState {
   // Connection state
@@ -17,6 +17,9 @@ interface SocketState {
   ralphSteering: Map<string, SteeringQuestion>
   ralphSummaries: Map<string, RalphSummary>
 
+  // Pending specs for auto-launch notifications
+  pendingSpecs: PendingSpec[]
+
   // Actions
   setConnected: (connected: boolean) => void
   setConnectionError: (error: string | null) => void
@@ -28,6 +31,8 @@ interface SocketState {
   updateRalphProgress: (taskId: string, progress: RalphProgress) => void
   updateRalphSteering: (steering: SteeringQuestion) => void
   updateRalphSummary: (taskId: string, summary: RalphSummary) => void
+  addPendingSpec: (spec: PendingSpec) => void
+  removePendingSpec: (taskId: string) => void
   clearStaleData: () => void
 
   // Selectors - memoized
@@ -49,6 +54,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   ralphProgress: new Map(),
   ralphSteering: new Map(),
   ralphSummaries: new Map(),
+  pendingSpecs: [],
 
   // Actions
   setConnected: (connected) => set({ connected, connectionError: connected ? null : get().connectionError }),
@@ -107,6 +113,18 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     return { ralphSummaries: newSummaries }
   }),
 
+  addPendingSpec: (spec) => set((state) => {
+    // Don't add duplicates
+    if (state.pendingSpecs.some(s => s.taskId === spec.taskId)) {
+      return state
+    }
+    return { pendingSpecs: [...state.pendingSpecs, spec] }
+  }),
+
+  removePendingSpec: (taskId) => set((state) => ({
+    pendingSpecs: state.pendingSpecs.filter(s => s.taskId !== taskId)
+  })),
+
   clearStaleData: () => {
     // Invalidate cache
     cachedLoopsMap = null
@@ -118,6 +136,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       ralphProgress: new Map(),
       ralphSteering: new Map(),
       ralphSummaries: new Map(),
+      pendingSpecs: [],
     })
   },
 

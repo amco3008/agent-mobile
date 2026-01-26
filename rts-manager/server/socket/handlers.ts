@@ -122,6 +122,11 @@ export function setupSocketHandlers(io: IOServer) {
       io.to(`ralph:${taskId}`).emit('ralph:summary:created', { taskId, summary })
     })
 
+    ralphWatcher.on('spec:created', (data) => {
+      // Broadcast to all clients - new spec ready for auto-launch
+      io.emit('ralph:spec:created', data)
+    })
+
     ralphWatcher.startWatching()
   }
 

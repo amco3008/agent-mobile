@@ -18,6 +18,7 @@ export interface RalphWatcherEvents {
   'loop:update': (loop: RalphLoop) => void
   'loop:removed': (taskId: string) => void
   'spec:update': (spec: RalphSpec) => void
+  'spec:created': (data: { taskId: string; spec: RalphSpec; projectPath: string }) => void
   'progress:update': (taskId: string, progress: RalphProgress) => void
   'steering:pending': (taskId: string, steering: SteeringQuestion) => void
   'steering:answered': (taskId: string, steering: SteeringQuestion) => void
@@ -27,6 +28,8 @@ export interface RalphWatcherEvents {
 export class RalphWatcher extends EventEmitter {
   private watcher: FSWatcher | null = null
   private watching = false
+  // Track specs we've seen to only emit spec:created for new ones
+  private seenSpecs = new Set<string>()
 
   /**
    * Parse a spec file into a RalphSpec object
@@ -253,12 +256,30 @@ export class RalphWatcher extends EventEmitter {
           this.emit('loop:update', loop)
         }
       }
-      // Spec files - check for fresh mode loop
+      // Spec files - check for fresh mode loop and emit spec:created for new specs
       else if (filename.startsWith('ralph-spec-') && filename.endsWith('.md')) {
         const content = await readFile(filepath, 'utf-8')
         const spec = this.parseSpecFile(filepath, content)
         if (spec) {
           this.emit('spec:update', spec)
+
+          // For new spec files (add event), check if we should emit spec:created
+          if (event === 'add' && !this.seenSpecs.has(spec.taskId)) {
+            this.seenSpecs.add(spec.taskId)
+
+            // Check if there's an active loop for this spec
+            const hasActiveLoop = await this.hasActiveLoop(filepath, spec.taskId)
+            if (!hasActiveLoop) {
+              // Emit spec:created for auto-launch notification
+              const projectPath = dirname(dirname(filepath)) // parent of .claude dir
+              this.emit('spec:created', {
+                taskId: spec.taskId,
+                spec,
+                projectPath
+              })
+            }
+          }
+
           // Check if this is a fresh mode loop (has logs but no state file)
           await this.checkFreshModeLoop(filepath, spec)
         }
@@ -313,6 +334,45 @@ export class RalphWatcher extends EventEmitter {
     } catch (error) {
       console.error(`Error handling file ${filepath}:`, error)
     }
+  }
+
+  /**
+   * Check if there's an active loop for a given task ID
+   * Returns true if state file exists OR logs directory has recent activity
+   */
+  private async hasActiveLoop(specPath: string, taskId: string): Promise<boolean> {
+    const dir = dirname(specPath)
+    const stateFile = join(dir, `ralph-loop-${taskId}.local.md`)
+    const logsDir = join(dir, `ralph-logs-${taskId}`)
+
+    // Check for persistent mode state file
+    if (existsSync(stateFile)) {
+      return true
+    }
+
+    // Check for fresh mode logs with recent activity
+    if (existsSync(logsDir)) {
+      try {
+        const logFiles = await readdir(logsDir)
+        const iterationFiles = logFiles.filter(f => f.startsWith('iteration-') && f.endsWith('.log'))
+
+        if (iterationFiles.length > 0) {
+          // Check if any log file was modified recently (within 5 minutes)
+          for (const logFile of iterationFiles) {
+            const logPath = join(logsDir, logFile)
+            const logStat = await stat(logPath)
+            const age = Date.now() - logStat.mtime.getTime()
+            if (age < 5 * 60 * 1000) {
+              return true // Active loop detected
+            }
+          }
+        }
+      } catch {
+        // Ignore errors reading logs
+      }
+    }
+
+    return false
   }
 
   /**

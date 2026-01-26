@@ -10,6 +10,7 @@ import { SteeringPanel } from './components/ralph/SteeringPanel'
 import { PaneTerminal } from './components/tmux/PaneTerminal'
 import { LaunchModal } from './components/ralph/LaunchModal'
 import { InteractiveSession } from './components/ralph/InteractiveSession'
+import { SpecNotificationList } from './components/ralph/SpecNotification'
 import { useTmuxSession } from './api/hooks/useTmuxSessions'
 import { useRalphLoops } from './api/hooks/useRalphLoops'
 import { getSocket } from './api/socket'
@@ -86,6 +87,9 @@ function App() {
           onClose={() => setInteractiveSession(null)}
         />
       )}
+
+      {/* Auto-launch spec notifications */}
+      <SpecNotificationList onLaunched={handleLaunched} />
 
       <main className="flex-1 p-4 overflow-auto flex flex-col gap-4">
         {/* Steering panel when needed */}

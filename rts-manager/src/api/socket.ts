@@ -93,6 +93,16 @@ function setupSocketListeners(socket: TypedSocket) {
     store.updateRalphSummary(taskId, summary)
   })
 
+  // Spec created (for auto-launch notifications)
+  socket.on('ralph:spec:created', ({ taskId, spec, projectPath }) => {
+    store.addPendingSpec({
+      taskId,
+      spec,
+      projectPath,
+      createdAt: new Date(),
+    })
+  })
+
   // System stats
   socket.on('system:stats', (stats) => {
     store.setSystemStats(stats)
