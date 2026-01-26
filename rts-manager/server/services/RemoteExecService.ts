@@ -43,24 +43,35 @@ export class RemoteExecService {
 
       // Collect output with timeout
       let output = ''
+      let resolved = false
       return new Promise((resolve) => {
+        const safeResolve = (result: ExecResult) => {
+          if (!resolved) {
+            resolved = true
+            resolve(result)
+          }
+        }
+
         const timeout = setTimeout(() => {
           stream.destroy()
-          resolve({ success: false, error: `Command execution timeout (${EXEC_TIMEOUT_MS / 1000}s)` })
+          safeResolve({ success: false, error: `Command execution timeout (${EXEC_TIMEOUT_MS / 1000}s)` })
         }, EXEC_TIMEOUT_MS)
 
         stream.on('data', (chunk: Buffer) => {
-          output += chunk.toString()
+          // Guard against data after stream destroyed
+          if (!resolved && !stream.destroyed) {
+            output += chunk.toString()
+          }
         })
 
         stream.on('end', () => {
           clearTimeout(timeout)
-          resolve({ success: true, output })
+          safeResolve({ success: true, output })
         })
 
         stream.on('error', (err: Error) => {
           clearTimeout(timeout)
-          resolve({ success: false, error: err.message })
+          safeResolve({ success: false, error: err.message })
         })
       })
     } catch (error) {
@@ -102,41 +113,53 @@ export class RemoteExecService {
 
       // Wait for command to complete with timeout
       let output = ''
-      let errorOutput = ''
+      let resolved = false
 
       return new Promise((resolve) => {
+        const safeResolve = (result: ExecResult) => {
+          if (!resolved) {
+            resolved = true
+            resolve(result)
+          }
+        }
+
         const timeout = setTimeout(() => {
           stream.destroy()
-          resolve({ success: false, error: `Tmux session creation timeout (${EXEC_TIMEOUT_MS / 1000}s)` })
+          safeResolve({ success: false, error: `Tmux session creation timeout (${EXEC_TIMEOUT_MS / 1000}s)` })
         }, EXEC_TIMEOUT_MS)
 
         stream.on('data', (chunk: Buffer) => {
-          // Docker multiplexes stdout/stderr - first byte indicates stream type
-          const data = chunk.toString()
-          output += data
+          // Guard against data after stream destroyed
+          if (!resolved && !stream.destroyed) {
+            // Docker multiplexes stdout/stderr - first byte indicates stream type
+            const data = chunk.toString()
+            output += data
+          }
         })
 
         stream.on('end', async () => {
           clearTimeout(timeout)
+          if (resolved) return
+
           // Check if session was created successfully
           const checkResult = await this.checkTmuxSession(containerId, sessionName)
 
           if (checkResult.exists) {
-            resolve({
+            safeResolve({
               success: true,
               output: `Session '${sessionName}' created successfully`,
             })
           } else {
-            resolve({
+            safeResolve({
               success: false,
-              error: `Failed to create tmux session: ${output || errorOutput || 'Unknown error'}`,
+              error: `Failed to create tmux session: ${output || 'Unknown error'}`,
             })
           }
         })
 
         stream.on('error', (err: Error) => {
           clearTimeout(timeout)
-          resolve({ success: false, error: err.message })
+          safeResolve({ success: false, error: err.message })
         })
       })
     } catch (error) {

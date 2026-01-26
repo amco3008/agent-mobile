@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { remoteRalphService } from '../services/RemoteRalphService'
 import { containerManager } from '../services/ContainerManager'
-import { validateContainerId } from '../middleware'
+import { validateContainerId, validateTaskId } from '../middleware'
 
 const router = Router()
 
@@ -33,7 +33,7 @@ router.get('/:containerId/ralph/loops', validateContainerId, async (req, res) =>
 })
 
 // GET /api/containers/:containerId/ralph/loops/:taskId - Get loop details
-router.get('/:containerId/ralph/loops/:taskId', validateContainerId, async (req, res) => {
+router.get('/:containerId/ralph/loops/:taskId', validateContainerId, validateTaskId, async (req, res) => {
   try {
     const { containerId, taskId } = req.params
 
@@ -58,7 +58,7 @@ router.get('/:containerId/ralph/loops/:taskId', validateContainerId, async (req,
 })
 
 // GET /api/containers/:containerId/ralph/loops/:taskId/progress - Get progress
-router.get('/:containerId/ralph/loops/:taskId/progress', validateContainerId, async (req, res) => {
+router.get('/:containerId/ralph/loops/:taskId/progress', validateContainerId, validateTaskId, async (req, res) => {
   try {
     const { containerId, taskId } = req.params
 
@@ -80,7 +80,7 @@ router.get('/:containerId/ralph/loops/:taskId/progress', validateContainerId, as
 })
 
 // GET /api/containers/:containerId/ralph/loops/:taskId/steering - Get steering question
-router.get('/:containerId/ralph/loops/:taskId/steering', validateContainerId, async (req, res) => {
+router.get('/:containerId/ralph/loops/:taskId/steering', validateContainerId, validateTaskId, async (req, res) => {
   try {
     const { containerId, taskId } = req.params
 
@@ -102,7 +102,7 @@ router.get('/:containerId/ralph/loops/:taskId/steering', validateContainerId, as
 })
 
 // POST /api/containers/:containerId/ralph/loops/:taskId/steer - Answer steering question
-router.post('/:containerId/ralph/loops/:taskId/steer', validateContainerId, async (req, res) => {
+router.post('/:containerId/ralph/loops/:taskId/steer', validateContainerId, validateTaskId, async (req, res) => {
   try {
     const { containerId, taskId } = req.params
     const { response } = req.body
@@ -144,7 +144,7 @@ router.post('/:containerId/ralph/loops/:taskId/steer', validateContainerId, asyn
 })
 
 // GET /api/containers/:containerId/ralph/loops/:taskId/summary - Get completion summary
-router.get('/:containerId/ralph/loops/:taskId/summary', validateContainerId, async (req, res) => {
+router.get('/:containerId/ralph/loops/:taskId/summary', validateContainerId, validateTaskId, async (req, res) => {
   try {
     const { containerId, taskId } = req.params
 

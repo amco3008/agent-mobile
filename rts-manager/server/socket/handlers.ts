@@ -1,21 +1,34 @@
 import { Server, Socket } from 'socket.io'
 import { RateLimiterMemory } from 'rate-limiter-flexible'
-import { TmuxService } from '../services/TmuxService'
-import { RalphWatcher } from '../services/RalphWatcher'
-import { SystemMonitor } from '../services/SystemMonitor'
-import { terminalManager } from '../services/TerminalManager'
-import { containerManager } from '../services/ContainerManager'
-import { remoteTmuxService } from '../services/RemoteTmuxService'
-import { remoteRalphService } from '../services/RemoteRalphService'
+import {
+  tmuxService,
+  ralphWatcher,
+  systemMonitor,
+  terminalManager,
+  containerManager,
+  remoteTmuxService,
+  remoteRalphService,
+} from '../services'
 import { config } from '../config'
 import type { ServerToClientEvents, ClientToServerEvents } from '../../src/types'
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>
 type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>
 
-const tmuxService = new TmuxService()
-const ralphWatcher = new RalphWatcher()
-const systemMonitor = new SystemMonitor()
+// Timeout for remote polling operations (10 seconds)
+const REMOTE_POLL_TIMEOUT_MS = 10000
+
+/**
+ * Wrap a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ])
+}
 
 // Rate limiter for high-frequency socket events (per socket ID)
 // 50 events per second is generous for terminal input
@@ -110,34 +123,56 @@ export function setupSocketHandlers(io: IOServer) {
         }
 
         try {
-          // Verify container is still running
-          const container = await containerManager.getContainer(containerId)
+          // Verify container is still running (with timeout)
+          const container = await withTimeout(
+            containerManager.getContainer(containerId),
+            REMOTE_POLL_TIMEOUT_MS,
+            `getContainer(${containerId})`
+          )
           if (!container || container.status !== 'running') {
             continue
           }
 
-          // Fetch remote tmux sessions
-          const sessions = await remoteTmuxService.listSessions(containerId)
+          // Fetch remote tmux sessions (with timeout)
+          const sessions = await withTimeout(
+            remoteTmuxService.listSessions(containerId),
+            REMOTE_POLL_TIMEOUT_MS,
+            `listSessions(${containerId})`
+          )
 
-          // Fetch remote Ralph loops
-          const loops = await remoteRalphService.listLoops(containerId)
+          // Fetch remote Ralph loops (with timeout)
+          const loops = await withTimeout(
+            remoteRalphService.listLoops(containerId),
+            REMOTE_POLL_TIMEOUT_MS,
+            `listLoops(${containerId})`
+          )
 
           // Emit to all subscribers of this container
           const room = `container:${containerId}`
           io.to(room).emit('container:tmux:update', { containerId, sessions })
           io.to(room).emit('container:ralph:update', { containerId, loops })
 
-          // Check for pending steering in any loop
+          // Check for pending steering in any loop (with timeout)
           for (const loop of loops) {
             if (loop.steeringStatus === 'pending') {
-              const steering = await remoteRalphService.getSteering(containerId, loop.taskId)
-              if (steering) {
-                io.to(room).emit('container:ralph:steering', { containerId, taskId: loop.taskId, steering })
+              try {
+                const steering = await withTimeout(
+                  remoteRalphService.getSteering(containerId, loop.taskId),
+                  REMOTE_POLL_TIMEOUT_MS,
+                  `getSteering(${containerId}, ${loop.taskId})`
+                )
+                if (steering) {
+                  io.to(room).emit('container:ralph:steering', { containerId, taskId: loop.taskId, steering })
+                }
+              } catch (steeringError) {
+                // Log but don't fail the whole poll for one steering fetch
+                console.warn(`Failed to fetch steering for ${loop.taskId}:`, steeringError)
               }
             }
           }
         } catch (error) {
-          console.error(`Error polling remote container ${containerId}:`, error)
+          const errMsg = error instanceof Error ? error.message : String(error)
+          console.error(`Error polling remote container ${containerId}: ${errMsg}`)
         }
       }
     }, config.polling.remote || 3000)

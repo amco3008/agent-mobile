@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { remoteTmuxService } from '../services/RemoteTmuxService'
 import { containerManager } from '../services/ContainerManager'
-import { validateContainerId } from '../middleware'
+import { validateContainerId, validateTmuxSessionId } from '../middleware'
 
 const router = Router()
 
@@ -33,7 +33,7 @@ router.get('/:containerId/tmux/sessions', validateContainerId, async (req, res) 
 })
 
 // GET /api/containers/:containerId/tmux/sessions/:sessionId - Get session details
-router.get('/:containerId/tmux/sessions/:sessionId', validateContainerId, async (req, res) => {
+router.get('/:containerId/tmux/sessions/:sessionId', validateContainerId, validateTmuxSessionId, async (req, res) => {
   try {
     const { containerId, sessionId } = req.params
 
@@ -58,7 +58,7 @@ router.get('/:containerId/tmux/sessions/:sessionId', validateContainerId, async 
 })
 
 // GET /api/containers/:containerId/tmux/sessions/:sessionId/capture - Capture pane content
-router.get('/:containerId/tmux/sessions/:sessionId/capture', validateContainerId, async (req, res) => {
+router.get('/:containerId/tmux/sessions/:sessionId/capture', validateContainerId, validateTmuxSessionId, async (req, res) => {
   try {
     const { containerId, sessionId } = req.params
     const { paneId } = req.query
@@ -85,7 +85,7 @@ router.get('/:containerId/tmux/sessions/:sessionId/capture', validateContainerId
 })
 
 // POST /api/containers/:containerId/tmux/sessions/:sessionId/keys - Send keys to pane
-router.post('/:containerId/tmux/sessions/:sessionId/keys', validateContainerId, async (req, res) => {
+router.post('/:containerId/tmux/sessions/:sessionId/keys', validateContainerId, validateTmuxSessionId, async (req, res) => {
   try {
     const { containerId, sessionId } = req.params
     const { paneId, keys } = req.body
