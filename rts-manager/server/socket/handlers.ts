@@ -353,14 +353,22 @@ export function setupSocketHandlers(io: IOServer) {
       terminalManager.unsubscribe(socket.id, sessionId, paneId)
     })
 
+    // Track last rate limit warning time per socket to avoid flooding
+    let lastRateLimitWarning = 0
+    const RATE_LIMIT_WARNING_COOLDOWN = 2000 // 2 seconds between warnings
+
     // Handle terminal input - writes directly to PTY (rate limited)
     socket.on('tmux:input', async ({ sessionId, paneId, data }) => {
       try {
         await socketRateLimiter.consume(socket.id)
         terminalManager.write(sessionId, paneId, data)
       } catch {
-        // Rate limit exceeded - silently drop input
-        // Don't emit error to avoid flooding client
+        // Rate limit exceeded - emit warning (throttled)
+        const now = Date.now()
+        if (now - lastRateLimitWarning > RATE_LIMIT_WARNING_COOLDOWN) {
+          lastRateLimitWarning = now
+          socket.emit('error', { message: 'Rate limit exceeded - slow down input' })
+        }
       }
     })
 
@@ -370,7 +378,7 @@ export function setupSocketHandlers(io: IOServer) {
         await socketRateLimiter.consume(socket.id)
         terminalManager.resize(sessionId, paneId, cols, rows)
       } catch {
-        // Rate limit exceeded - silently drop resize
+        // Rate limit exceeded - silently drop resize (less important than input)
       }
     })
 

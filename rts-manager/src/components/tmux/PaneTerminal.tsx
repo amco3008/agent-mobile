@@ -1,7 +1,8 @@
-import { useEffect, useRef, useMemo, memo } from 'react'
+import { useEffect, useRef, useMemo, useState, memo } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { getSocket, subscribeToTerminal, unsubscribeFromTerminal, sendTerminalInput, sendTerminalResize } from '../../api/socket'
+import { useSocketStore } from '../../stores/socketStore'
 import type { TmuxPane } from '../../types'
 import 'xterm/css/xterm.css'
 
@@ -27,8 +28,12 @@ export const PaneTerminal = memo(function PaneTerminal({ sessionId, pane, onClos
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const [rateLimited, setRateLimited] = useState(false)
 
   const paneId = String(pane.id)
+
+  // Track connection status from socket store
+  const connected = useSocketStore((state) => state.connected)
 
   // Initialize terminal
   useEffect(() => {
@@ -89,6 +94,16 @@ export const PaneTerminal = memo(function PaneTerminal({ sessionId, pane, onClos
       sendTerminalInput(sessionId, paneId, data)
     })
 
+    // Handle rate limit warnings from server
+    const handleRateLimit = ({ message }: { message: string }) => {
+      if (message.includes('Rate limit')) {
+        setRateLimited(true)
+        // Clear after 2 seconds
+        setTimeout(() => setRateLimited(false), 2000)
+      }
+    }
+    socket.on('error', handleRateLimit)
+
     // Handle resize - notify server of new dimensions (debounced to avoid flooding)
     const handleResize = debounce(() => {
       fitAddon.fit()
@@ -106,6 +121,7 @@ export const PaneTerminal = memo(function PaneTerminal({ sessionId, pane, onClos
     // Cleanup
     return () => {
       socket.off('tmux:pane:output', handleOutput)
+      socket.off('error', handleRateLimit)
       unsubscribeFromTerminal(sessionId, paneId)
       window.removeEventListener('resize', handleResize)
       terminal.dispose()
@@ -132,24 +148,45 @@ export const PaneTerminal = memo(function PaneTerminal({ sessionId, pane, onClos
   }, [handleContainerResize])
 
   return (
-    <div className="flex flex-col h-full bg-factory-bg border border-factory-border rounded-lg overflow-hidden">
+    <div className="flex flex-col h-full bg-factory-bg border border-factory-border rounded-lg overflow-hidden relative">
       {/* Terminal header */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-factory-panel border-b border-factory-border">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
+          <span className={`w-2 h-2 rounded-full ${connected ? 'bg-signal-green animate-pulse' : 'bg-signal-red'}`} />
           <span className="text-xs text-gray-400">
             {sessionId}:{pane.id} - {pane.command}
           </span>
+          {!connected && (
+            <span className="text-xs text-signal-red">Disconnected</span>
+          )}
         </div>
         {onClose && (
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-signal-red transition-colors text-sm"
+            aria-label="Close terminal"
           >
             ✕
           </button>
         )}
       </div>
+
+      {/* Rate limit warning */}
+      {rateLimited && (
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-signal-yellow/90 text-black text-xs px-3 py-1 rounded z-10">
+          Input rate limited - slow down
+        </div>
+      )}
+
+      {/* Disconnected overlay */}
+      {!connected && (
+        <div className="absolute inset-0 top-8 bg-black/70 flex items-center justify-center z-10">
+          <div className="text-center">
+            <div className="text-signal-red text-lg mb-2">Connection Lost</div>
+            <div className="text-gray-400 text-sm">Attempting to reconnect...</div>
+          </div>
+        </div>
+      )}
 
       {/* Terminal content */}
       <div

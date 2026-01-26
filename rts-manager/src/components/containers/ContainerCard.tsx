@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import type { Container } from '../../types'
 import { useContainerActions } from '../../api/hooks/useContainers'
 
@@ -25,26 +25,44 @@ const healthColors: Record<string, string> = {
   none: 'text-gray-500',
 }
 
+type ConfirmAction = 'stop' | 'restart' | null
+
 export const ContainerCard = memo(function ContainerCard({
   container,
   isSelected,
   onSelect,
 }: ContainerCardProps) {
   const { start, stop, restart } = useContainerActions(container.id)
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null)
 
   const handleStart = (e: React.MouseEvent) => {
     e.stopPropagation()
     start.mutate()
   }
 
-  const handleStop = (e: React.MouseEvent) => {
+  const handleStopClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    stop.mutate()
+    setConfirmAction('stop')
   }
 
-  const handleRestart = (e: React.MouseEvent) => {
+  const handleRestartClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    restart.mutate()
+    setConfirmAction('restart')
+  }
+
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (confirmAction === 'stop') {
+      stop.mutate()
+    } else if (confirmAction === 'restart') {
+      restart.mutate()
+    }
+    setConfirmAction(null)
+  }
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setConfirmAction(null)
   }
 
   return (
@@ -101,31 +119,59 @@ export const ContainerCard = memo(function ContainerCard({
 
       {/* Actions */}
       <div className="flex gap-2">
-        {container.status !== 'running' && (
-          <button
-            onClick={handleStart}
-            disabled={start.isPending}
-            className="px-2 py-1 text-xs bg-signal-green/20 text-signal-green border border-signal-green/30 rounded hover:bg-signal-green/30 disabled:opacity-50"
-          >
-            {start.isPending ? 'Starting...' : 'Start'}
-          </button>
-        )}
-        {container.status === 'running' && (
+        {confirmAction ? (
+          // Confirmation dialog
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-signal-yellow">
+              {confirmAction === 'stop' ? 'Stop' : 'Restart'} container?
+            </span>
+            <button
+              onClick={handleConfirm}
+              className="px-2 py-1 bg-signal-red/20 text-signal-red border border-signal-red/30 rounded hover:bg-signal-red/30"
+              aria-label={`Confirm ${confirmAction}`}
+            >
+              Yes
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-2 py-1 bg-gray-500/20 text-gray-400 border border-gray-500/30 rounded hover:bg-gray-500/30"
+              aria-label="Cancel"
+            >
+              No
+            </button>
+          </div>
+        ) : (
           <>
-            <button
-              onClick={handleStop}
-              disabled={stop.isPending}
-              className="px-2 py-1 text-xs bg-signal-red/20 text-signal-red border border-signal-red/30 rounded hover:bg-signal-red/30 disabled:opacity-50"
-            >
-              {stop.isPending ? 'Stopping...' : 'Stop'}
-            </button>
-            <button
-              onClick={handleRestart}
-              disabled={restart.isPending}
-              className="px-2 py-1 text-xs bg-signal-yellow/20 text-signal-yellow border border-signal-yellow/30 rounded hover:bg-signal-yellow/30 disabled:opacity-50"
-            >
-              {restart.isPending ? 'Restarting...' : 'Restart'}
-            </button>
+            {container.status !== 'running' && (
+              <button
+                onClick={handleStart}
+                disabled={start.isPending}
+                className="px-2 py-1 text-xs bg-signal-green/20 text-signal-green border border-signal-green/30 rounded hover:bg-signal-green/30 disabled:opacity-50"
+                aria-label={`Start container ${container.name}`}
+              >
+                {start.isPending ? 'Starting...' : 'Start'}
+              </button>
+            )}
+            {container.status === 'running' && (
+              <>
+                <button
+                  onClick={handleStopClick}
+                  disabled={stop.isPending}
+                  className="px-2 py-1 text-xs bg-signal-red/20 text-signal-red border border-signal-red/30 rounded hover:bg-signal-red/30 disabled:opacity-50"
+                  aria-label={`Stop container ${container.name}`}
+                >
+                  {stop.isPending ? 'Stopping...' : 'Stop'}
+                </button>
+                <button
+                  onClick={handleRestartClick}
+                  disabled={restart.isPending}
+                  className="px-2 py-1 text-xs bg-signal-yellow/20 text-signal-yellow border border-signal-yellow/30 rounded hover:bg-signal-yellow/30 disabled:opacity-50"
+                  aria-label={`Restart container ${container.name}`}
+                >
+                  {restart.isPending ? 'Restarting...' : 'Restart'}
+                </button>
+              </>
+            )}
           </>
         )}
       </div>
