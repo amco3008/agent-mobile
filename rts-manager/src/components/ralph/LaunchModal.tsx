@@ -83,11 +83,14 @@ export const LaunchModal = memo(function LaunchModal({
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] max-w-[90vw] bg-factory-panel border border-factory-border rounded-lg shadow-xl z-50"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="launch-modal-title"
       >
         {/* Header */}
         <div className="border-b border-factory-border p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-gray-200">Start New Ralph Session</h2>
+            <h2 id="launch-modal-title" className="text-sm font-bold text-gray-200">Start New Ralph Session</h2>
             <p className="text-xs text-gray-500 mt-1">
               Launch Claude Code to create a ralph spec interactively
             </p>

@@ -1,11 +1,14 @@
 import { ReactNode } from 'react'
 import { StatusBar } from './StatusBar'
+import { useConnectionStatus } from '../../api/hooks/useSystemStats'
 
 interface DashboardLayoutProps {
   children: ReactNode
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { connected, error } = useConnectionStatus()
+
   return (
     <div className="h-screen flex flex-col bg-factory-bg">
       {/* Header */}
@@ -16,8 +19,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <span className="text-xs text-gray-500">Agent Control Interface</span>
         <div className="flex-1" />
         <div className="flex items-center gap-2 text-xs">
-          <span className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
-          <span className="text-gray-400">Connected</span>
+          {connected ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-signal-green animate-pulse" />
+              <span className="text-gray-400">Connected</span>
+            </>
+          ) : error ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-signal-red" />
+              <span className="text-signal-red">Error</span>
+            </>
+          ) : (
+            <>
+              <span className="w-2 h-2 rounded-full bg-signal-yellow animate-pulse" />
+              <span className="text-signal-yellow">Connecting...</span>
+            </>
+          )}
         </div>
       </header>
 

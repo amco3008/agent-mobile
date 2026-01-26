@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, memo } from 'react'
+import { useEffect, useRef, useMemo, memo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
@@ -37,6 +37,7 @@ export const InteractiveSession = memo(function InteractiveSession({
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const killSession = useKillRalphSession()
+  const [confirmKill, setConfirmKill] = useState(false)
 
   // For socket subscription, we use the session name as sessionId and "0" as paneId
   // since we created a single-pane tmux session
@@ -201,15 +202,41 @@ export const InteractiveSession = memo(function InteractiveSession({
             >
               Minimize
             </motion.button>
-            <motion.button
-              type="button"
-              onClick={handleKillAndClose}
-              className="px-3 py-1 text-xs text-signal-red/70 hover:text-signal-red border border-transparent hover:border-signal-red/30 rounded transition-colors"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Kill Session
-            </motion.button>
+            {confirmKill ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-signal-yellow">Kill session?</span>
+                <motion.button
+                  type="button"
+                  onClick={handleKillAndClose}
+                  className="px-2 py-1 text-xs bg-signal-red/20 text-signal-red border border-signal-red/30 rounded hover:bg-signal-red/30 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  aria-label="Confirm kill session"
+                >
+                  Yes
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={() => setConfirmKill(false)}
+                  className="px-2 py-1 text-xs text-gray-400 border border-factory-border rounded hover:bg-factory-highlight transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  aria-label="Cancel kill"
+                >
+                  No
+                </motion.button>
+              </div>
+            ) : (
+              <motion.button
+                type="button"
+                onClick={() => setConfirmKill(true)}
+                className="px-3 py-1 text-xs text-signal-red/70 hover:text-signal-red border border-transparent hover:border-signal-red/30 rounded transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Kill Session
+              </motion.button>
+            )}
           </div>
         </div>
 

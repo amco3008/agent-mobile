@@ -1,4 +1,4 @@
-import { useState, memo } from 'react'
+import { useState, memo, useCallback, KeyboardEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useSteerRalphLoop } from '../../api/hooks/useRalphLoops'
 import { useSocketStore } from '../../stores/socketStore'
@@ -10,6 +10,7 @@ interface SteeringPanelProps {
 
 export const SteeringPanel = memo(function SteeringPanel({ loop }: SteeringPanelProps) {
   const [response, setResponse] = useState('')
+  const [focusedOption, setFocusedOption] = useState(-1)
   const steerMutation = useSteerRalphLoop()
   const steering = useSocketStore((state) => state.ralphSteering.get(loop.taskId))
 
@@ -31,6 +32,29 @@ export const SteeringPanel = memo(function SteeringPanel({ loop }: SteeringPanel
   const handleOptionClick = (option: string) => {
     setResponse(option)
   }
+
+  const handleOptionsKeyDown = useCallback((e: KeyboardEvent<HTMLUListElement>) => {
+    const options = steering?.options || []
+    if (options.length === 0) return
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setFocusedOption((prev) => (prev < options.length - 1 ? prev + 1 : 0))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setFocusedOption((prev) => (prev > 0 ? prev - 1 : options.length - 1))
+        break
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        if (focusedOption >= 0 && focusedOption < options.length) {
+          handleOptionClick(options[focusedOption])
+        }
+        break
+    }
+  }, [steering?.options, focusedOption])
 
   return (
     <motion.div
@@ -69,14 +93,31 @@ export const SteeringPanel = memo(function SteeringPanel({ loop }: SteeringPanel
       {/* Options */}
       {steering?.options && steering.options.length > 0 && (
         <div className="mb-3">
-          <h4 className="text-xs font-bold text-gray-400 mb-1">Options</h4>
-          <ul className="space-y-1">
+          <h4 className="text-xs font-bold text-gray-400 mb-1">Options (use arrow keys to navigate)</h4>
+          <ul
+            className="space-y-1"
+            tabIndex={0}
+            role="listbox"
+            aria-label="Steering options"
+            onKeyDown={handleOptionsKeyDown}
+            onFocus={() => focusedOption === -1 && setFocusedOption(0)}
+            onBlur={() => setFocusedOption(-1)}
+          >
             {steering.options.map((opt, i) => (
-              <li key={i}>
+              <li
+                key={i}
+                role="option"
+                aria-selected={focusedOption === i}
+              >
                 <button
                   type="button"
                   onClick={() => handleOptionClick(opt)}
-                  className="text-left text-xs text-gray-300 hover:text-signal-yellow cursor-pointer transition-colors w-full p-1.5 rounded hover:bg-factory-highlight"
+                  className={`text-left text-xs cursor-pointer transition-colors w-full p-1.5 rounded ${
+                    focusedOption === i
+                      ? 'text-signal-yellow bg-factory-highlight'
+                      : 'text-gray-300 hover:text-signal-yellow hover:bg-factory-highlight'
+                  }`}
+                  tabIndex={-1}
                 >
                   {i + 1}. {opt}
                 </button>

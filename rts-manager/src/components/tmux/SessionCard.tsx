@@ -21,6 +21,15 @@ export const SessionCard = memo(function SessionCard({ session, isSelected, onSe
     <div
       className={`session-card ${isSelected ? 'selected' : ''}`}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-pressed={isSelected}
     >
       {/* Container badge (when showing sessions from multiple containers) */}
       {showContainerBadge && session.containerName && (
