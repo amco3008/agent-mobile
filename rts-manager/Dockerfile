@@ -36,8 +36,8 @@ COPY --from=frontend-builder /app/dist ./dist
 COPY server ./server
 COPY tsconfig.json ./
 
-# Build server TypeScript
-RUN npx tsc --project server/tsconfig.json || true
+# Build server TypeScript (fail build if compilation errors)
+RUN npx tsc --project server/tsconfig.json
 
 # Create non-root user
 RUN addgroup -g 1001 -S rts && \
@@ -55,9 +55,9 @@ EXPOSE 9091
 ENV NODE_ENV=production
 ENV PORT=9091
 
-# Health check
+# Health check (using node instead of wget for reliability)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:9091/api/health || exit 1
+    CMD node -e "require('http').get('http://localhost:9091/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 # Start the server
 CMD ["node", "dist/server/index.js"]

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { remoteTmuxService } from '../services/RemoteTmuxService'
 import { containerManager } from '../services/ContainerManager'
-import { validateContainerId, validateTmuxSessionId } from '../middleware'
+import { validateContainerId, validateTmuxSessionId, getStringParam } from '../middleware'
 
 const router = Router()
 
@@ -12,9 +12,8 @@ const router = Router()
 
 // GET /api/containers/:containerId/tmux/sessions - List sessions in a container
 router.get('/:containerId/tmux/sessions', validateContainerId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
   try {
-    const { containerId } = req.params
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {
@@ -34,9 +33,9 @@ router.get('/:containerId/tmux/sessions', validateContainerId, async (req, res) 
 
 // GET /api/containers/:containerId/tmux/sessions/:sessionId - Get session details
 router.get('/:containerId/tmux/sessions/:sessionId', validateContainerId, validateTmuxSessionId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const sessionId = getStringParam(req.params.sessionId) as string
   try {
-    const { containerId, sessionId } = req.params
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {
@@ -59,10 +58,10 @@ router.get('/:containerId/tmux/sessions/:sessionId', validateContainerId, valida
 
 // GET /api/containers/:containerId/tmux/sessions/:sessionId/capture - Capture pane content
 router.get('/:containerId/tmux/sessions/:sessionId/capture', validateContainerId, validateTmuxSessionId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const sessionId = getStringParam(req.params.sessionId) as string
+  const { paneId } = req.query
   try {
-    const { containerId, sessionId } = req.params
-    const { paneId } = req.query
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {
@@ -86,9 +85,10 @@ router.get('/:containerId/tmux/sessions/:sessionId/capture', validateContainerId
 
 // POST /api/containers/:containerId/tmux/sessions/:sessionId/keys - Send keys to pane
 router.post('/:containerId/tmux/sessions/:sessionId/keys', validateContainerId, validateTmuxSessionId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const sessionId = getStringParam(req.params.sessionId) as string
+  const { paneId, keys } = req.body
   try {
-    const { containerId, sessionId } = req.params
-    const { paneId, keys } = req.body
 
     // Validate required fields
     if (typeof paneId !== 'string' || !paneId.trim()) {

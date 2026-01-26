@@ -1,2 +1,2 @@
-export { validateContainerId, validateTmuxSessionId, validateTaskId } from './validate'
+export { validateContainerId, validateTmuxSessionId, validateTaskId, getStringParam } from './validate'
 export { optionalApiKey, ipWhitelist } from './auth'

@@ -1,6 +1,15 @@
 import { Request, Response, NextFunction } from 'express'
 
 /**
+ * Helper to safely extract a string param from Express params
+ * (Express 5 params can be string | string[])
+ */
+export function getStringParam(param: string | string[] | undefined): string | undefined {
+  if (Array.isArray(param)) return param[0]
+  return param
+}
+
+/**
  * Docker container ID format: 12-64 hex characters
  */
 const containerIdRegex = /^[a-f0-9]{12,64}$/i
@@ -61,7 +70,7 @@ export function validateContainerId(
   res: Response,
   next: NextFunction
 ) {
-  const id = req.params.id || req.params.containerId
+  const id = getStringParam(req.params.id) || getStringParam(req.params.containerId)
   if (!id || !containerIdRegex.test(id)) {
     return res.status(400).json({
       error: 'Invalid container ID format',
@@ -84,7 +93,7 @@ export function validateTmuxSessionId(
   res: Response,
   next: NextFunction
 ) {
-  const id = req.params.id || req.params.sessionId
+  const id = getStringParam(req.params.id) || getStringParam(req.params.sessionId)
   if (!id || !tmuxIdRegex.test(id)) {
     return res.status(400).json({
       error: 'Invalid session ID format',
@@ -106,7 +115,7 @@ export function validateTaskId(
   res: Response,
   next: NextFunction
 ) {
-  const id = req.params.taskId || req.params.id
+  const id = getStringParam(req.params.taskId) || getStringParam(req.params.id)
   if (!id || !taskIdRegex.test(id)) {
     return res.status(400).json({
       error: 'Invalid task ID format',

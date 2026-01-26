@@ -344,7 +344,7 @@ export function setupSocketHandlers(io: IOServer) {
       console.error('Error fetching initial data for client:', error)
       // Still try to send partial data or empty arrays
       socket.emit('tmux:sessions:update', [])
-      socket.emit('system:stats', { cpu: 0, memory: { used: 0, total: 0, percent: 0 }, processes: [] })
+      socket.emit('system:stats', { cpu: { usage: 0, cores: 0 }, memory: { used: 0, total: 0, percent: 0 }, uptime: 0, claudeProcesses: [] })
       socket.emit('containers:update', [])
     })
 

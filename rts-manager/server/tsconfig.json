@@ -5,16 +5,16 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "outDir": "../dist/server",
-    "rootDir": ".",
+    "rootDir": "..",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "../src/types/**/*.ts"],
   "exclude": ["node_modules"]
 }

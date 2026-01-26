@@ -70,7 +70,7 @@ export class RemoteTmuxService {
       const panes = await this.listPanes(containerId, sessionName, id)
 
       windows.push({
-        id: id.replace('@', ''),
+        id: parseInt(id.replace('@', ''), 10) || 0,
         name,
         active: active === '1',
         layout: layout || '',
@@ -111,8 +111,7 @@ export class RemoteTmuxService {
       if (!id) continue
 
       panes.push({
-        id: id.replace('%', ''),
-        index: panes.length,
+        id: parseInt(id.replace('%', ''), 10) || 0,
         active: active === '1',
         width: parseInt(width, 10) || 80,
         height: parseInt(height, 10) || 24,

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { tmuxService } from '../services'
-import { validateTmuxSessionId } from '../middleware'
+import { validateTmuxSessionId, getStringParam } from '../middleware'
 
 const router = Router()
 
@@ -17,8 +17,9 @@ router.get('/sessions', async (_req, res) => {
 
 // GET /api/tmux/sessions/:id - Get session details
 router.get('/sessions/:id', validateTmuxSessionId, async (req, res) => {
+  const id = getStringParam(req.params.id) as string
   try {
-    const session = await tmuxService.getSession(req.params.id)
+    const session = await tmuxService.getSession(id)
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
@@ -31,10 +32,11 @@ router.get('/sessions/:id', validateTmuxSessionId, async (req, res) => {
 
 // GET /api/tmux/sessions/:id/capture - Capture pane content
 router.get('/sessions/:id/capture', validateTmuxSessionId, async (req, res) => {
+  const id = getStringParam(req.params.id) as string
   try {
     const { paneId } = req.query
     const content = await tmuxService.capturePane(
-      req.params.id,
+      id,
       paneId as string | undefined
     )
     res.json({ content })
@@ -46,6 +48,7 @@ router.get('/sessions/:id/capture', validateTmuxSessionId, async (req, res) => {
 
 // POST /api/tmux/sessions/:id/keys - Send keys to pane
 router.post('/sessions/:id/keys', validateTmuxSessionId, async (req, res) => {
+  const id = getStringParam(req.params.id) as string
   try {
     const { paneId, keys } = req.body
 
@@ -61,7 +64,7 @@ router.post('/sessions/:id/keys', validateTmuxSessionId, async (req, res) => {
       return res.status(400).json({ error: 'keys exceeds maximum length of 10000 characters' })
     }
 
-    await tmuxService.sendKeys(req.params.id, paneId.trim(), keys)
+    await tmuxService.sendKeys(id, paneId.trim(), keys)
     res.json({ success: true })
   } catch (error) {
     console.error('Error sending keys:', error)
@@ -98,8 +101,9 @@ router.post('/sessions', async (req, res) => {
 
 // DELETE /api/tmux/sessions/:id - Kill session
 router.delete('/sessions/:id', validateTmuxSessionId, async (req, res) => {
+  const id = getStringParam(req.params.id) as string
   try {
-    await tmuxService.killSession(req.params.id)
+    await tmuxService.killSession(id)
     res.json({ success: true })
   } catch (error) {
     console.error('Error killing session:', error)

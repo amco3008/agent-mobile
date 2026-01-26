@@ -116,7 +116,7 @@ export class RemoteRalphService {
           steeringFile: `${this.claudeDir}/ralph-steering-${taskId}.md`,
           steeringStatus: 'none',
           loopType: 'fresh',
-          spec,
+          spec: spec || undefined,
         })
       }
     }
@@ -158,13 +158,15 @@ export class RemoteRalphService {
       // Check steering status
       const steeringStatus = await this.getSteeringStatus(containerId, taskId)
 
+      const status = (frontmatter.status || 'running') as RalphLoop['status']
+      const mode = (frontmatter.mode || spec?.mode || 'yolo') as RalphLoop['mode']
       return {
         taskId,
-        status: frontmatter.status || 'running',
+        status,
         iteration: parseInt(frontmatter.iteration, 10) || 0,
         maxIterations: parseInt(frontmatter.max_iterations, 10) || spec?.maxIterations || 50,
         completionPromise: frontmatter.completion_promise || spec?.completionPromise || null,
-        mode: frontmatter.mode || spec?.mode || 'yolo',
+        mode,
         startedAt: frontmatter.started_at ? new Date(frontmatter.started_at) : new Date(),
         stateFile: filepath,
         projectPath: frontmatter.project_path || '',
@@ -172,7 +174,7 @@ export class RemoteRalphService {
         steeringFile: `${this.claudeDir}/ralph-steering-${taskId}.md`,
         steeringStatus,
         loopType: 'persistent',
-        spec,
+        spec: spec || undefined,
       }
     } catch (error) {
       console.error(`Failed to parse loop state file ${filepath}:`, error)

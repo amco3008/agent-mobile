@@ -87,25 +87,26 @@ export class TerminalManager {
       const pendingPromise = this.pendingCreations.get(key)
       if (pendingPromise) {
         // Wait for the existing creation to complete
-        terminal = await pendingPromise
-        if (!terminal) {
+        const result = await pendingPromise
+        if (!result) {
           console.error(`Failed to get terminal for ${key} - creation failed`)
           return
         }
+        terminal = result
       } else {
         // Start creating the terminal and store the promise
         const creationPromise = this.createTerminal(sessionId, paneId, key)
         this.pendingCreations.set(key, creationPromise)
 
         try {
-          terminal = await creationPromise
+          const result = await creationPromise
+          if (!result) {
+            return
+          }
+          terminal = result
         } finally {
           // Clean up pending promise after creation completes
           this.pendingCreations.delete(key)
-        }
-
-        if (!terminal) {
-          return
         }
       }
     }

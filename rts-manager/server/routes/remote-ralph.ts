@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { remoteRalphService } from '../services/RemoteRalphService'
 import { containerManager } from '../services/ContainerManager'
-import { validateContainerId, validateTaskId } from '../middleware'
+import { validateContainerId, validateTaskId, getStringParam } from '../middleware'
 
 const router = Router()
 
@@ -12,9 +12,8 @@ const router = Router()
 
 // GET /api/containers/:containerId/ralph/loops - List loops in a container
 router.get('/:containerId/ralph/loops', validateContainerId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
   try {
-    const { containerId } = req.params
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {
@@ -34,9 +33,9 @@ router.get('/:containerId/ralph/loops', validateContainerId, async (req, res) =>
 
 // GET /api/containers/:containerId/ralph/loops/:taskId - Get loop details
 router.get('/:containerId/ralph/loops/:taskId', validateContainerId, validateTaskId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const taskId = getStringParam(req.params.taskId) as string
   try {
-    const { containerId, taskId } = req.params
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {
@@ -59,9 +58,9 @@ router.get('/:containerId/ralph/loops/:taskId', validateContainerId, validateTas
 
 // GET /api/containers/:containerId/ralph/loops/:taskId/progress - Get progress
 router.get('/:containerId/ralph/loops/:taskId/progress', validateContainerId, validateTaskId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const taskId = getStringParam(req.params.taskId) as string
   try {
-    const { containerId, taskId } = req.params
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {
@@ -81,9 +80,9 @@ router.get('/:containerId/ralph/loops/:taskId/progress', validateContainerId, va
 
 // GET /api/containers/:containerId/ralph/loops/:taskId/steering - Get steering question
 router.get('/:containerId/ralph/loops/:taskId/steering', validateContainerId, validateTaskId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const taskId = getStringParam(req.params.taskId) as string
   try {
-    const { containerId, taskId } = req.params
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {
@@ -103,9 +102,10 @@ router.get('/:containerId/ralph/loops/:taskId/steering', validateContainerId, va
 
 // POST /api/containers/:containerId/ralph/loops/:taskId/steer - Answer steering question
 router.post('/:containerId/ralph/loops/:taskId/steer', validateContainerId, validateTaskId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const taskId = getStringParam(req.params.taskId) as string
+  const { response } = req.body
   try {
-    const { containerId, taskId } = req.params
-    const { response } = req.body
 
     // Validate response field
     if (typeof response !== 'string') {
@@ -145,9 +145,9 @@ router.post('/:containerId/ralph/loops/:taskId/steer', validateContainerId, vali
 
 // GET /api/containers/:containerId/ralph/loops/:taskId/summary - Get completion summary
 router.get('/:containerId/ralph/loops/:taskId/summary', validateContainerId, validateTaskId, async (req, res) => {
+  const containerId = getStringParam(req.params.containerId) as string
+  const taskId = getStringParam(req.params.taskId) as string
   try {
-    const { containerId, taskId } = req.params
-
     // Verify container exists and is running
     const container = await containerManager.getContainer(containerId)
     if (!container) {

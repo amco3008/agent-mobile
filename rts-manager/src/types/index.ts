@@ -48,6 +48,7 @@ export interface RalphSpec {
   taskContent: string        // The task body (after frontmatter)
   taskSummary: string        // First paragraph for preview
   specFile: string           // Full path to spec file
+  projectPath?: string       // Project path from frontmatter (optional)
 }
 
 // Ralph types
