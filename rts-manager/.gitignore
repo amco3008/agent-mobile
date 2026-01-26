@@ -24,5 +24,10 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Compiled JS/DTS in source directories (from server build)
+src/**/*.js
+src/**/*.d.ts
+vite.config.d.ts
+
 # Vite
 *.local
