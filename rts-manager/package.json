@@ -10,7 +10,7 @@
     "build": "vite build && npm run build:server",
     "build:server": "tsc -p server/tsconfig.json",
     "preview": "vite preview",
-    "start": "node dist/server/index.js"
+    "start": "node dist/server/server/index.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.60.0",

@@ -15,6 +15,9 @@ interface ToastState {
 
 let toastId = 0
 
+// Track timeout IDs for cleanup on manual dismiss
+const timeoutIds = new Map<string, NodeJS.Timeout>()
+
 export const useToastStore = create<ToastState>((set) => ({
   toasts: [],
 
@@ -28,15 +31,27 @@ export const useToastStore = create<ToastState>((set) => ({
 
     // Auto-remove after duration
     if (duration > 0) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
+        // Clean up timeout tracking
+        timeoutIds.delete(id)
         set((state) => ({
           toasts: state.toasts.filter((t) => t.id !== id),
         }))
       }, duration)
+
+      // Store timeout ID for potential cleanup
+      timeoutIds.set(id, timeoutId)
     }
   },
 
   removeToast: (id) => {
+    // Clear any pending timeout to prevent memory leak
+    const timeoutId = timeoutIds.get(id)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+      timeoutIds.delete(id)
+    }
+
     set((state) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
     }))

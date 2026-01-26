@@ -329,19 +329,26 @@ export function setupSocketHandlers(io: IOServer) {
   io.on('connection', (socket: IOSocket) => {
     console.log(`Client connected: ${socket.id}`)
 
-    // Send initial data
-    Promise.all([
-      tmuxService.listSessions(),
-      ralphWatcher.listLoops(),
-      systemMonitor.getStats(),
-      containerManager.listContainers(),
-    ]).then(([sessions, loops, stats, containers]) => {
+    // Send initial data with timeout to prevent hanging on slow services
+    const INITIAL_DATA_TIMEOUT_MS = 10000 // 10 seconds
+
+    withTimeout(
+      Promise.all([
+        tmuxService.listSessions(),
+        ralphWatcher.listLoops(),
+        systemMonitor.getStats(),
+        containerManager.listContainers(),
+      ]),
+      INITIAL_DATA_TIMEOUT_MS,
+      'Initial data fetch'
+    ).then(([sessions, loops, stats, containers]) => {
       socket.emit('tmux:sessions:update', sessions)
       loops.forEach((loop) => socket.emit('ralph:loop:update', loop))
       socket.emit('system:stats', stats)
       socket.emit('containers:update', containers)
     }).catch((error) => {
-      console.error('Error fetching initial data for client:', error)
+      const errMsg = error instanceof Error ? error.message : String(error)
+      console.error(`Error fetching initial data for client ${socket.id}: ${errMsg}`)
       // Still try to send partial data or empty arrays
       socket.emit('tmux:sessions:update', [])
       socket.emit('system:stats', { cpu: { usage: 0, cores: 0 }, memory: { used: 0, total: 0, percent: 0 }, uptime: 0, claudeProcesses: [] })

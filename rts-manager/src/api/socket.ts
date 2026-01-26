@@ -44,6 +44,9 @@ function safeHandler<T>(handler: (data: T) => void): (data: T) => void {
 function setupSocketListeners(socket: TypedSocket) {
   const store = useSocketStore.getState()
 
+  // Remove any existing listeners to prevent accumulation on hot reload or reconnect edge cases
+  socket.removeAllListeners()
+
   // Connection events (no data passed)
   socket.on('connect', () => {
     try {

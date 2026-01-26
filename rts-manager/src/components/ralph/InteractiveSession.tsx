@@ -4,6 +4,7 @@ import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { getSocket, subscribeToTerminal, unsubscribeFromTerminal, sendTerminalInput, sendTerminalResize } from '../../api/socket'
 import { useKillRalphSession } from '../../api/hooks/useRalphLaunch'
+import { toast } from '../../stores/toastStore'
 import 'xterm/css/xterm.css'
 
 // Debounce utility
@@ -111,7 +112,7 @@ export const InteractiveSession = memo(function InteractiveSession({
     window.addEventListener('resize', handleResize)
 
     // Send initial dimensions
-    setTimeout(() => {
+    const initialResizeTimeout = setTimeout(() => {
       fitAddon.fit()
       const { cols, rows } = terminal
       sendTerminalResize(sessionName, paneId, cols, rows)
@@ -122,6 +123,7 @@ export const InteractiveSession = memo(function InteractiveSession({
 
     // Cleanup
     return () => {
+      clearTimeout(initialResizeTimeout)
       socket.off('tmux:pane:output', handleOutput)
       unsubscribeFromTerminal(sessionName, paneId)
       window.removeEventListener('resize', handleResize)
@@ -160,8 +162,12 @@ export const InteractiveSession = memo(function InteractiveSession({
   const handleKillAndClose = async () => {
     try {
       await killSession.mutateAsync({ containerId, sessionName })
-    } catch {
-      // Session might already be dead
+    } catch (error) {
+      // Session might already be dead, but log unexpected errors
+      const errMsg = error instanceof Error ? error.message : String(error)
+      if (!errMsg.includes('not found') && !errMsg.includes('no session')) {
+        toast.error(`Failed to kill session: ${errMsg}`)
+      }
     }
     onClose()
   }

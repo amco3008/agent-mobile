@@ -72,7 +72,8 @@ app.get('/api/health', (_req, res) => {
 // In development, Vite serves the frontend on a separate port
 if (process.env.NODE_ENV === 'production' || !process.env.VITE_DEV_SERVER) {
   // Static files from dist/ (built by Vite)
-  const staticPath = path.join(__dirname, '..', '..', 'dist')
+  // Server runs from dist/server/server/index.js, so go up 3 levels to project root
+  const staticPath = path.resolve(process.cwd(), 'dist')
   app.use(express.static(staticPath))
 
   // SPA fallback - serve index.html for all non-API routes

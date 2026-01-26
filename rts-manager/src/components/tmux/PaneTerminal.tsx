@@ -113,13 +113,14 @@ export const PaneTerminal = memo(function PaneTerminal({ sessionId, pane, onClos
     window.addEventListener('resize', handleResize)
 
     // Send initial dimensions after terminal is ready
-    setTimeout(() => {
+    const initialResizeTimeout = setTimeout(() => {
       const { cols, rows } = terminal
       sendTerminalResize(sessionId, paneId, cols, rows)
     }, 100)
 
     // Cleanup
     return () => {
+      clearTimeout(initialResizeTimeout)
       socket.off('tmux:pane:output', handleOutput)
       socket.off('error', handleRateLimit)
       unsubscribeFromTerminal(sessionId, paneId)

@@ -32,8 +32,9 @@ RUN npm ci --omit=dev
 # Copy built frontend from builder stage
 COPY --from=frontend-builder /app/dist ./dist
 
-# Copy server files
+# Copy server files and shared types (server imports from ../src/types)
 COPY server ./server
+COPY src/types ./src/types
 COPY tsconfig.json ./
 
 # Build server TypeScript (fail build if compilation errors)
@@ -59,5 +60,5 @@ ENV PORT=9091
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:9091/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# Start the server
-CMD ["node", "dist/server/index.js"]
+# Start the server (server/ subfolder due to rootDir: ".." in tsconfig)
+CMD ["node", "dist/server/server/index.js"]
