@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { containerManager } from '../services/ContainerManager'
+import { validateContainerId } from '../middleware'
 
 const router = Router()
 
@@ -26,7 +27,7 @@ router.get('/ping', async (_req, res) => {
 })
 
 // GET /api/containers/:id - Get single container
-router.get('/:id', async (req, res) => {
+router.get('/:id', validateContainerId, async (req, res) => {
   try {
     const container = await containerManager.getContainer(req.params.id)
     if (!container) {
@@ -40,7 +41,7 @@ router.get('/:id', async (req, res) => {
 })
 
 // GET /api/containers/:id/stats - Get container stats
-router.get('/:id/stats', async (req, res) => {
+router.get('/:id/stats', validateContainerId, async (req, res) => {
   try {
     const stats = await containerManager.getContainerStats(req.params.id)
     if (!stats) {
@@ -54,39 +55,30 @@ router.get('/:id/stats', async (req, res) => {
 })
 
 // POST /api/containers/:id/start - Start container
-router.post('/:id/start', async (req, res) => {
-  try {
-    await containerManager.startContainer(req.params.id)
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error starting container:', error)
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    res.status(500).json({ error: 'Failed to start container', message })
+router.post('/:id/start', validateContainerId, async (req, res) => {
+  const result = await containerManager.startContainer(req.params.id)
+  if (!result.success) {
+    return res.status(500).json({ error: 'Failed to start container', message: result.error })
   }
+  res.json({ success: true })
 })
 
 // POST /api/containers/:id/stop - Stop container
-router.post('/:id/stop', async (req, res) => {
-  try {
-    await containerManager.stopContainer(req.params.id)
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error stopping container:', error)
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    res.status(500).json({ error: 'Failed to stop container', message })
+router.post('/:id/stop', validateContainerId, async (req, res) => {
+  const result = await containerManager.stopContainer(req.params.id)
+  if (!result.success) {
+    return res.status(500).json({ error: 'Failed to stop container', message: result.error })
   }
+  res.json({ success: true })
 })
 
 // POST /api/containers/:id/restart - Restart container
-router.post('/:id/restart', async (req, res) => {
-  try {
-    await containerManager.restartContainer(req.params.id)
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error restarting container:', error)
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    res.status(500).json({ error: 'Failed to restart container', message })
+router.post('/:id/restart', validateContainerId, async (req, res) => {
+  const result = await containerManager.restartContainer(req.params.id)
+  if (!result.success) {
+    return res.status(500).json({ error: 'Failed to restart container', message: result.error })
   }
+  res.json({ success: true })
 })
 
 export default router

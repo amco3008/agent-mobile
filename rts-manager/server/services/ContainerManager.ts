@@ -6,14 +6,41 @@ import type {
   ContainerStats,
 } from '../../src/types/container'
 
+/**
+ * Result type for container operations
+ */
+export interface ContainerOperationResult {
+  success: boolean
+  error?: string
+}
+
 export class ContainerManager {
   private docker: Docker
+  private isConnected: boolean = false
 
   constructor() {
     // Connect to Docker socket
     // On Linux/Mac: /var/run/docker.sock
     // On Windows: npipe:////./pipe/docker_engine (but we're in container, so use socket)
     this.docker = new Docker({ socketPath: '/var/run/docker.sock' })
+
+    // Check connection on startup (non-blocking)
+    this.checkConnection()
+  }
+
+  /**
+   * Check Docker connection on startup
+   */
+  private async checkConnection(): Promise<void> {
+    try {
+      await this.docker.ping()
+      this.isConnected = true
+      console.log('Docker connection established')
+    } catch (error) {
+      this.isConnected = false
+      console.warn('Docker connection not available:', error instanceof Error ? error.message : 'Unknown error')
+      console.warn('Container management features will be disabled')
+    }
   }
 
   /**
@@ -22,11 +49,20 @@ export class ContainerManager {
   async ping(): Promise<boolean> {
     try {
       await this.docker.ping()
+      this.isConnected = true
       return true
     } catch (error) {
-      console.error('Docker ping failed:', error)
+      this.isConnected = false
+      console.error('Docker ping failed:', error instanceof Error ? error.message : 'Unknown error')
       return false
     }
+  }
+
+  /**
+   * Check if Docker is connected
+   */
+  get connected(): boolean {
+    return this.isConnected
   }
 
   /**
@@ -80,25 +116,46 @@ export class ContainerManager {
   /**
    * Start a container
    */
-  async startContainer(id: string): Promise<void> {
-    const container = this.docker.getContainer(id)
-    await container.start()
+  async startContainer(id: string): Promise<ContainerOperationResult> {
+    try {
+      const container = this.docker.getContainer(id)
+      await container.start()
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Failed to start container ${id}:`, message)
+      return { success: false, error: message }
+    }
   }
 
   /**
    * Stop a container
    */
-  async stopContainer(id: string): Promise<void> {
-    const container = this.docker.getContainer(id)
-    await container.stop()
+  async stopContainer(id: string): Promise<ContainerOperationResult> {
+    try {
+      const container = this.docker.getContainer(id)
+      await container.stop()
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Failed to stop container ${id}:`, message)
+      return { success: false, error: message }
+    }
   }
 
   /**
    * Restart a container
    */
-  async restartContainer(id: string): Promise<void> {
-    const container = this.docker.getContainer(id)
-    await container.restart()
+  async restartContainer(id: string): Promise<ContainerOperationResult> {
+    try {
+      const container = this.docker.getContainer(id)
+      await container.restart()
+      return { success: true }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Failed to restart container ${id}:`, message)
+      return { success: false, error: message }
+    }
   }
 
   /**

@@ -102,6 +102,42 @@ Default ports:
 - Frontend dev: `5173`
 - Backend API: `9091`
 
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RTS_PORT` | `9091` | Backend server port |
+| `RTS_CORS_ORIGINS` | `http://localhost:5173` | Allowed CORS origins (comma-separated) |
+| `RTS_API_KEY` | (none) | API key for authentication (optional, disabled if unset) |
+| `RTS_RATE_LIMIT` | `100` | Max requests per minute per IP |
+| `RTS_ALLOWED_IPS` | (none) | IP whitelist (comma-separated, optional) |
+
+## Security
+
+### Rate Limiting
+
+All API endpoints are rate-limited to 100 requests per minute per IP by default. Configure with `RTS_RATE_LIMIT`.
+
+### API Key Authentication
+
+Optional API key authentication can be enabled by setting `RTS_API_KEY`:
+
+```bash
+export RTS_API_KEY="your-secret-key"
+```
+
+When enabled, all API requests must include the `X-API-Key` header:
+
+```bash
+curl -H "X-API-Key: your-secret-key" http://localhost:9091/api/containers
+```
+
+### Input Validation
+
+- Container IDs validated as 12-64 hex characters
+- Tmux session/pane IDs validated for safe characters
+- Request bodies validated for required fields
+
 ## Container Integration
 
 To run inside agent-mobile container:

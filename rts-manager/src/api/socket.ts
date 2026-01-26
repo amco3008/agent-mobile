@@ -13,8 +13,9 @@ export function getSocket(): TypedSocket {
     socket = io({
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000, // Max 10s between retries (exponential backoff)
     })
   }
 
