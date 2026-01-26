@@ -14,7 +14,7 @@ A Factorio-style web dashboard for managing tmux sessions, Claude Code Ralph loo
 - **Mini-map**: Quick navigation between sessions and loops
 - **Industrial Theme**: Dark Factorio-inspired aesthetic
 
-## Quick Start
+## Quick Start (Development)
 
 ```bash
 # Install dependencies
@@ -26,6 +26,8 @@ npm run dev
 # Access the dashboard
 open http://localhost:5173
 ```
+
+> **Note**: In production (inside agent-mobile container), the dashboard is pre-built and accessible at `http://agent-mobile:9091`.
 
 ## Architecture
 
@@ -138,22 +140,44 @@ curl -H "X-API-Key: your-secret-key" http://localhost:9091/api/containers
 - Tmux session/pane IDs validated for safe characters
 - Request bodies validated for required fields
 
-## Container Integration
+## Production Deployment
 
-To run inside agent-mobile container:
+RTS Manager is automatically built into the agent-mobile Docker image and starts on container boot.
 
-1. Add to `docker-compose.yml`:
-```yaml
-ports:
-  - "9091:9091"
-volumes:
-  - /var/run/docker.sock:/var/run/docker.sock  # Required for container management
-```
+### How It Works
 
-2. Add to `entrypoint.sh`:
+1. **Build Time**: The main `Dockerfile` builds RTS Manager:
+   - Compiles frontend (Vite) to `dist/`
+   - Compiles server (TypeScript) to `dist/server/`
+   - Installs production dependencies
+   - Output: `/opt/rts-manager/`
+
+2. **Runtime**: `entrypoint.sh` starts the server:
+   - Enabled by default (`RTS_ENABLED=true`)
+   - Serves on port 9091 (`RTS_PORT`)
+   - Health check with retry on startup
+   - Logs to `~/rts-manager.log`
+
+### Configuration
+
+Set these in your `.env` file:
+
 ```bash
-cd /home/agent/rts-manager && npm run dev:server &
+# Enable/disable RTS Manager (default: true)
+RTS_ENABLED=true
+
+# Server port (default: 9091)
+RTS_PORT=9091
+
+# Optional: API key for authentication
+RTS_API_KEY=your-secret-key
 ```
+
+### Accessing the Dashboard
+
+- **Via Tailscale**: `http://agent-mobile:9091`
+- **Via Port Forward**: `http://localhost:9091`
+- **Direct IP**: `http://<tailscale-ip>:9091`
 
 ### Container Detection
 
@@ -161,6 +185,28 @@ The RTS Manager detects containers by:
 - Image name containing "agent-mobile"
 - Container name containing "agent-mobile"
 - Label `com.rts.type=agent`
+
+## Development
+
+For local development without Docker:
+
+## Standalone Docker Image
+
+RTS Manager can also be built as a standalone container:
+
+```bash
+cd rts-manager
+docker build -t rts-manager .
+docker run -d \
+  -p 9091:9091 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -e RTS_API_KEY=your-secret-key \
+  rts-manager
+```
+
+This is useful for:
+- Running RTS Manager on a dedicated host
+- Orchestrating multiple agent-mobile containers from outside
 
 ## Tech Stack
 

@@ -63,6 +63,25 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 
 tmux keeps your session alive when you disconnect - essential for mobile use since Android suspends Termux when backgrounded.
 
+### RTS Manager (Web Dashboard)
+
+A Factorio-style web dashboard for managing tmux sessions, Ralph loops, and Docker containers.
+
+**URL:** `http://<tailscale-ip>:9091` (or `http://agent-mobile:9091` or `http://localhost:9091`)
+
+- **Port:** 9091 (configurable via `RTS_PORT`)
+- **Features:**
+  - View all tmux sessions with pane previews
+  - Click any pane to open interactive terminal
+  - Monitor Ralph loop progress, steering questions, summaries
+  - Start/stop/restart agent-mobile containers
+  - Real-time CPU/memory monitoring
+  - Industrial Factorio-inspired theme
+
+To disable: Set `RTS_ENABLED=false` in `.env`
+
+See [rts-manager/README.md](./rts-manager/README.md) for full documentation.
+
 ### Web Access (webtmux)
 
 You can access your terminal directly from a browser without SSH apps, which is often easier on mobile devices or locked-down machines.
@@ -135,6 +154,9 @@ Select [1]:
 | `WEBTMUX_ENABLED` | Optional - Enable browser-based terminal on port 9090 (default: `false`) |
 | `CLAUDE_STARTUP_UPDATE` | Optional - Check for Claude Code updates on container start (default: `true`) |
 | `DISABLE_AUTOUPDATER` | Optional - Disable Claude's built-in auto-updater (default: `1`) |
+| `RTS_ENABLED` | Optional - Enable RTS Manager dashboard on port 9091 (default: `true`) |
+| `RTS_PORT` | Optional - RTS Manager server port (default: `9091`) |
+| `RTS_API_KEY` | Optional - API key for RTS Manager authentication (disabled if unset) |
 
 ## Build Arguments
 
