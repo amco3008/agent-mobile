@@ -48,6 +48,9 @@ const containerSubscriptions = new Map<string, Set<string>>()
 // Track which containers each socket is subscribed to (for cleanup)
 const socketContainerSubs = new Map<string, Set<string>>()
 
+// Track ralph room subscriptions for cleanup on disconnect
+const socketRalphSubs = new Map<string, Set<string>>()
+
 // Store listener references for cleanup
 type RalphListeners = {
   loopUpdate: (loop: any) => void
@@ -346,13 +349,18 @@ export function setupSocketHandlers(io: IOServer) {
     })
 
     // Handle terminal subscription - connects PTY to tmux pane
-    socket.on('tmux:subscribe', (params) => {
+    socket.on('tmux:subscribe', async (params) => {
       const validation = validateSocketTmuxParams(params)
       if (!validation.valid) {
         socket.emit('error', { message: validation.error || 'Invalid parameters' })
         return
       }
-      terminalManager.subscribe(socket.id, params.sessionId!, params.paneId!)
+      try {
+        await terminalManager.subscribe(socket.id, params.sessionId!, params.paneId!)
+      } catch (error) {
+        console.error('Error subscribing to terminal:', error)
+        socket.emit('error', { message: 'Failed to subscribe to terminal' })
+      }
     })
 
     socket.on('tmux:unsubscribe', (params) => {
@@ -414,12 +422,23 @@ export function setupSocketHandlers(io: IOServer) {
     socket.on('ralph:subscribe', ({ taskId }) => {
       const room = `ralph:${taskId}`
       socket.join(room)
+
+      // Track subscription for cleanup
+      if (!socketRalphSubs.has(socket.id)) {
+        socketRalphSubs.set(socket.id, new Set())
+      }
+      socketRalphSubs.get(socket.id)!.add(taskId)
+
       console.log(`Client ${socket.id} subscribed to ${room}`)
     })
 
     socket.on('ralph:unsubscribe', ({ taskId }) => {
       const room = `ralph:${taskId}`
       socket.leave(room)
+
+      // Remove from tracking
+      socketRalphSubs.get(socket.id)?.delete(taskId)
+
       console.log(`Client ${socket.id} unsubscribed from ${room}`)
     })
 
@@ -482,10 +501,19 @@ export function setupSocketHandlers(io: IOServer) {
       // Clean up any PTY connections for this socket
       terminalManager.cleanupSocket(socket.id)
 
+      // Clean up ralph room subscriptions
+      const ralphSubs = socketRalphSubs.get(socket.id)
+      if (ralphSubs) {
+        for (const taskId of ralphSubs) {
+          socket.leave(`ralph:${taskId}`)
+        }
+        socketRalphSubs.delete(socket.id)
+      }
+
       // Clean up container subscriptions
-      const subs = socketContainerSubs.get(socket.id)
-      if (subs) {
-        for (const containerId of subs) {
+      const containerSubs = socketContainerSubs.get(socket.id)
+      if (containerSubs) {
+        for (const containerId of containerSubs) {
           containerSubscriptions.get(containerId)?.delete(socket.id)
           if (containerSubscriptions.get(containerId)?.size === 0) {
             containerSubscriptions.delete(containerId)
