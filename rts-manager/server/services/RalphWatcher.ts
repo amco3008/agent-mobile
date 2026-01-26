@@ -837,15 +837,22 @@ export class RalphWatcher extends EventEmitter {
       throw new Error('Loop or steering file not found')
     }
 
-    const content = await readFile(loop.steeringFile, 'utf-8')
-    const updated = content
-      .replace('status: pending', 'status: answered')
-      .replace(
-        /## Response\n\n_Waiting for response\.\.\._/,
-        `## Response\n\n${response}`
-      )
+    try {
+      const content = await readFile(loop.steeringFile, 'utf-8')
+      const updated = content
+        .replace('status: pending', 'status: answered')
+        .replace(
+          /## Response\n\n_Waiting for response\.\.\._/,
+          `## Response\n\n${response}`
+        )
 
-    await writeFile(loop.steeringFile, updated, 'utf-8')
+      await writeFile(loop.steeringFile, updated, 'utf-8')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.error(`Failed to write steering response for ${taskId}:`, message)
+      this.emit('error', { taskId, error: `Failed to write steering response: ${message}` })
+      throw new Error(`Failed to write steering response: ${message}`)
+    }
   }
 
   /**

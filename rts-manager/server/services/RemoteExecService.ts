@@ -94,13 +94,15 @@ export class RemoteExecService {
     try {
       const container = this.docker.getContainer(containerId)
 
-      // Build the tmux command
-      // If workingDir provided, cd to it first
-      const cdPrefix = workingDir ? `cd ${this.escapeShell(workingDir)} && ` : ''
+      // Build the full command to run in bash
+      // If workingDir provided, cd to it first, then run the command
+      const fullCmd = workingDir
+        ? `cd ${this.escapeShell(workingDir)} && ${command}`
+        : command
 
       // Create detached tmux session running the command
-      // Using bash -c to handle the cd && command properly
-      const tmuxCmd = `tmux new-session -d -s ${this.escapeShell(sessionName)} bash -c '${cdPrefix}${command}'`
+      // Escape the entire command string to prevent injection
+      const tmuxCmd = `tmux new-session -d -s ${this.escapeShell(sessionName)} bash -c ${this.escapeShell(fullCmd)}`
 
       const exec = await container.exec({
         Cmd: ['bash', '-c', tmuxCmd],
@@ -141,19 +143,25 @@ export class RemoteExecService {
           clearTimeout(timeout)
           if (resolved) return
 
-          // Check if session was created successfully
-          const checkResult = await this.checkTmuxSession(containerId, sessionName)
+          try {
+            // Check if session was created successfully
+            const checkResult = await this.checkTmuxSession(containerId, sessionName)
 
-          if (checkResult.exists) {
-            safeResolve({
-              success: true,
-              output: `Session '${sessionName}' created successfully`,
-            })
-          } else {
-            safeResolve({
-              success: false,
-              error: `Failed to create tmux session: ${output || 'Unknown error'}`,
-            })
+            if (checkResult.exists) {
+              safeResolve({
+                success: true,
+                output: `Session '${sessionName}' created successfully`,
+              })
+            } else {
+              safeResolve({
+                success: false,
+                error: `Failed to create tmux session: ${output || 'Unknown error'}`,
+              })
+            }
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unknown error'
+            console.error('Error checking tmux session:', message)
+            safeResolve({ success: false, error: message })
           }
         })
 

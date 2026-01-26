@@ -57,29 +57,44 @@ router.get('/:id/stats', validateContainerId, async (req, res) => {
 
 // POST /api/containers/:id/start - Start container
 router.post('/:id/start', validateContainerId, async (req, res) => {
-  const result = await containerManager.startContainer(req.params.id)
-  if (!result.success) {
-    return res.status(500).json({ error: 'Failed to start container', message: result.error })
+  try {
+    const result = await containerManager.startContainer(req.params.id)
+    if (!result.success) {
+      return res.status(500).json({ error: 'Failed to start container', message: result.error })
+    }
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error starting container:', error)
+    res.status(500).json({ error: 'Failed to start container' })
   }
-  res.json({ success: true })
 })
 
 // POST /api/containers/:id/stop - Stop container
 router.post('/:id/stop', validateContainerId, async (req, res) => {
-  const result = await containerManager.stopContainer(req.params.id)
-  if (!result.success) {
-    return res.status(500).json({ error: 'Failed to stop container', message: result.error })
+  try {
+    const result = await containerManager.stopContainer(req.params.id)
+    if (!result.success) {
+      return res.status(500).json({ error: 'Failed to stop container', message: result.error })
+    }
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error stopping container:', error)
+    res.status(500).json({ error: 'Failed to stop container' })
   }
-  res.json({ success: true })
 })
 
 // POST /api/containers/:id/restart - Restart container
 router.post('/:id/restart', validateContainerId, async (req, res) => {
-  const result = await containerManager.restartContainer(req.params.id)
-  if (!result.success) {
-    return res.status(500).json({ error: 'Failed to restart container', message: result.error })
+  try {
+    const result = await containerManager.restartContainer(req.params.id)
+    if (!result.success) {
+      return res.status(500).json({ error: 'Failed to restart container', message: result.error })
+    }
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error restarting container:', error)
+    res.status(500).json({ error: 'Failed to restart container' })
   }
-  res.json({ success: true })
 })
 
 // GET /api/containers/:id/sessions - List tmux sessions in a container

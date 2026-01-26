@@ -1,8 +1,7 @@
 import { Router } from 'express'
-import { SystemMonitor } from '../services/SystemMonitor'
+import { systemMonitor } from '../services'
 
 const router = Router()
-const systemMonitor = new SystemMonitor()
 
 // GET /api/system/stats - Get system statistics
 router.get('/stats', async (_req, res) => {

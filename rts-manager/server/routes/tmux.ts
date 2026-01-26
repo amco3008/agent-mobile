@@ -1,8 +1,7 @@
 import { Router } from 'express'
-import { TmuxService } from '../services/TmuxService'
+import { tmuxService } from '../services'
 
 const router = Router()
-const tmuxService = new TmuxService()
 
 // GET /api/tmux/sessions - List all sessions
 router.get('/sessions', async (_req, res) => {
