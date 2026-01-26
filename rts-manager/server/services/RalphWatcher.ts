@@ -217,7 +217,9 @@ export class RalphWatcher extends EventEmitter {
       ignoreInitial: false,
       persistent: true,
       awaitWriteFinish: {
-        stabilityThreshold: 200,
+        // Increased from 200ms to 500ms to reduce duplicate events
+        // when files are being written rapidly
+        stabilityThreshold: 500,
         pollInterval: 100,
       },
     })

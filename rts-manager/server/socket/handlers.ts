@@ -68,6 +68,7 @@ export function setupSocketHandlers(io: IOServer) {
   let systemInterval: NodeJS.Timeout | null = null
   let containerInterval: NodeJS.Timeout | null = null
   let remotePollingInterval: NodeJS.Timeout | null = null
+  let subscriptionCleanupInterval: NodeJS.Timeout | null = null
 
   function startPolling() {
     // Clear any existing intervals to prevent leaks
@@ -176,6 +177,34 @@ export function setupSocketHandlers(io: IOServer) {
         }
       }
     }, config.polling.remote || 3000)
+
+    // Periodic cleanup of stale container subscriptions (every 60 seconds)
+    // Removes subscriptions for containers that no longer exist
+    subscriptionCleanupInterval = setInterval(async () => {
+      if (containerSubscriptions.size === 0) return
+
+      try {
+        const containers = await containerManager.listContainers()
+        const validContainerIds = new Set(containers.map(c => c.id))
+
+        for (const containerId of containerSubscriptions.keys()) {
+          if (!validContainerIds.has(containerId)) {
+            // Container no longer exists - clean up subscriptions
+            const subscribers = containerSubscriptions.get(containerId)
+            if (subscribers) {
+              console.log(`Cleaning up ${subscribers.size} subscriptions for removed container ${containerId}`)
+              for (const socketId of subscribers) {
+                socketContainerSubs.get(socketId)?.delete(containerId)
+              }
+            }
+            containerSubscriptions.delete(containerId)
+          }
+        }
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error)
+        console.warn(`Error during subscription cleanup: ${errMsg}`)
+      }
+    }, 60000) // Every 60 seconds
   }
 
   function stopPolling() {
@@ -194,6 +223,10 @@ export function setupSocketHandlers(io: IOServer) {
     if (remotePollingInterval) {
       clearInterval(remotePollingInterval)
       remotePollingInterval = null
+    }
+    if (subscriptionCleanupInterval) {
+      clearInterval(subscriptionCleanupInterval)
+      subscriptionCleanupInterval = null
     }
   }
 
