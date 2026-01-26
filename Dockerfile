@@ -70,6 +70,20 @@ RUN git clone https://github.com/chrismccord/webtmux /opt/webtmux \
 RUN git clone https://github.com/ComposioHQ/awesome-Claude-skills /opt/awesome-claude-skills \
     && chown -R agent:agent /opt/awesome-claude-skills
 
+# Build RTS Manager (Factorio-style dashboard for managing Ralph loops and containers)
+COPY rts-manager /opt/rts-manager-src
+RUN cd /opt/rts-manager-src \
+    && npm ci \
+    && npm run build \
+    && mkdir -p /opt/rts-manager \
+    && cp -r dist /opt/rts-manager/ \
+    && cp package*.json /opt/rts-manager/ \
+    && cd /opt/rts-manager \
+    && npm ci --omit=dev \
+    && rm -rf /opt/rts-manager-src \
+    && chown -R agent:agent /opt/rts-manager
+# Note: npm run build compiles both frontend (to dist/) and server (to dist/server/)
+
 # Allow agent user to run sudo without password
 RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \
     chmod 0440 /etc/sudoers.d/agent

@@ -3,6 +3,8 @@ import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { tmuxRouter } from './routes/tmux'
 import { ralphRouter } from './routes/ralph'
 import { systemRouter } from './routes/system'
@@ -12,6 +14,9 @@ import { setupSocketHandlers } from './socket/handlers'
 import { config } from './config'
 import { optionalApiKey } from './middleware'
 import type { ServerToClientEvents, ClientToServerEvents } from '../src/types'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const httpServer = createServer(app)
@@ -52,6 +57,19 @@ app.use('/api/containers', containersRouter)
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
+
+// Serve static frontend files in production
+// In development, Vite serves the frontend on a separate port
+if (process.env.NODE_ENV === 'production' || !process.env.VITE_DEV_SERVER) {
+  // Static files from dist/ (built by Vite)
+  const staticPath = path.join(__dirname, '..', '..', 'dist')
+  app.use(express.static(staticPath))
+
+  // SPA fallback - serve index.html for all non-API routes
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(staticPath, 'index.html'))
+  })
+}
 
 // Socket.io handlers
 setupSocketHandlers(io)

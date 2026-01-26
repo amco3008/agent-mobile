@@ -81,11 +81,16 @@ services:
       - DISABLE_AUTOUPDATER=${DISABLE_AUTOUPDATER:-1}
       # Check for updates on container startup (after network ready)
       - CLAUDE_STARTUP_UPDATE=${CLAUDE_STARTUP_UPDATE:-true}
+      # RTS Manager dashboard (Factorio-style control plane for Ralph loops)
+      - RTS_ENABLED=${RTS_ENABLED:-true}
+      - RTS_PORT=${RTS_PORT:-9091}
+      - RTS_API_KEY=${RTS_API_KEY:-}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
       - "2222:22"
       - "9090:9090"
+      - "9091:9091"
 
     restart: unless-stopped
 

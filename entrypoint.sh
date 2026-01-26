@@ -689,6 +689,47 @@ start_webtmux() {
 start_webtmux
 
 # ==========================================
+# RTS Manager Setup (Factorio-style Dashboard)
+# ==========================================
+
+start_rts_manager() {
+    if [ "${RTS_ENABLED:-true}" != "true" ]; then
+        echo "RTS Manager disabled (set RTS_ENABLED=true to enable)"
+        return
+    fi
+
+    local RTS_DIR="/opt/rts-manager"
+    if [ ! -d "$RTS_DIR" ]; then
+        echo "RTS Manager not found at $RTS_DIR, skipping..."
+        return
+    fi
+
+    local RTS_PORT="${RTS_PORT:-9091}"
+    echo "Starting RTS Manager on port $RTS_PORT..."
+
+    # Set environment variables for RTS Manager
+    export PORT="$RTS_PORT"
+    export CLAUDE_DIR="/home/agent/.claude"
+
+    # Start as agent user in background
+    # Uses nohup to ensure it stays running
+    # Server is compiled to dist/server/ by npm run build
+    su - agent -c "cd $RTS_DIR && PORT=$RTS_PORT CLAUDE_DIR=/home/agent/.claude nohup node dist/server/index.js > /home/agent/rts-manager.log 2>&1 &"
+
+    # Wait briefly and check if it started
+    sleep 2
+    if curl -s "http://localhost:$RTS_PORT/api/health" > /dev/null 2>&1; then
+        echo "RTS Manager started at http://localhost:$RTS_PORT"
+        echo "  Dashboard: http://localhost:$RTS_PORT"
+        echo "  Log file: /home/agent/rts-manager.log"
+    else
+        echo "Warning: RTS Manager may have failed to start. Check /home/agent/rts-manager.log"
+    fi
+}
+
+start_rts_manager
+
+# ==========================================
 # Docker Daemon Setup
 # ==========================================
 
@@ -1115,7 +1156,8 @@ echo "============================================"
 echo ""
 echo "Connect via MagicDNS:  ssh agent@agent-mobile"
 echo "Connect via IP:        ssh agent@$(tailscale ip -4 2>/dev/null || echo '<pending>')"
-[ "${WEBTMUX_ENABLED:-false}" = "true" ] && echo "Connect via Web:       http://localhost:9090"
+[ "${WEBTMUX_ENABLED:-false}" = "true" ] && echo "Webtmux Terminal:      http://localhost:9090"
+[ "${RTS_ENABLED:-true}" = "true" ] && echo "RTS Dashboard:         http://localhost:${RTS_PORT:-9091}"
 echo "Password:              agent"
 echo ""
 echo "First time setup (run after SSH):"
