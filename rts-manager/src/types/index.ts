@@ -8,6 +8,17 @@ export interface TmuxSession {
   created: Date
   attached: boolean
   windows: TmuxWindow[]
+  // Container info (for multi-container support)
+  containerId?: string
+  containerName?: string
+}
+
+// Simplified container session info (from remote exec)
+export interface ContainerSession {
+  id: string
+  name: string
+  containerId: string
+  containerName: string
 }
 
 export interface TmuxWindow {

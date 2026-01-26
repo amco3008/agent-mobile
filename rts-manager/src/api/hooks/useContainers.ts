@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../client'
-import type { Container, ContainerStats } from '../../types'
+import type { Container, ContainerStats, ContainerSession } from '../../types'
 import { useSocketStore } from '../../stores/socketStore'
 
 /**
@@ -66,4 +66,19 @@ export function useContainerActions(containerId: string) {
   })
 
   return { start, stop, restart }
+}
+
+/**
+ * Hook for tmux sessions in a specific container.
+ * Used for multi-container session filtering.
+ */
+export function useContainerSessions(containerId: string | null) {
+  return useQuery<{ sessions: ContainerSession[]; message?: string }, Error>({
+    queryKey: ['container-sessions', containerId],
+    queryFn: () => api.get<{ sessions: ContainerSession[]; message?: string }>(`/containers/${containerId}/sessions`),
+    // Poll every 5 seconds when a container is selected
+    refetchInterval: containerId ? 5000 : false,
+    // Only fetch when a specific container is selected
+    enabled: !!containerId,
+  })
 }

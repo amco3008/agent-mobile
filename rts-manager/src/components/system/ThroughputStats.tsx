@@ -1,9 +1,13 @@
 import { memo, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useRalphLoops } from '../../api/hooks/useRalphLoops'
+import { useContainers } from '../../api/hooks/useContainers'
+import { useDashboardStore } from '../../stores/dashboardStore'
 
 export const ThroughputStats = memo(function ThroughputStats() {
   const { data: loops } = useRalphLoops()
+  const { data: containers } = useContainers()
+  const selectedContainerId = useDashboardStore((state) => state.selectedContainerId)
 
   // Memoize calculated stats
   const { runningLoops, completedLoops, totalIterations, avgIterationsPerLoop } = useMemo(() => {
@@ -14,6 +18,14 @@ export const ThroughputStats = memo(function ThroughputStats() {
     const avg = loopsArray.length ? total / loopsArray.length : 0
     return { runningLoops: running, completedLoops: completed, totalIterations: total, avgIterationsPerLoop: avg }
   }, [loops])
+
+  // Container stats
+  const containerStats = useMemo(() => {
+    const containersArray = containers ?? []
+    const running = containersArray.filter(c => c.status === 'running').length
+    const total = containersArray.length
+    return { runningContainers: running, totalContainers: total }
+  }, [containers])
 
   const stats = useMemo(() => [
     { label: 'Active Loops', value: runningLoops, color: 'text-signal-green' },
@@ -46,6 +58,26 @@ export const ThroughputStats = memo(function ThroughputStats() {
           </motion.div>
         ))}
       </div>
+
+      {/* Container stats section */}
+      {containerStats.totalContainers > 0 && (
+        <div className="mt-3 pt-3 border-t border-factory-border">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Containers</span>
+            <span className="font-mono">
+              <span className={containerStats.runningContainers > 0 ? 'text-signal-green' : 'text-gray-500'}>
+                {containerStats.runningContainers}
+              </span>
+              <span className="text-gray-600">/{containerStats.totalContainers}</span>
+            </span>
+          </div>
+          {selectedContainerId && containers && (
+            <div className="mt-1 text-[10px] text-gray-500 truncate">
+              Filtered: {containers.find(c => c.id === selectedContainerId)?.name || 'Unknown'}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Activity indicator */}
       {runningLoops > 0 && (

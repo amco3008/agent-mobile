@@ -2,6 +2,7 @@ import { memo, ReactNode, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useTmuxSessions } from '../../api/hooks/useTmuxSessions'
 import { useContainers } from '../../api/hooks/useContainers'
+import { useDashboardStore } from '../../stores/dashboardStore'
 import { MiniMap } from '../factorio/MiniMap'
 import type { TmuxSession, Container } from '../../types'
 
@@ -54,6 +55,8 @@ const SessionItem = memo(function SessionItem({ session, index, isSelected, onSe
 interface ContainerItemProps {
   container: Container
   index: number
+  isSelected: boolean
+  onSelect: () => void
 }
 
 const statusColors: Record<string, string> = {
@@ -66,13 +69,21 @@ const statusColors: Record<string, string> = {
   dead: 'bg-signal-red',
 }
 
-const ContainerItem = memo(function ContainerItem({ container, index }: ContainerItemProps) {
+const ContainerItem = memo(function ContainerItem({ container, index, isSelected, onSelect }: ContainerItemProps) {
   return (
-    <motion.div
+    <motion.button
+      type="button"
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="flex items-center gap-2 px-2 py-1.5 rounded border border-transparent hover:bg-factory-highlight"
+      onClick={onSelect}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-left ${
+        isSelected
+          ? 'bg-signal-blue/10 border border-signal-blue/30'
+          : 'hover:bg-factory-highlight border border-transparent'
+      }`}
+      aria-pressed={isSelected}
+      aria-label={`Container ${container.name} (${container.status})`}
     >
       <span
         className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[container.status] || 'bg-gray-500'}`}
@@ -80,7 +91,7 @@ const ContainerItem = memo(function ContainerItem({ container, index }: Containe
       />
       <span className="text-xs truncate flex-1">{container.name}</span>
       <span className="text-[10px] text-gray-500">{container.status}</span>
-    </motion.div>
+    </motion.button>
   )
 })
 
@@ -88,10 +99,21 @@ export const Sidebar = memo(function Sidebar({ children, selectedSession, onSele
   const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = useTmuxSessions()
   const { data: containers, isLoading: containersLoading, error: containersError } = useContainers()
 
+  // Container selection state
+  const selectedContainerId = useDashboardStore((state) => state.selectedContainerId)
+  const setSelectedContainer = useDashboardStore((state) => state.setSelectedContainer)
+
   // Memoize callback creator
   const handleSelectSession = useCallback((sessionId: string) => {
     onSelectSession?.(sessionId)
   }, [onSelectSession])
+
+  const handleSelectContainer = useCallback((containerId: string | null) => {
+    setSelectedContainer(containerId)
+  }, [setSelectedContainer])
+
+  // Count running containers
+  const runningCount = containers?.filter(c => c.status === 'running').length || 0
 
   return (
     <aside className="w-64 border-r border-factory-border flex flex-col bg-factory-panel/50">
@@ -100,11 +122,18 @@ export const Sidebar = memo(function Sidebar({ children, selectedSession, onSele
         <MiniMap onSelectSession={onSelectSession} />
       </div>
 
-      {/* Containers section */}
+      {/* Containers section - acts as filter selector */}
       <div className="p-3 border-b border-factory-border">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-          Containers
-        </h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Containers
+          </h2>
+          {containers && containers.length > 0 && (
+            <span className="text-[10px] text-gray-500">
+              {runningCount} running
+            </span>
+          )}
+        </div>
         {containersError ? (
           <div className="text-xs text-signal-red">Failed to load</div>
         ) : containersLoading ? (
@@ -113,11 +142,32 @@ export const Sidebar = memo(function Sidebar({ children, selectedSession, onSele
           <div className="text-xs text-gray-500 italic">No containers</div>
         ) : (
           <div className="space-y-1">
+            {/* All Containers option */}
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              onClick={() => handleSelectContainer(null)}
+              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors text-left ${
+                selectedContainerId === null
+                  ? 'bg-signal-blue/10 border border-signal-blue/30'
+                  : 'hover:bg-factory-highlight border border-transparent'
+              }`}
+              aria-pressed={selectedContainerId === null}
+            >
+              <span className="w-2 h-2 rounded-full flex-shrink-0 bg-signal-blue" aria-hidden="true" />
+              <span className="text-xs flex-1">All Containers</span>
+              <span className="text-[10px] text-gray-500">{containers.length}</span>
+            </motion.button>
+
+            {/* Individual containers */}
             {containers.map((container, i) => (
               <ContainerItem
                 key={container.id}
                 container={container}
-                index={i}
+                index={i + 1}
+                isSelected={selectedContainerId === container.id}
+                onSelect={() => handleSelectContainer(container.id)}
               />
             ))}
           </div>

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { containerManager } from '../services/ContainerManager'
+import { remoteExecService } from '../services/RemoteExecService'
 import { validateContainerId } from '../middleware'
 
 const router = Router()
@@ -79,6 +80,37 @@ router.post('/:id/restart', validateContainerId, async (req, res) => {
     return res.status(500).json({ error: 'Failed to restart container', message: result.error })
   }
   res.json({ success: true })
+})
+
+// GET /api/containers/:id/sessions - List tmux sessions in a container
+router.get('/:id/sessions', validateContainerId, async (req, res) => {
+  try {
+    // Check if container is running first
+    const container = await containerManager.getContainer(req.params.id)
+    if (!container) {
+      return res.status(404).json({ error: 'Container not found' })
+    }
+    if (container.status !== 'running') {
+      return res.json({ sessions: [], message: 'Container is not running' })
+    }
+
+    // Get tmux session names from the container
+    const sessionNames = await remoteExecService.listTmuxSessions(req.params.id)
+
+    // Return simplified session info (names only for now)
+    // Full session details would require more complex docker exec parsing
+    const sessions = sessionNames.map((name, index) => ({
+      id: `${req.params.id}:${name}`,
+      name,
+      containerId: req.params.id,
+      containerName: container.name,
+    }))
+
+    res.json({ sessions })
+  } catch (error) {
+    console.error('Error listing container sessions:', error)
+    res.status(500).json({ error: 'Failed to list sessions' })
+  }
 })
 
 export default router
