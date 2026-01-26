@@ -32,7 +32,6 @@ export function useTmuxSessions() {
 
 export function useTmuxSession(sessionId: string | null) {
   const socketSessions = useSocketStore((state) => state.tmuxSessions)
-  const isConnected = useSocketStore((state) => state.connected)
 
   // Find session in socket data
   const socketSession = sessionId

@@ -59,7 +59,7 @@ export function useAutoLaunchRalph() {
 /**
  * Hook for listing ralph sessions in a container
  */
-export function useRalphSessions(containerId: string | null) {
+export function useRalphSessions(_containerId: string | null) {
   // This would use useQuery but for now we'll just return the mutation
   // Sessions are typically discovered via socket updates
   return null

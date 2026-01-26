@@ -28,7 +28,6 @@ export function useRalphLoops() {
 
 export function useRalphLoop(taskId: string | null) {
   const ralphLoops = useSocketStore((state) => state.ralphLoops)
-  const isConnected = useSocketStore((state) => state.connected)
 
   // Find loop in socket data
   const socketLoop = taskId ? ralphLoops.get(taskId) : undefined

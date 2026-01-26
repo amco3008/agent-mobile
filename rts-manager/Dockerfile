@@ -37,7 +37,7 @@ COPY server ./server
 COPY tsconfig.json ./
 
 # Build server TypeScript
-RUN npx tsc --project tsconfig.json --outDir ./dist-server || true
+RUN npx tsc --project server/tsconfig.json || true
 
 # Create non-root user
 RUN addgroup -g 1001 -S rts && \
@@ -60,4 +60,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:9091/api/health || exit 1
 
 # Start the server
-CMD ["node", "server/index.js"]
+CMD ["node", "dist/server/index.js"]

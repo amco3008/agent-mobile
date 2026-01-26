@@ -122,7 +122,7 @@ function setupSocketListeners(socket: TypedSocket) {
     store.setContainerRalphLoops(containerId, loops)
   })
 
-  socket.on('container:ralph:steering', ({ containerId, taskId, steering }) => {
+  socket.on('container:ralph:steering', ({ containerId, taskId: _taskId, steering }) => {
     store.updateContainerSteering(containerId, steering)
   })
 
