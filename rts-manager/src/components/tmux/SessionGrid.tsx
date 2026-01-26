@@ -13,7 +13,8 @@ interface SessionGridProps {
 }
 
 export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelectSession, onOpenTerminal }: SessionGridProps) {
-  // Get container filter from dashboard store
+  // Get zoom level and container filter from dashboard store
+  const zoomLevel = useDashboardStore((state) => state.zoomLevel)
   const selectedContainerId = useDashboardStore((state) => state.selectedContainerId)
   const { data: containers } = useContainers()
 
@@ -94,6 +95,20 @@ export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelect
     return containers.find(c => c.id === selectedContainerId)?.name
   }, [selectedContainerId, containers])
 
+  // Get grid classes based on zoom level
+  const gridClasses = useMemo(() => {
+    switch (zoomLevel) {
+      case 1: // Overview - compact cards
+        return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'
+      case 2: // Session - medium cards (default)
+        return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+      case 3: // Terminal - large cards with more detail
+        return 'grid-cols-1 lg:grid-cols-2 gap-6'
+      default:
+        return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
+    }
+  }, [zoomLevel])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -141,7 +156,7 @@ export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelect
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`grid ${gridClasses}`}>
         {sessions.map((session) => (
           <SessionCard
             key={session.id}
@@ -152,6 +167,7 @@ export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelect
             )}
             onOpenTerminal={onOpenTerminal}
             showContainerBadge={showContainerBadge}
+            compact={zoomLevel === 1}
           />
         ))}
       </div>

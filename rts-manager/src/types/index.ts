@@ -128,6 +128,7 @@ export interface PendingSpec {
   spec: RalphSpec
   projectPath: string
   createdAt: Date
+  containerId?: string  // Container where spec was detected (for multi-container)
 }
 
 // Socket events

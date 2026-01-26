@@ -8,9 +8,10 @@ interface SessionCardProps {
   onSelect: () => void
   onOpenTerminal?: (sessionId: string, pane: TmuxPane) => void
   showContainerBadge?: boolean
+  compact?: boolean
 }
 
-export const SessionCard = memo(function SessionCard({ session, isSelected, onSelect, onOpenTerminal, showContainerBadge }: SessionCardProps) {
+export const SessionCard = memo(function SessionCard({ session, isSelected, onSelect, onOpenTerminal, showContainerBadge, compact }: SessionCardProps) {
   const activeWindow = useMemo(() =>
     session.windows.find(w => w.active) || session.windows[0],
     [session.windows]
@@ -46,8 +47,8 @@ export const SessionCard = memo(function SessionCard({ session, isSelected, onSe
         </span>
       </div>
 
-      {/* Window tabs */}
-      {session.windows.length > 0 && (
+      {/* Window tabs - hidden in compact mode */}
+      {!compact && session.windows.length > 0 && (
         <div className="flex gap-1 mb-2 overflow-x-auto">
           {session.windows.map((window) => (
             <div
@@ -64,8 +65,8 @@ export const SessionCard = memo(function SessionCard({ session, isSelected, onSe
         </div>
       )}
 
-      {/* Pane preview grid */}
-      {activeWindow && activeWindow.panes.length > 0 && (
+      {/* Pane preview grid - hidden in compact mode */}
+      {!compact && activeWindow && activeWindow.panes.length > 0 && (
         <div className="bg-factory-bg rounded border border-factory-border p-1">
           <div
             className="grid gap-1"
@@ -92,8 +93,15 @@ export const SessionCard = memo(function SessionCard({ session, isSelected, onSe
         </div>
       )}
 
-      {/* Remote session indicator (no pane details available) */}
-      {session.windows.length === 0 && (
+      {/* Compact mode pane count */}
+      {compact && activeWindow && activeWindow.panes.length > 0 && (
+        <div className="text-xs text-gray-500">
+          {activeWindow.panes.length} pane{activeWindow.panes.length !== 1 ? 's' : ''}
+        </div>
+      )}
+
+      {/* Remote session indicator (no pane details available) - hidden in compact mode */}
+      {!compact && session.windows.length === 0 && (
         <div className="bg-factory-bg rounded border border-factory-border p-2 text-center">
           <span className="text-xs text-gray-500 italic">Remote session - connect to view details</span>
         </div>

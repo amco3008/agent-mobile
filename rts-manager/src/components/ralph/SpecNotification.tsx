@@ -1,7 +1,8 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAutoLaunchRalph } from '../../api/hooks/useRalphLaunch'
 import { useSocketStore } from '../../stores/socketStore'
+import { useDashboardStore } from '../../stores/dashboardStore'
 import { useContainers } from '../../api/hooks/useContainers'
 import type { PendingSpec } from '../../types'
 
@@ -18,17 +19,37 @@ const SpecNotificationItem = memo(function SpecNotificationItem({
 }: SpecNotificationItemProps) {
   const autoLaunch = useAutoLaunchRalph()
   const { data: containers } = useContainers()
+  const selectedContainerId = useDashboardStore((state) => state.selectedContainerId)
 
-  // Find a running container to launch in
-  // TODO: In a multi-container setup, might need to determine which container the spec belongs to
-  const runningContainer = containers?.find((c) => c.status === 'running')
+  // Find the target container to launch in:
+  // 1. Use container where spec was detected (if available)
+  // 2. Fall back to currently selected container in dashboard
+  // 3. Fall back to first running container
+  const targetContainer = useMemo(() => {
+    if (!containers) return null
+
+    // If spec has a containerId, use that container
+    if (spec.containerId) {
+      const specContainer = containers.find((c) => c.id === spec.containerId && c.status === 'running')
+      if (specContainer) return specContainer
+    }
+
+    // If a container is selected in dashboard, prefer that
+    if (selectedContainerId) {
+      const selectedContainer = containers.find((c) => c.id === selectedContainerId && c.status === 'running')
+      if (selectedContainer) return selectedContainer
+    }
+
+    // Fall back to first running container
+    return containers.find((c) => c.status === 'running')
+  }, [containers, spec.containerId, selectedContainerId])
 
   const handleLaunch = async () => {
-    if (!runningContainer) return
+    if (!targetContainer) return
 
     try {
       const result = await autoLaunch.mutateAsync({
-        containerId: runningContainer.id,
+        containerId: targetContainer.id,
         taskId: spec.taskId,
       })
 
@@ -114,7 +135,7 @@ const SpecNotificationItem = memo(function SpecNotificationItem({
             Dismiss
           </button>
 
-          {runningContainer ? (
+          {targetContainer ? (
             <motion.button
               type="button"
               onClick={handleLaunch}
@@ -122,6 +143,7 @@ const SpecNotificationItem = memo(function SpecNotificationItem({
               className="px-3 py-1.5 bg-signal-green/20 border border-signal-green text-signal-green text-xs rounded hover:bg-signal-green/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              title={`Launch in ${targetContainer.name}`}
             >
               {autoLaunch.isPending ? (
                 <>
