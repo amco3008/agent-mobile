@@ -10,6 +10,7 @@ import {
   remoteRalphService,
 } from '../services'
 import { config } from '../config'
+import { validateSocketTmuxParams, validateSocketInputData } from '../middleware/validate'
 import type { ServerToClientEvents, ClientToServerEvents } from '../../src/types'
 
 type IOServer = Server<ClientToServerEvents, ServerToClientEvents>
@@ -345,12 +346,22 @@ export function setupSocketHandlers(io: IOServer) {
     })
 
     // Handle terminal subscription - connects PTY to tmux pane
-    socket.on('tmux:subscribe', ({ sessionId, paneId }) => {
-      terminalManager.subscribe(socket.id, sessionId, paneId)
+    socket.on('tmux:subscribe', (params) => {
+      const validation = validateSocketTmuxParams(params)
+      if (!validation.valid) {
+        socket.emit('error', { message: validation.error || 'Invalid parameters' })
+        return
+      }
+      terminalManager.subscribe(socket.id, params.sessionId!, params.paneId!)
     })
 
-    socket.on('tmux:unsubscribe', ({ sessionId, paneId }) => {
-      terminalManager.unsubscribe(socket.id, sessionId, paneId)
+    socket.on('tmux:unsubscribe', (params) => {
+      const validation = validateSocketTmuxParams(params)
+      if (!validation.valid) {
+        socket.emit('error', { message: validation.error || 'Invalid parameters' })
+        return
+      }
+      terminalManager.unsubscribe(socket.id, params.sessionId!, params.paneId!)
     })
 
     // Track last rate limit warning time per socket to avoid flooding
@@ -358,11 +369,21 @@ export function setupSocketHandlers(io: IOServer) {
     const RATE_LIMIT_WARNING_COOLDOWN = 2000 // 2 seconds between warnings
 
     // Handle terminal input - writes directly to PTY (rate limited)
-    socket.on('tmux:input', async ({ sessionId, paneId, data }) => {
+    socket.on('tmux:input', async (params) => {
       try {
+        const tmuxValidation = validateSocketTmuxParams(params)
+        if (!tmuxValidation.valid) {
+          socket.emit('error', { message: tmuxValidation.error || 'Invalid parameters' })
+          return
+        }
+        const dataValidation = validateSocketInputData(params.data)
+        if (!dataValidation.valid) {
+          socket.emit('error', { message: dataValidation.error || 'Invalid data' })
+          return
+        }
         await socketRateLimiter.consume(socket.id)
-        terminalManager.write(sessionId, paneId, data)
-      } catch {
+        terminalManager.write(params.sessionId!, params.paneId!, params.data as string)
+      } catch (error) {
         // Rate limit exceeded - emit warning (throttled)
         const now = Date.now()
         if (now - lastRateLimitWarning > RATE_LIMIT_WARNING_COOLDOWN) {
@@ -373,10 +394,18 @@ export function setupSocketHandlers(io: IOServer) {
     })
 
     // Handle terminal resize (rate limited)
-    socket.on('tmux:resize', async ({ sessionId, paneId, cols, rows }) => {
+    socket.on('tmux:resize', async (params) => {
       try {
+        const validation = validateSocketTmuxParams(params)
+        if (!validation.valid) {
+          return // Silently ignore invalid resize params
+        }
+        const { cols, rows } = params as { sessionId: string; paneId: string; cols?: number; rows?: number }
+        if (typeof cols !== 'number' || typeof rows !== 'number' || cols < 1 || rows < 1) {
+          return // Silently ignore invalid dimensions
+        }
         await socketRateLimiter.consume(socket.id)
-        terminalManager.resize(sessionId, paneId, cols, rows)
+        terminalManager.resize(params.sessionId!, params.paneId!, cols, rows)
       } catch {
         // Rate limit exceeded - silently drop resize (less important than input)
       }

@@ -28,48 +28,73 @@ export function getSocket(): TypedSocket {
   return socket
 }
 
+/**
+ * Safe wrapper for socket event handlers to prevent crashes
+ */
+function safeHandler<T>(handler: (data: T) => void): (data: T) => void {
+  return (data: T) => {
+    try {
+      handler(data)
+    } catch (error) {
+      console.error('Socket handler error:', error)
+    }
+  }
+}
+
 function setupSocketListeners(socket: TypedSocket) {
   const store = useSocketStore.getState()
 
-  // Connection events
+  // Connection events (no data passed)
   socket.on('connect', () => {
-    console.log('Socket connected:', socket.id)
-    store.setConnected(true)
-    store.setConnectionError(null)
+    try {
+      console.log('Socket connected:', socket.id)
+      store.setConnected(true)
+      store.setConnectionError(null)
+    } catch (error) {
+      console.error('Socket connect handler error:', error)
+    }
   })
 
   socket.on('disconnect', () => {
-    console.log('Socket disconnected')
-    store.setConnected(false)
-    // Clear stale data - will be refreshed on reconnect
-    store.clearStaleData()
+    try {
+      console.log('Socket disconnected')
+      store.setConnected(false)
+      // Clear stale data - will be refreshed on reconnect
+      store.clearStaleData()
+    } catch (error) {
+      console.error('Socket disconnect handler error:', error)
+    }
   })
 
-  socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error)
-    store.setConnectionError(error.message)
+  socket.on('connect_error', (error: Error) => {
+    try {
+      console.error('Socket connection error:', error)
+      store.setConnectionError(error.message)
+    } catch (err) {
+      console.error('Socket connect_error handler error:', err)
+    }
   })
 
   // Tmux events
-  socket.on('tmux:sessions:update', (sessions) => {
+  socket.on('tmux:sessions:update', safeHandler((sessions) => {
     store.setTmuxSessions(sessions)
-  })
+  }))
 
   // Ralph events
-  socket.on('ralph:loop:update', (loop) => {
+  socket.on('ralph:loop:update', safeHandler((loop) => {
     // Handle the "removed" state (cancelled with empty data)
     if (loop.status === 'cancelled' && loop.iteration === 0 && loop.maxIterations === 0) {
       store.removeRalphLoop(loop.taskId)
     } else {
       store.updateRalphLoop(loop)
     }
-  })
+  }))
 
-  socket.on('ralph:progress:update', ({ taskId, progress }) => {
+  socket.on('ralph:progress:update', safeHandler(({ taskId, progress }) => {
     store.updateRalphProgress(taskId, progress)
-  })
+  }))
 
-  socket.on('ralph:steering:pending', ({ taskId, steering }) => {
+  socket.on('ralph:steering:pending', safeHandler(({ taskId, steering }) => {
     store.updateRalphSteering(steering)
     // Also update the loop's steering status
     const loops = useSocketStore.getState().ralphLoops
@@ -77,9 +102,9 @@ function setupSocketListeners(socket: TypedSocket) {
     if (loop) {
       store.updateRalphLoop({ ...loop, steeringStatus: 'pending' })
     }
-  })
+  }))
 
-  socket.on('ralph:steering:answered', ({ taskId, steering }) => {
+  socket.on('ralph:steering:answered', safeHandler(({ taskId, steering }) => {
     store.updateRalphSteering(steering)
     // Also update the loop's steering status
     const loops = useSocketStore.getState().ralphLoops
@@ -87,48 +112,48 @@ function setupSocketListeners(socket: TypedSocket) {
     if (loop) {
       store.updateRalphLoop({ ...loop, steeringStatus: 'answered' })
     }
-  })
+  }))
 
-  socket.on('ralph:summary:created', ({ taskId, summary }) => {
+  socket.on('ralph:summary:created', safeHandler(({ taskId, summary }) => {
     store.updateRalphSummary(taskId, summary)
-  })
+  }))
 
   // Spec created (for auto-launch notifications)
-  socket.on('ralph:spec:created', ({ taskId, spec, projectPath }) => {
+  socket.on('ralph:spec:created', safeHandler(({ taskId, spec, projectPath }) => {
     store.addPendingSpec({
       taskId,
       spec,
       projectPath,
       createdAt: new Date(),
     })
-  })
+  }))
 
   // System stats
-  socket.on('system:stats', (stats) => {
+  socket.on('system:stats', safeHandler((stats) => {
     store.setSystemStats(stats)
-  })
+  }))
 
   // Container events
-  socket.on('containers:update', (containers) => {
+  socket.on('containers:update', safeHandler((containers) => {
     store.setContainers(containers)
-  })
+  }))
 
   // Cross-container events
-  socket.on('container:tmux:update', ({ containerId, sessions }) => {
+  socket.on('container:tmux:update', safeHandler(({ containerId, sessions }) => {
     store.setContainerTmuxSessions(containerId, sessions)
-  })
+  }))
 
-  socket.on('container:ralph:update', ({ containerId, loops }) => {
+  socket.on('container:ralph:update', safeHandler(({ containerId, loops }) => {
     store.setContainerRalphLoops(containerId, loops)
-  })
+  }))
 
-  socket.on('container:ralph:steering', ({ containerId, taskId: _taskId, steering }) => {
+  socket.on('container:ralph:steering', safeHandler(({ containerId, taskId: _taskId, steering }) => {
     store.updateContainerSteering(containerId, steering)
-  })
+  }))
 
-  socket.on('error', ({ message }) => {
+  socket.on('error', safeHandler(({ message }) => {
     console.error('Socket error:', message)
-  })
+  }))
 }
 
 // Initialize socket on module load to start receiving events immediately

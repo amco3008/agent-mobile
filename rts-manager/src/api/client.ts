@@ -20,6 +20,13 @@ export class TimeoutError extends Error {
   }
 }
 
+export class ParseError extends Error {
+  constructor(message = 'Failed to parse response') {
+    super(message)
+    this.name = 'ParseError'
+  }
+}
+
 async function request<T>(
   endpoint: string,
   options?: RequestInit & { timeout?: number }
@@ -48,7 +55,14 @@ async function request<T>(
       )
     }
 
-    return response.json()
+    // Parse JSON response with error handling
+    try {
+      return await response.json()
+    } catch (parseError) {
+      throw new ParseError(
+        `Failed to parse response from ${endpoint}: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`
+      )
+    }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new TimeoutError(`Request to ${endpoint} timed out after ${timeout}ms`)

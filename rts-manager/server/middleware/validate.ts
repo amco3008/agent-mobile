@@ -6,6 +6,53 @@ import { Request, Response, NextFunction } from 'express'
 const containerIdRegex = /^[a-f0-9]{12,64}$/i
 
 /**
+ * Socket validation helper - validates tmux subscribe/unsubscribe params
+ */
+export function validateSocketTmuxParams(
+  params: { sessionId?: string; paneId?: string }
+): { valid: boolean; error?: string } {
+  const { sessionId, paneId } = params
+
+  if (!sessionId || typeof sessionId !== 'string') {
+    return { valid: false, error: 'sessionId is required and must be a string' }
+  }
+  if (!paneId || typeof paneId !== 'string') {
+    return { valid: false, error: 'paneId is required and must be a string' }
+  }
+
+  const tmuxIdRegex = /^[a-zA-Z0-9_\-:.@]+$/
+  if (!tmuxIdRegex.test(sessionId)) {
+    return { valid: false, error: 'Invalid sessionId format' }
+  }
+  if (!tmuxIdRegex.test(paneId)) {
+    return { valid: false, error: 'Invalid paneId format' }
+  }
+
+  // Limit ID lengths to prevent abuse
+  if (sessionId.length > 100 || paneId.length > 100) {
+    return { valid: false, error: 'ID too long' }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * Socket validation helper - validates tmux input data
+ */
+export function validateSocketInputData(
+  data: unknown
+): { valid: boolean; error?: string } {
+  if (typeof data !== 'string') {
+    return { valid: false, error: 'data must be a string' }
+  }
+  // Limit input size to 4KB
+  if (data.length > 4096) {
+    return { valid: false, error: 'Input data too large (max 4KB)' }
+  }
+  return { valid: true }
+}
+
+/**
  * Validate container ID parameter
  * Supports both :id and :containerId param names
  */
