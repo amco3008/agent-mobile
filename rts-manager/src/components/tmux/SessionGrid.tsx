@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { useTmuxSessions } from '../../api/hooks/useTmuxSessions'
 import { SessionCard } from './SessionCard'
 import type { TmuxPane } from '../../types'
@@ -8,7 +9,7 @@ interface SessionGridProps {
   onOpenTerminal?: (sessionId: string, pane: TmuxPane) => void
 }
 
-export function SessionGrid({ selectedSession, onSelectSession, onOpenTerminal }: SessionGridProps) {
+export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelectSession, onOpenTerminal }: SessionGridProps) {
   const { data: sessions, isLoading, error } = useTmuxSessions()
 
   if (isLoading) {
@@ -59,4 +60,4 @@ export function SessionGrid({ selectedSession, onSelectSession, onOpenTerminal }
       ))}
     </div>
   )
-}
+})

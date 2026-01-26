@@ -26,10 +26,15 @@ interface SocketState {
   updateRalphProgress: (taskId: string, progress: RalphProgress) => void
   updateRalphSteering: (steering: SteeringQuestion) => void
   updateRalphSummary: (taskId: string, summary: RalphSummary) => void
+  clearStaleData: () => void
 
-  // Selectors
+  // Selectors - memoized
   getRalphLoopsArray: () => RalphLoop[]
 }
+
+// Memoized selector cache
+let cachedLoopsArray: RalphLoop[] = []
+let cachedLoopsMap: Map<string, RalphLoop> | null = null
 
 export const useSocketStore = create<SocketState>((set, get) => ({
   // Initial state
@@ -52,13 +57,29 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   updateRalphLoop: (loop) => set((state) => {
     const newLoops = new Map(state.ralphLoops)
     newLoops.set(loop.taskId, loop)
+    // Invalidate cache
+    cachedLoopsMap = null
     return { ralphLoops: newLoops }
   }),
 
   removeRalphLoop: (taskId) => set((state) => {
     const newLoops = new Map(state.ralphLoops)
     newLoops.delete(taskId)
-    return { ralphLoops: newLoops }
+    // Also clear related progress/steering/summaries
+    const newProgress = new Map(state.ralphProgress)
+    newProgress.delete(taskId)
+    const newSteering = new Map(state.ralphSteering)
+    newSteering.delete(taskId)
+    const newSummaries = new Map(state.ralphSummaries)
+    newSummaries.delete(taskId)
+    // Invalidate cache
+    cachedLoopsMap = null
+    return {
+      ralphLoops: newLoops,
+      ralphProgress: newProgress,
+      ralphSteering: newSteering,
+      ralphSummaries: newSummaries,
+    }
   }),
 
   setSystemStats: (stats) => set({ systemStats: stats }),
@@ -81,6 +102,29 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     return { ralphSummaries: newSummaries }
   }),
 
-  // Selectors
-  getRalphLoopsArray: () => Array.from(get().ralphLoops.values()),
+  clearStaleData: () => {
+    // Invalidate cache
+    cachedLoopsMap = null
+    set({
+      tmuxSessions: [],
+      ralphLoops: new Map(),
+      systemStats: null,
+      ralphProgress: new Map(),
+      ralphSteering: new Map(),
+      ralphSummaries: new Map(),
+    })
+  },
+
+  // Selectors - memoized to avoid new array on each call
+  getRalphLoopsArray: () => {
+    const currentMap = get().ralphLoops
+    // Return cached array if map hasn't changed
+    if (cachedLoopsMap === currentMap) {
+      return cachedLoopsArray
+    }
+    // Update cache
+    cachedLoopsMap = currentMap
+    cachedLoopsArray = Array.from(currentMap.values())
+    return cachedLoopsArray
+  },
 }))

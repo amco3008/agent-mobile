@@ -154,6 +154,12 @@ export function setupSocketHandlers(io: IOServer) {
       console.log(`Client ${socket.id} subscribed to ${room}`)
     })
 
+    socket.on('ralph:unsubscribe', ({ taskId }) => {
+      const room = `ralph:${taskId}`
+      socket.leave(room)
+      console.log(`Client ${socket.id} unsubscribed from ${room}`)
+    })
+
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`)
       // Clean up any PTY connections for this socket

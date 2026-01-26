@@ -55,7 +55,7 @@ export function StatusBar() {
 
       {/* Right: Port and time */}
       <div className="flex items-center gap-4 text-gray-500">
-        <span>Port: 9091</span>
+        <span>Port: {window.location.port || '80'}</span>
         <span className="text-signal-yellow font-mono">
           {time.toLocaleTimeString()}
         </span>

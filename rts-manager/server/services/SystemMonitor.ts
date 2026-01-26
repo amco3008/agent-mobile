@@ -49,7 +49,8 @@ export class SystemMonitor {
         cpu: p.cpu,
         memory: p.mem,
       }))
-    } catch {
+    } catch (error) {
+      console.error('Error fetching Claude processes:', error)
       return []
     }
   }

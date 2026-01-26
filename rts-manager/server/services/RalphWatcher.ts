@@ -480,8 +480,8 @@ export class RalphWatcher extends EventEmitter {
             }
           }
         }
-      } catch {
-        // Ignore errors for missing directories
+      } catch (error) {
+        console.warn(`Error scanning directory ${basePath} for state files:`, error)
       }
     }
 
@@ -522,8 +522,8 @@ export class RalphWatcher extends EventEmitter {
             }
           }
         }
-      } catch {
-        // Ignore errors for missing directories
+      } catch (error) {
+        console.warn(`Error scanning directory ${basePath} for spec files:`, error)
       }
     }
 
@@ -710,8 +710,8 @@ export class RalphWatcher extends EventEmitter {
               logsDir,
             })
           }
-        } catch {
-          // Ignore errors
+        } catch (error) {
+          console.warn(`Error reading logs directory ${logsDir}:`, error)
         }
       }
     }
@@ -742,7 +742,8 @@ export class RalphWatcher extends EventEmitter {
     try {
       const content = await readFile(loop.progressFile, 'utf-8')
       return this.parseProgressFile(loop.progressFile, content)
-    } catch {
+    } catch (error) {
+      console.warn(`Error reading progress file for ${taskId}:`, error)
       return null
     }
   }
@@ -759,7 +760,8 @@ export class RalphWatcher extends EventEmitter {
     try {
       const content = await readFile(loop.steeringFile, 'utf-8')
       return this.parseSteeringFile(loop.steeringFile, content)
-    } catch {
+    } catch (error) {
+      console.warn(`Error reading steering file for ${taskId}:`, error)
       return null
     }
   }

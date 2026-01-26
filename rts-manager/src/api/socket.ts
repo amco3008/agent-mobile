@@ -40,6 +40,8 @@ function setupSocketListeners(socket: TypedSocket) {
   socket.on('disconnect', () => {
     console.log('Socket disconnected')
     store.setConnected(false)
+    // Clear stale data - will be refreshed on reconnect
+    store.clearStaleData()
   })
 
   socket.on('connect_error', (error) => {
@@ -125,4 +127,9 @@ export function sendTerminalResize(sessionId: string, paneId: string, cols: numb
 export function subscribeToRalphLoop(taskId: string) {
   const s = getSocket()
   s.emit('ralph:subscribe', { taskId })
+}
+
+export function unsubscribeFromRalphLoop(taskId: string) {
+  const s = getSocket()
+  s.emit('ralph:unsubscribe', { taskId })
 }

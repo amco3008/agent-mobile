@@ -1,9 +1,21 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { getSocket, subscribeToTerminal, unsubscribeFromTerminal, sendTerminalInput, sendTerminalResize } from '../../api/socket'
 import type { TmuxPane } from '../../types'
 import 'xterm/css/xterm.css'
+
+// Debounce utility
+function debounce<T extends (...args: Parameters<T>) => void>(
+  fn: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  return (...args: Parameters<T>) => {
+    if (timeoutId) clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn(...args), delay)
+  }
+}
 
 interface PaneTerminalProps {
   sessionId: string
@@ -77,12 +89,12 @@ export function PaneTerminal({ sessionId, pane, onClose }: PaneTerminalProps) {
       sendTerminalInput(sessionId, paneId, data)
     })
 
-    // Handle resize - notify server of new dimensions
-    const handleResize = () => {
+    // Handle resize - notify server of new dimensions (debounced to avoid flooding)
+    const handleResize = debounce(() => {
       fitAddon.fit()
       const { cols, rows } = terminal
       sendTerminalResize(sessionId, paneId, cols, rows)
-    }
+    }, 200)
     window.addEventListener('resize', handleResize)
 
     // Send initial dimensions after terminal is ready
@@ -102,14 +114,14 @@ export function PaneTerminal({ sessionId, pane, onClose }: PaneTerminalProps) {
     }
   }, [sessionId, paneId])
 
-  // Handle resize when container size changes
-  const handleContainerResize = useCallback(() => {
+  // Handle resize when container size changes (debounced)
+  const handleContainerResize = useMemo(() => debounce(() => {
     if (fitAddonRef.current && xtermRef.current) {
       fitAddonRef.current.fit()
       const { cols, rows } = xtermRef.current
       sendTerminalResize(sessionId, paneId, cols, rows)
     }
-  }, [sessionId, paneId])
+  }, 200), [sessionId, paneId])
 
   useEffect(() => {
     const resizeObserver = new ResizeObserver(handleContainerResize)

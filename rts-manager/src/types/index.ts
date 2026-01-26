@@ -123,4 +123,5 @@ export interface ClientToServerEvents {
   'tmux:input': (data: { sessionId: string; paneId: string; data: string }) => void
   'tmux:resize': (data: { sessionId: string; paneId: string; cols: number; rows: number }) => void
   'ralph:subscribe': (data: { taskId: string }) => void
+  'ralph:unsubscribe': (data: { taskId: string }) => void
 }
