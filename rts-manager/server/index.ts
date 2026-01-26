@@ -30,7 +30,11 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 })
 
 // Middleware
-app.use(cors())
+app.use(cors({
+  origin: config.getCorsOrigins(),
+  methods: ['GET', 'POST', 'DELETE'],
+  credentials: true
+}))
 app.use(express.json())
 
 // Rate limiting (100 requests per minute per IP)

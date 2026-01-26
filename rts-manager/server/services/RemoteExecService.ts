@@ -9,6 +9,9 @@ export interface ExecResult {
   error?: string
 }
 
+// Default timeout for exec operations (30 seconds)
+const EXEC_TIMEOUT_MS = 30000
+
 /**
  * Service for executing commands inside Docker containers
  * Used to create tmux sessions and run commands like `claude`
@@ -38,18 +41,25 @@ export class RemoteExecService {
 
       const stream = await exec.start({ Detach: false })
 
-      // Collect output
+      // Collect output with timeout
       let output = ''
       return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          stream.destroy()
+          resolve({ success: false, error: `Command execution timeout (${EXEC_TIMEOUT_MS / 1000}s)` })
+        }, EXEC_TIMEOUT_MS)
+
         stream.on('data', (chunk: Buffer) => {
           output += chunk.toString()
         })
 
         stream.on('end', () => {
+          clearTimeout(timeout)
           resolve({ success: true, output })
         })
 
         stream.on('error', (err: Error) => {
+          clearTimeout(timeout)
           resolve({ success: false, error: err.message })
         })
       })
@@ -90,11 +100,16 @@ export class RemoteExecService {
 
       const stream = await exec.start({ Detach: false })
 
-      // Wait for command to complete
+      // Wait for command to complete with timeout
       let output = ''
       let errorOutput = ''
 
       return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          stream.destroy()
+          resolve({ success: false, error: `Tmux session creation timeout (${EXEC_TIMEOUT_MS / 1000}s)` })
+        }, EXEC_TIMEOUT_MS)
+
         stream.on('data', (chunk: Buffer) => {
           // Docker multiplexes stdout/stderr - first byte indicates stream type
           const data = chunk.toString()
@@ -102,6 +117,7 @@ export class RemoteExecService {
         })
 
         stream.on('end', async () => {
+          clearTimeout(timeout)
           // Check if session was created successfully
           const checkResult = await this.checkTmuxSession(containerId, sessionName)
 
@@ -119,6 +135,7 @@ export class RemoteExecService {
         })
 
         stream.on('error', (err: Error) => {
+          clearTimeout(timeout)
           resolve({ success: false, error: err.message })
         })
       })

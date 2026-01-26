@@ -30,6 +30,22 @@ router.post('/launch', async (req, res) => {
     })
   }
 
+  // Validate workingDir for path traversal attacks
+  if (workingDir) {
+    // Reject paths with parent directory references or suspicious patterns
+    if (
+      workingDir.includes('..') ||
+      workingDir.includes('//') ||
+      workingDir.includes('\x00') ||
+      /[;&|`$]/.test(workingDir)
+    ) {
+      return res.status(400).json({
+        error: 'Invalid working directory',
+        message: 'Working directory contains invalid characters or path traversal patterns',
+      })
+    }
+  }
+
   // Verify container exists and is running
   const container = await containerManager.getContainer(containerId)
   if (!container) {

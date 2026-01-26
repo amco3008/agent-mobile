@@ -1,4 +1,5 @@
 import { Server, Socket } from 'socket.io'
+import { RateLimiterMemory } from 'rate-limiter-flexible'
 import { TmuxService } from '../services/TmuxService'
 import { RalphWatcher } from '../services/RalphWatcher'
 import { SystemMonitor } from '../services/SystemMonitor'
@@ -13,6 +14,28 @@ type IOSocket = Socket<ClientToServerEvents, ServerToClientEvents>
 const tmuxService = new TmuxService()
 const ralphWatcher = new RalphWatcher()
 const systemMonitor = new SystemMonitor()
+
+// Rate limiter for high-frequency socket events (per socket ID)
+// 50 events per second is generous for terminal input
+const socketRateLimiter = new RateLimiterMemory({
+  points: 50, // 50 events
+  duration: 1, // per second
+})
+
+// Track if Ralph listeners are registered to prevent duplicates
+let ralphListenersRegistered = false
+
+// Store listener references for cleanup
+type RalphListeners = {
+  loopUpdate: (loop: any) => void
+  loopRemoved: (taskId: string) => void
+  progressUpdate: (taskId: string, progress: any) => void
+  steeringPending: (taskId: string, steering: any) => void
+  steeringAnswered: (taskId: string, steering: any) => void
+  summaryCreated: (taskId: string, summary: any) => void
+  specCreated: (data: any) => void
+}
+let ralphListenerRefs: RalphListeners | null = null
 
 export function setupSocketHandlers(io: IOServer) {
   // Initialize terminal manager with socket.io server
@@ -82,57 +105,95 @@ export function setupSocketHandlers(io: IOServer) {
   }
 
   // Set up Ralph file watching (instant updates instead of polling)
+  // Listeners registered ONCE to prevent memory leaks
   function startRalphWatching() {
-    ralphWatcher.on('loop:update', (loop) => {
-      io.emit('ralph:loop:update', loop)
-    })
+    if (ralphListenersRegistered) {
+      console.log('Ralph listeners already registered, skipping')
+      return
+    }
 
-    ralphWatcher.on('loop:removed', (taskId) => {
-      // Emit a "removed" state to clients
-      io.emit('ralph:loop:update', {
-        taskId,
-        status: 'cancelled',
-        iteration: 0,
-        maxIterations: 0,
-        completionPromise: null,
-        mode: 'yolo',
-        startedAt: new Date(),
-        stateFile: null,
-        projectPath: '',
-        progressFile: null,
-        steeringFile: null,
-        steeringStatus: 'none',
-        loopType: 'persistent',
-      })
-    })
+    // Create named listener functions for cleanup
+    ralphListenerRefs = {
+      loopUpdate: (loop) => {
+        io.emit('ralph:loop:update', loop)
+      },
+      loopRemoved: (taskId) => {
+        // Emit a "removed" state to clients
+        io.emit('ralph:loop:update', {
+          taskId,
+          status: 'cancelled',
+          iteration: 0,
+          maxIterations: 0,
+          completionPromise: null,
+          mode: 'yolo',
+          startedAt: new Date(),
+          stateFile: null,
+          projectPath: '',
+          progressFile: null,
+          steeringFile: null,
+          steeringStatus: 'none',
+          loopType: 'persistent',
+        })
+      },
+      progressUpdate: (taskId, progress) => {
+        io.to(`ralph:${taskId}`).emit('ralph:progress:update', { taskId, progress })
+      },
+      steeringPending: (taskId, steering) => {
+        io.emit('ralph:steering:pending', { taskId, steering })
+      },
+      steeringAnswered: (taskId, steering) => {
+        io.emit('ralph:steering:answered', { taskId, steering })
+      },
+      summaryCreated: (taskId, summary) => {
+        io.to(`ralph:${taskId}`).emit('ralph:summary:created', { taskId, summary })
+      },
+      specCreated: (data) => {
+        // Broadcast to all clients - new spec ready for auto-launch
+        io.emit('ralph:spec:created', data)
+      },
+    }
 
-    ralphWatcher.on('progress:update', (taskId, progress) => {
-      io.to(`ralph:${taskId}`).emit('ralph:progress:update', { taskId, progress })
-    })
+    // Register listeners
+    ralphWatcher.on('loop:update', ralphListenerRefs.loopUpdate)
+    ralphWatcher.on('loop:removed', ralphListenerRefs.loopRemoved)
+    ralphWatcher.on('progress:update', ralphListenerRefs.progressUpdate)
+    ralphWatcher.on('steering:pending', ralphListenerRefs.steeringPending)
+    ralphWatcher.on('steering:answered', ralphListenerRefs.steeringAnswered)
+    ralphWatcher.on('summary:created', ralphListenerRefs.summaryCreated)
+    ralphWatcher.on('spec:created', ralphListenerRefs.specCreated)
 
-    ralphWatcher.on('steering:pending', (taskId, steering) => {
-      io.emit('ralph:steering:pending', { taskId, steering })
-    })
-
-    ralphWatcher.on('steering:answered', (taskId, steering) => {
-      io.emit('ralph:steering:answered', { taskId, steering })
-    })
-
-    ralphWatcher.on('summary:created', (taskId, summary) => {
-      io.to(`ralph:${taskId}`).emit('ralph:summary:created', { taskId, summary })
-    })
-
-    ralphWatcher.on('spec:created', (data) => {
-      // Broadcast to all clients - new spec ready for auto-launch
-      io.emit('ralph:spec:created', data)
-    })
-
+    ralphListenersRegistered = true
     ralphWatcher.startWatching()
   }
 
   async function stopRalphWatching() {
+    // Remove listeners to prevent memory leaks
+    if (ralphListenerRefs) {
+      ralphWatcher.off('loop:update', ralphListenerRefs.loopUpdate)
+      ralphWatcher.off('loop:removed', ralphListenerRefs.loopRemoved)
+      ralphWatcher.off('progress:update', ralphListenerRefs.progressUpdate)
+      ralphWatcher.off('steering:pending', ralphListenerRefs.steeringPending)
+      ralphWatcher.off('steering:answered', ralphListenerRefs.steeringAnswered)
+      ralphWatcher.off('summary:created', ralphListenerRefs.summaryCreated)
+      ralphWatcher.off('spec:created', ralphListenerRefs.specCreated)
+      ralphListenerRefs = null
+    }
+    ralphListenersRegistered = false
     await ralphWatcher.stopWatching()
   }
+
+  // Socket.io authentication middleware (optional - enabled when RTS_API_KEY is set)
+  io.use((socket, next) => {
+    const apiKey = process.env.RTS_API_KEY
+    if (!apiKey) return next() // Dev mode - skip auth when no key configured
+
+    const token = socket.handshake.auth?.token || socket.handshake.headers['x-api-key']
+    if (token !== apiKey) {
+      console.warn(`Socket auth failed for ${socket.id} - invalid or missing API key`)
+      return next(new Error('Authentication required'))
+    }
+    next()
+  })
 
   // Start polling on first connection
   io.on('connection', (socket: IOSocket) => {
@@ -166,14 +227,25 @@ export function setupSocketHandlers(io: IOServer) {
       terminalManager.unsubscribe(socket.id, sessionId, paneId)
     })
 
-    // Handle terminal input - writes directly to PTY
-    socket.on('tmux:input', ({ sessionId, paneId, data }) => {
-      terminalManager.write(sessionId, paneId, data)
+    // Handle terminal input - writes directly to PTY (rate limited)
+    socket.on('tmux:input', async ({ sessionId, paneId, data }) => {
+      try {
+        await socketRateLimiter.consume(socket.id)
+        terminalManager.write(sessionId, paneId, data)
+      } catch {
+        // Rate limit exceeded - silently drop input
+        // Don't emit error to avoid flooding client
+      }
     })
 
-    // Handle terminal resize
-    socket.on('tmux:resize', ({ sessionId, paneId, cols, rows }) => {
-      terminalManager.resize(sessionId, paneId, cols, rows)
+    // Handle terminal resize (rate limited)
+    socket.on('tmux:resize', async ({ sessionId, paneId, cols, rows }) => {
+      try {
+        await socketRateLimiter.consume(socket.id)
+        terminalManager.resize(sessionId, paneId, cols, rows)
+      } catch {
+        // Rate limit exceeded - silently drop resize
+      }
     })
 
     socket.on('ralph:subscribe', ({ taskId }) => {
