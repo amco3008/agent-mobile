@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useContainers } from '../../api/hooks/useContainers'
 import { useLaunchClaudeSession, type LaunchConfig } from '../../api/hooks/useRalphLaunch'
 import { toast } from '../../stores/toastStore'
+import { useEscapeKey, useFocusTrap } from '../../hooks/useModal'
 
 interface LaunchModalProps {
   isOpen: boolean
@@ -21,6 +22,10 @@ export const LaunchModal = memo(function LaunchModal({
   const [selectedContainer, setSelectedContainer] = useState<string>('')
   const [workingDir, setWorkingDir] = useState<string>('')
   const [command, setCommand] = useState<LaunchConfig['command']>('claude')
+
+  // Accessibility: Escape key and focus trap
+  useEscapeKey(onClose, isOpen)
+  const { containerRef, handleKeyDown } = useFocusTrap<HTMLDivElement>(isOpen)
 
   // Filter to only running containers
   const runningContainers = containers?.filter((c) => c.status === 'running') || []
@@ -79,6 +84,7 @@ export const LaunchModal = memo(function LaunchModal({
 
       {/* Modal */}
       <motion.div
+        ref={containerRef}
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -87,6 +93,7 @@ export const LaunchModal = memo(function LaunchModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="launch-modal-title"
+        onKeyDown={handleKeyDown}
       >
         {/* Header */}
         <div className="border-b border-factory-border p-4 flex items-center justify-between">

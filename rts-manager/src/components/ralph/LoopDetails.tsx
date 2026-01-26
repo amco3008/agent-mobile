@@ -4,6 +4,7 @@ import { useSocketStore } from '../../stores/socketStore'
 import { ProgressDisplay } from './ProgressDisplay'
 import { SummaryDisplay } from './SummaryDisplay'
 import { SteeringPanel } from './SteeringPanel'
+import { useEscapeKey, useFocusTrap } from '../../hooks/useModal'
 import type { RalphLoop } from '../../types'
 
 interface LoopDetailsProps {
@@ -14,6 +15,10 @@ interface LoopDetailsProps {
 export const LoopDetails = memo(function LoopDetails({ loop, onClose }: LoopDetailsProps) {
   const steering = useSocketStore((state) => state.ralphSteering.get(loop.taskId))
   const summary = useSocketStore((state) => state.ralphSummaries.get(loop.taskId))
+
+  // Accessibility: Escape key and focus trap
+  useEscapeKey(onClose, true) // Always open when rendered
+  const { containerRef, handleKeyDown } = useFocusTrap<HTMLDivElement>(true)
 
   const statusColors = {
     running: 'text-signal-green',
@@ -40,16 +45,21 @@ export const LoopDetails = memo(function LoopDetails({ loop, onClose }: LoopDeta
 
       {/* Panel */}
       <motion.div
+        ref={containerRef}
         initial={{ opacity: 0, x: 300 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 300 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         className="fixed right-0 top-0 h-full w-[480px] max-w-[90vw] bg-factory-panel border-l border-factory-border z-50 overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="loop-details-title"
+        onKeyDown={handleKeyDown}
       >
         {/* Header */}
         <div className="sticky top-0 bg-factory-panel border-b border-factory-border p-4 flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold text-gray-200">{loop.taskId}</h2>
+            <h2 id="loop-details-title" className="text-sm font-bold text-gray-200">{loop.taskId}</h2>
             <div className="flex items-center gap-2 mt-1">
               <span className={`text-xs ${statusColors[loop.status]}`}>
                 {loop.status.replace('_', ' ')}
