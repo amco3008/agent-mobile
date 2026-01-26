@@ -9,6 +9,7 @@ interface SidebarProps {
   children: ReactNode
   selectedSession?: string | null
   onSelectSession?: (sessionId: string) => void
+  onNewRalph?: () => void
 }
 
 // Memoized session item component
@@ -83,7 +84,7 @@ const ContainerItem = memo(function ContainerItem({ container, index }: Containe
   )
 })
 
-export const Sidebar = memo(function Sidebar({ children, selectedSession, onSelectSession }: SidebarProps) {
+export const Sidebar = memo(function Sidebar({ children, selectedSession, onSelectSession, onNewRalph }: SidebarProps) {
   const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = useTmuxSessions()
   const { data: containers, isLoading: containersLoading, error: containersError } = useContainers()
 
@@ -150,11 +151,30 @@ export const Sidebar = memo(function Sidebar({ children, selectedSession, onSele
       </div>
 
       {/* Ralph loops section */}
-      <div className="flex-1 p-3 overflow-auto">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-          Ralph Loops
-        </h2>
-        {children}
+      <div className="flex-1 p-3 overflow-auto flex flex-col">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Ralph Loops
+          </h2>
+          {onNewRalph && (
+            <motion.button
+              type="button"
+              onClick={onNewRalph}
+              className="px-2 py-1 text-[10px] text-signal-green border border-signal-green/30 rounded hover:bg-signal-green/10 transition-colors flex items-center gap-1"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              aria-label="Start new Ralph session"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New
+            </motion.button>
+          )}
+        </div>
+        <div className="flex-1 overflow-auto">
+          {children}
+        </div>
       </div>
     </aside>
   )

@@ -8,6 +8,8 @@ import { LoopList } from './components/ralph/LoopList'
 import { ProductionChain } from './components/ralph/ProductionChain'
 import { SteeringPanel } from './components/ralph/SteeringPanel'
 import { PaneTerminal } from './components/tmux/PaneTerminal'
+import { LaunchModal } from './components/ralph/LaunchModal'
+import { InteractiveSession } from './components/ralph/InteractiveSession'
 import { useTmuxSession } from './api/hooks/useTmuxSessions'
 import { useRalphLoops } from './api/hooks/useRalphLoops'
 import { getSocket } from './api/socket'
@@ -18,14 +20,31 @@ interface TerminalState {
   pane: TmuxPane
 }
 
+interface InteractiveSessionState {
+  sessionName: string
+  containerId: string
+  containerName?: string
+  command?: string
+}
+
 function App() {
   const [selectedSession, setSelectedSession] = useState<string | null>(null)
   const [openTerminal, setOpenTerminal] = useState<TerminalState | null>(null)
+  const [launchModalOpen, setLaunchModalOpen] = useState(false)
+  const [interactiveSession, setInteractiveSession] = useState<InteractiveSessionState | null>(null)
 
   // Initialize socket connection
   useEffect(() => {
     getSocket()
   }, [])
+
+  // Handle launching a new interactive session
+  const handleLaunched = (sessionName: string, containerId: string) => {
+    setInteractiveSession({
+      sessionName,
+      containerId,
+    })
+  }
 
   // Get selected session details
   const { data: sessionDetails } = useTmuxSession(selectedSession)
@@ -45,9 +64,28 @@ function App() {
       <Sidebar
         selectedSession={selectedSession}
         onSelectSession={setSelectedSession}
+        onNewRalph={() => setLaunchModalOpen(true)}
       >
         <LoopList />
       </Sidebar>
+
+      {/* Launch modal for starting new Claude sessions */}
+      <LaunchModal
+        isOpen={launchModalOpen}
+        onClose={() => setLaunchModalOpen(false)}
+        onLaunched={handleLaunched}
+      />
+
+      {/* Interactive session overlay */}
+      {interactiveSession && (
+        <InteractiveSession
+          sessionName={interactiveSession.sessionName}
+          containerId={interactiveSession.containerId}
+          containerName={interactiveSession.containerName}
+          command={interactiveSession.command}
+          onClose={() => setInteractiveSession(null)}
+        />
+      )}
 
       <main className="flex-1 p-4 overflow-auto flex flex-col gap-4">
         {/* Steering panel when needed */}
