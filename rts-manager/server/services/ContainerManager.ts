@@ -14,6 +14,21 @@ export interface ContainerOperationResult {
   error?: string
 }
 
+/**
+ * Timeout wrapper for async operations
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ])
+}
+
+// Container operation timeout (30 seconds)
+const CONTAINER_OPERATION_TIMEOUT = 30000
+
 export class ContainerManager {
   private docker: Docker
   private isConnected: boolean = false
@@ -119,7 +134,7 @@ export class ContainerManager {
   async startContainer(id: string): Promise<ContainerOperationResult> {
     try {
       const container = this.docker.getContainer(id)
-      await container.start()
+      await withTimeout(container.start(), CONTAINER_OPERATION_TIMEOUT, 'Container start')
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -134,7 +149,7 @@ export class ContainerManager {
   async stopContainer(id: string): Promise<ContainerOperationResult> {
     try {
       const container = this.docker.getContainer(id)
-      await container.stop()
+      await withTimeout(container.stop(), CONTAINER_OPERATION_TIMEOUT, 'Container stop')
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
@@ -149,7 +164,7 @@ export class ContainerManager {
   async restartContainer(id: string): Promise<ContainerOperationResult> {
     try {
       const container = this.docker.getContainer(id)
-      await container.restart()
+      await withTimeout(container.restart(), CONTAINER_OPERATION_TIMEOUT, 'Container restart')
       return { success: true }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'

@@ -2,6 +2,7 @@ import { useState, memo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useContainers } from '../../api/hooks/useContainers'
 import { useLaunchClaudeSession, type LaunchConfig } from '../../api/hooks/useRalphLaunch'
+import { toast } from '../../stores/toastStore'
 
 interface LaunchModalProps {
   isOpen: boolean
@@ -54,8 +55,8 @@ export const LaunchModal = memo(function LaunchModal({
         onLaunched(result.sessionName, result.containerId)
         onClose()
       }
-    } catch {
-      // Error is handled by mutation state
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to launch session')
     }
   }
 

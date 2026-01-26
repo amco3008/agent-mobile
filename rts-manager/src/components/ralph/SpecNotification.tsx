@@ -4,6 +4,7 @@ import { useAutoLaunchRalph } from '../../api/hooks/useRalphLaunch'
 import { useSocketStore } from '../../stores/socketStore'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { useContainers } from '../../api/hooks/useContainers'
+import { toast } from '../../stores/toastStore'
 import type { PendingSpec } from '../../types'
 
 interface SpecNotificationItemProps {
@@ -57,8 +58,8 @@ const SpecNotificationItem = memo(function SpecNotificationItem({
         onLaunched(result.sessionName, result.containerId)
         onDismiss()
       }
-    } catch {
-      // Error shown by mutation state
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to launch ralph')
     }
   }
 

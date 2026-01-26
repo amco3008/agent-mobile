@@ -94,24 +94,14 @@ function setupSocketListeners(socket: TypedSocket) {
     store.updateRalphProgress(taskId, progress)
   }))
 
-  socket.on('ralph:steering:pending', safeHandler(({ taskId, steering }) => {
-    store.updateRalphSteering(steering)
-    // Also update the loop's steering status
-    const loops = useSocketStore.getState().ralphLoops
-    const loop = loops.get(taskId)
-    if (loop) {
-      store.updateRalphLoop({ ...loop, steeringStatus: 'pending' })
-    }
+  socket.on('ralph:steering:pending', safeHandler(({ taskId: _taskId, steering }) => {
+    // Use atomic update to prevent race conditions
+    store.updateRalphSteeringAndLoop(steering)
   }))
 
-  socket.on('ralph:steering:answered', safeHandler(({ taskId, steering }) => {
-    store.updateRalphSteering(steering)
-    // Also update the loop's steering status
-    const loops = useSocketStore.getState().ralphLoops
-    const loop = loops.get(taskId)
-    if (loop) {
-      store.updateRalphLoop({ ...loop, steeringStatus: 'answered' })
-    }
+  socket.on('ralph:steering:answered', safeHandler(({ taskId: _taskId, steering }) => {
+    // Use atomic update to prevent race conditions
+    store.updateRalphSteeringAndLoop(steering)
   }))
 
   socket.on('ralph:summary:created', safeHandler(({ taskId, summary }) => {

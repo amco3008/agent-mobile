@@ -42,6 +42,7 @@ interface SocketState {
   setContainers: (containers: Container[]) => void
   updateRalphProgress: (taskId: string, progress: RalphProgress) => void
   updateRalphSteering: (steering: SteeringQuestion) => void
+  updateRalphSteeringAndLoop: (steering: SteeringQuestion) => void
   updateRalphSummary: (taskId: string, summary: RalphSummary) => void
   addPendingSpec: (spec: PendingSpec) => void
   removePendingSpec: (taskId: string) => void
@@ -136,6 +137,24 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   updateRalphSteering: (steering) => set((state) => {
     const newSteering = new Map(state.ralphSteering)
     newSteering.set(steering.taskId, steering)
+    return { ralphSteering: newSteering }
+  }),
+
+  // Atomic update of steering + loop status to prevent race conditions
+  updateRalphSteeringAndLoop: (steering) => set((state) => {
+    const newSteering = new Map(state.ralphSteering)
+    newSteering.set(steering.taskId, steering)
+
+    // Also update the loop's steeringStatus atomically
+    const loop = state.ralphLoops.get(steering.taskId)
+    if (loop) {
+      const newLoops = new Map(state.ralphLoops)
+      newLoops.set(steering.taskId, { ...loop, steeringStatus: steering.status })
+      // Invalidate cache
+      cachedLoopsMap = null
+      return { ralphSteering: newSteering, ralphLoops: newLoops }
+    }
+
     return { ralphSteering: newSteering }
   }),
 

@@ -1,4 +1,4 @@
-import { spawn, IPty } from 'node-pty'
+import { spawn, IPty, IDisposable } from 'node-pty'
 import { Server } from 'socket.io'
 import type { ServerToClientEvents, ClientToServerEvents } from '../../src/types'
 
@@ -9,6 +9,7 @@ interface TerminalInstance {
   sessionId: string
   paneId: string
   subscribers: Set<string> // socket IDs
+  disposables: IDisposable[] // Track event listeners for cleanup
 }
 
 export class TerminalManager {
@@ -44,10 +45,11 @@ export class TerminalManager {
           sessionId,
           paneId,
           subscribers: new Set(),
+          disposables: [],
         }
 
-        // Handle PTY output
-        pty.onData((data) => {
+        // Handle PTY output - store disposable for cleanup
+        const dataDisposable = pty.onData((data) => {
           if (this.io) {
             // Send to all subscribers
             for (const sid of terminal.subscribers) {
@@ -59,11 +61,17 @@ export class TerminalManager {
             }
           }
         })
+        terminal.disposables.push(dataDisposable)
 
-        pty.onExit(() => {
+        const exitDisposable = pty.onExit(() => {
           console.log(`Terminal ${key} exited`)
+          // Dispose all listeners
+          for (const disposable of terminal.disposables) {
+            disposable.dispose()
+          }
           this.terminals.delete(key)
         })
+        terminal.disposables.push(exitDisposable)
 
         this.terminals.set(key, terminal)
         console.log(`Created terminal for ${key}`)
@@ -128,6 +136,10 @@ export class TerminalManager {
 
       // Clean up terminal if no subscribers
       if (terminal.subscribers.size === 0) {
+        // Dispose all event listeners first
+        for (const disposable of terminal.disposables) {
+          disposable.dispose()
+        }
         terminal.pty.kill()
         this.terminals.delete(key)
         console.log(`Cleaned up terminal ${key}`)
@@ -168,6 +180,10 @@ export class TerminalManager {
     for (const [key, terminal] of this.terminals.entries()) {
       terminal.subscribers.delete(socketId)
       if (terminal.subscribers.size === 0) {
+        // Dispose all event listeners first
+        for (const disposable of terminal.disposables) {
+          disposable.dispose()
+        }
         terminal.pty.kill()
         this.terminals.delete(key)
         console.log(`Cleaned up terminal ${key} after socket ${socketId} disconnect`)
@@ -180,6 +196,10 @@ export class TerminalManager {
    */
   cleanup(): void {
     for (const [key, terminal] of this.terminals.entries()) {
+      // Dispose all event listeners first
+      for (const disposable of terminal.disposables) {
+        disposable.dispose()
+      }
       terminal.pty.kill()
       console.log(`Cleaned up terminal ${key}`)
     }
