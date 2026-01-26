@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../client'
 import type { Container, ContainerStats, ContainerSession } from '../../types'
 import { useSocketStore } from '../../stores/socketStore'
+import { toast } from '../../stores/toastStore'
 
 /**
  * Hook for container list that prefers socket-pushed data.
@@ -48,6 +49,10 @@ export function useContainerActions(containerId: string) {
     mutationFn: () => api.post(`/containers/${containerId}/start`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['containers'] })
+      toast.success('Container started successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to start container: ${error.message}`)
     },
   })
 
@@ -55,6 +60,10 @@ export function useContainerActions(containerId: string) {
     mutationFn: () => api.post(`/containers/${containerId}/stop`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['containers'] })
+      toast.success('Container stopped successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to stop container: ${error.message}`)
     },
   })
 
@@ -62,6 +71,10 @@ export function useContainerActions(containerId: string) {
     mutationFn: () => api.post(`/containers/${containerId}/restart`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['containers'] })
+      toast.success('Container restarted successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to restart container: ${error.message}`)
     },
   })
 

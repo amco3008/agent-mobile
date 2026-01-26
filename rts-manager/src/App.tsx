@@ -11,6 +11,7 @@ import { PaneTerminal } from './components/tmux/PaneTerminal'
 import { LaunchModal } from './components/ralph/LaunchModal'
 import { InteractiveSession } from './components/ralph/InteractiveSession'
 import { SpecNotificationList } from './components/ralph/SpecNotification'
+import { ToastContainer } from './components/ui/Toast'
 import { useTmuxSession } from './api/hooks/useTmuxSessions'
 import { useRalphLoops } from './api/hooks/useRalphLoops'
 import { getSocket } from './api/socket'
@@ -154,6 +155,9 @@ function App() {
           </div>
         )}
       </aside>
+
+      {/* Toast notifications */}
+      <ToastContainer />
     </DashboardLayout>
   )
 }
