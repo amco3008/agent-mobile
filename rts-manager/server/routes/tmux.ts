@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { tmuxService } from '../services'
+import { validateTmuxSessionId } from '../middleware'
 
 const router = Router()
 
@@ -15,7 +16,7 @@ router.get('/sessions', async (_req, res) => {
 })
 
 // GET /api/tmux/sessions/:id - Get session details
-router.get('/sessions/:id', async (req, res) => {
+router.get('/sessions/:id', validateTmuxSessionId, async (req, res) => {
   try {
     const session = await tmuxService.getSession(req.params.id)
     if (!session) {
@@ -29,7 +30,7 @@ router.get('/sessions/:id', async (req, res) => {
 })
 
 // GET /api/tmux/sessions/:id/capture - Capture pane content
-router.get('/sessions/:id/capture', async (req, res) => {
+router.get('/sessions/:id/capture', validateTmuxSessionId, async (req, res) => {
   try {
     const { paneId } = req.query
     const content = await tmuxService.capturePane(
@@ -44,7 +45,7 @@ router.get('/sessions/:id/capture', async (req, res) => {
 })
 
 // POST /api/tmux/sessions/:id/keys - Send keys to pane
-router.post('/sessions/:id/keys', async (req, res) => {
+router.post('/sessions/:id/keys', validateTmuxSessionId, async (req, res) => {
   try {
     const { paneId, keys } = req.body
 
@@ -96,7 +97,7 @@ router.post('/sessions', async (req, res) => {
 })
 
 // DELETE /api/tmux/sessions/:id - Kill session
-router.delete('/sessions/:id', async (req, res) => {
+router.delete('/sessions/:id', validateTmuxSessionId, async (req, res) => {
   try {
     await tmuxService.killSession(req.params.id)
     res.json({ success: true })

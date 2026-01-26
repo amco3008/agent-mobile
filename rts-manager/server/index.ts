@@ -85,7 +85,7 @@ if (process.env.NODE_ENV === 'production' || !process.env.VITE_DEV_SERVER) {
 setupSocketHandlers(io)
 
 // Start server
-httpServer.listen(config.port, () => {
+const server = httpServer.listen(config.port, () => {
   console.log(`RTS Manager server running on http://localhost:${config.port}`)
   console.log(`   API: http://localhost:${config.port}/api`)
   console.log(`   Socket.io: ws://localhost:${config.port}`)
@@ -93,5 +93,34 @@ httpServer.listen(config.port, () => {
   console.log(`   Rate limit: ${process.env.RTS_RATE_LIMIT || '100'} req/min`)
   console.log(`   API key auth: ${process.env.RTS_API_KEY ? 'enabled' : 'disabled'}`)
 })
+
+// Graceful shutdown
+function shutdown(signal: string) {
+  console.log(`\nReceived ${signal}. Shutting down gracefully...`)
+
+  // Close Socket.io connections
+  io.close(() => {
+    console.log('Socket.io connections closed')
+  })
+
+  // Close HTTP server
+  server.close((err) => {
+    if (err) {
+      console.error('Error closing HTTP server:', err)
+      process.exit(1)
+    }
+    console.log('HTTP server closed')
+    process.exit(0)
+  })
+
+  // Force exit after 10 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout')
+    process.exit(1)
+  }, 10000)
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
 
 export { io }

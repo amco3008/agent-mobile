@@ -14,6 +14,7 @@ interface TerminalInstance {
 export class TerminalManager {
   private terminals: Map<string, TerminalInstance> = new Map()
   private io: IOServer | null = null
+  private pendingCreations: Set<string> = new Set() // Mutex for PTY creation
 
   setIO(io: IOServer) {
     this.io = io
@@ -31,6 +32,15 @@ export class TerminalManager {
     let terminal = this.terminals.get(key)
 
     if (!terminal) {
+      // Check if another subscribe is already creating this terminal
+      if (this.pendingCreations.has(key)) {
+        // Wait and retry after a short delay
+        setTimeout(() => this.subscribe(socketId, sessionId, paneId), 100)
+        return
+      }
+
+      // Mark as being created
+      this.pendingCreations.add(key)
       // Create new PTY attached to tmux pane
       try {
         const pty = spawn('tmux', ['attach-session', '-t', sessionId, '-r'], {
@@ -68,8 +78,10 @@ export class TerminalManager {
         })
 
         this.terminals.set(key, terminal)
+        this.pendingCreations.delete(key)
         console.log(`Created terminal for ${key}`)
       } catch (error) {
+        this.pendingCreations.delete(key)
         console.error(`Failed to create terminal for ${key}:`, error)
         return
       }
