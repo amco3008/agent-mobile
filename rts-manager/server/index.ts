@@ -5,6 +5,7 @@ import cors from 'cors'
 import { tmuxRouter } from './routes/tmux'
 import { ralphRouter } from './routes/ralph'
 import { systemRouter } from './routes/system'
+import containersRouter from './routes/containers'
 import { setupSocketHandlers } from './socket/handlers'
 import { config } from './config'
 import type { ServerToClientEvents, ClientToServerEvents } from '../src/types'
@@ -28,6 +29,7 @@ app.use(express.json())
 app.use('/api/tmux', tmuxRouter)
 app.use('/api/ralph', ralphRouter)
 app.use('/api/system', systemRouter)
+app.use('/api/containers', containersRouter)
 
 // Health check
 app.get('/api/health', (_req, res) => {

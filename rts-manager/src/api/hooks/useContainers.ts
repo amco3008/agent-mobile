@@ -1,0 +1,69 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { api } from '../client'
+import type { Container, ContainerStats } from '../../types'
+import { useSocketStore } from '../../stores/socketStore'
+
+/**
+ * Hook for container list that prefers socket-pushed data.
+ * Falls back to API polling only when socket data is unavailable.
+ */
+export function useContainers() {
+  const socketContainers = useSocketStore((state) => state.containers)
+  const isConnected = useSocketStore((state) => state.connected)
+
+  const query = useQuery<Container[], Error>({
+    queryKey: ['containers'],
+    queryFn: () => api.get<Container[]>('/containers'),
+    // Only poll if socket is disconnected or no data yet
+    refetchInterval: isConnected && socketContainers.length > 0 ? false : 10000,
+    refetchOnWindowFocus: !isConnected,
+  })
+
+  return {
+    ...query,
+    data: socketContainers.length > 0 ? socketContainers : query.data,
+    isLoading: query.isLoading && socketContainers.length === 0,
+  }
+}
+
+/**
+ * Hook for single container stats.
+ */
+export function useContainerStats(containerId: string) {
+  return useQuery<ContainerStats, Error>({
+    queryKey: ['container-stats', containerId],
+    queryFn: () => api.get<ContainerStats>(`/containers/${containerId}/stats`),
+    refetchInterval: 5000,
+    enabled: !!containerId,
+  })
+}
+
+/**
+ * Hook for container actions (start, stop, restart).
+ */
+export function useContainerActions(containerId: string) {
+  const queryClient = useQueryClient()
+
+  const start = useMutation({
+    mutationFn: () => api.post(`/containers/${containerId}/start`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['containers'] })
+    },
+  })
+
+  const stop = useMutation({
+    mutationFn: () => api.post(`/containers/${containerId}/stop`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['containers'] })
+    },
+  })
+
+  const restart = useMutation({
+    mutationFn: () => api.post(`/containers/${containerId}/restart`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['containers'] })
+    },
+  })
+
+  return { start, stop, restart }
+}

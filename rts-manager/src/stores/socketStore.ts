@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TmuxSession, RalphLoop, SystemStats, SteeringQuestion, RalphProgress, RalphSummary } from '../types'
+import type { TmuxSession, RalphLoop, SystemStats, SteeringQuestion, RalphProgress, RalphSummary, Container } from '../types'
 
 interface SocketState {
   // Connection state
@@ -10,6 +10,7 @@ interface SocketState {
   tmuxSessions: TmuxSession[]
   ralphLoops: Map<string, RalphLoop>
   systemStats: SystemStats | null
+  containers: Container[]
 
   // Ralph progress/steering/summary (keyed by taskId) - now using parsed types
   ralphProgress: Map<string, RalphProgress>
@@ -23,6 +24,7 @@ interface SocketState {
   updateRalphLoop: (loop: RalphLoop) => void
   removeRalphLoop: (taskId: string) => void
   setSystemStats: (stats: SystemStats) => void
+  setContainers: (containers: Container[]) => void
   updateRalphProgress: (taskId: string, progress: RalphProgress) => void
   updateRalphSteering: (steering: SteeringQuestion) => void
   updateRalphSummary: (taskId: string, summary: RalphSummary) => void
@@ -43,6 +45,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   tmuxSessions: [],
   ralphLoops: new Map(),
   systemStats: null,
+  containers: [],
   ralphProgress: new Map(),
   ralphSteering: new Map(),
   ralphSummaries: new Map(),
@@ -84,6 +87,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
   setSystemStats: (stats) => set({ systemStats: stats }),
 
+  setContainers: (containers) => set({ containers }),
+
   updateRalphProgress: (taskId, progress) => set((state) => {
     const newProgress = new Map(state.ralphProgress)
     newProgress.set(taskId, progress)
@@ -109,6 +114,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       tmuxSessions: [],
       ralphLoops: new Map(),
       systemStats: null,
+      containers: [],
       ralphProgress: new Map(),
       ralphSteering: new Map(),
       ralphSummaries: new Map(),

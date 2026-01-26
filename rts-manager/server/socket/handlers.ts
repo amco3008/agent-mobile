@@ -3,6 +3,7 @@ import { TmuxService } from '../services/TmuxService'
 import { RalphWatcher } from '../services/RalphWatcher'
 import { SystemMonitor } from '../services/SystemMonitor'
 import { terminalManager } from '../services/TerminalManager'
+import { containerManager } from '../services/ContainerManager'
 import { config } from '../config'
 import type { ServerToClientEvents, ClientToServerEvents } from '../../src/types'
 
@@ -17,14 +18,17 @@ export function setupSocketHandlers(io: IOServer) {
   // Initialize terminal manager with socket.io server
   terminalManager.setIO(io)
 
-  // Start background polling for tmux and system (Ralph uses file watching)
+  // Start background polling for tmux, system, and containers (Ralph uses file watching)
   let tmuxInterval: NodeJS.Timeout | null = null
   let systemInterval: NodeJS.Timeout | null = null
+  let containerInterval: NodeJS.Timeout | null = null
 
   function startPolling() {
     // Clear any existing intervals to prevent leaks
     if (tmuxInterval) clearInterval(tmuxInterval)
     if (systemInterval) clearInterval(systemInterval)
+    if (containerInterval) clearInterval(containerInterval)
+
     // Tmux sessions polling
     tmuxInterval = setInterval(async () => {
       if (io.engine.clientsCount > 0) {
@@ -48,6 +52,18 @@ export function setupSocketHandlers(io: IOServer) {
         }
       }
     }, config.polling.system)
+
+    // Container polling
+    containerInterval = setInterval(async () => {
+      if (io.engine.clientsCount > 0) {
+        try {
+          const containers = await containerManager.listContainers()
+          io.emit('containers:update', containers)
+        } catch (error) {
+          console.error('Error polling containers:', error)
+        }
+      }
+    }, config.polling.containers || 5000)
   }
 
   function stopPolling() {
@@ -58,6 +74,10 @@ export function setupSocketHandlers(io: IOServer) {
     if (systemInterval) {
       clearInterval(systemInterval)
       systemInterval = null
+    }
+    if (containerInterval) {
+      clearInterval(containerInterval)
+      containerInterval = null
     }
   }
 
@@ -118,15 +138,18 @@ export function setupSocketHandlers(io: IOServer) {
       tmuxService.listSessions(),
       ralphWatcher.listLoops(),
       systemMonitor.getStats(),
-    ]).then(([sessions, loops, stats]) => {
+      containerManager.listContainers(),
+    ]).then(([sessions, loops, stats, containers]) => {
       socket.emit('tmux:sessions:update', sessions)
       loops.forEach((loop) => socket.emit('ralph:loop:update', loop))
       socket.emit('system:stats', stats)
+      socket.emit('containers:update', containers)
     }).catch((error) => {
       console.error('Error fetching initial data for client:', error)
       // Still try to send partial data or empty arrays
       socket.emit('tmux:sessions:update', [])
       socket.emit('system:stats', { cpu: 0, memory: { used: 0, total: 0, percent: 0 }, processes: [] })
+      socket.emit('containers:update', [])
     })
 
     // Handle terminal subscription - connects PTY to tmux pane

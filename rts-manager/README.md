@@ -1,12 +1,13 @@
 # RTS Manager
 
-A Factorio-style web dashboard for managing tmux sessions and Claude Code Ralph loops.
+A Factorio-style web dashboard for managing tmux sessions, Claude Code Ralph loops, and Docker containers.
 
 ## Features
 
+- **Container Management**: Detect, start, stop, restart agent-mobile containers via Docker API
 - **Session Grid**: View all tmux sessions with pane previews
 - **Terminal Embedding**: Click any pane to open an interactive terminal
-- **Ralph Loop Monitoring**: Track iteration progress, status, and steering
+- **Ralph Loop Monitoring**: Track iteration progress, status, and steering (persistent and fresh modes)
 - **Production Chain**: Visualize the prompt → Claude → output flow
 - **Resource Monitor**: Real-time CPU, memory, and process stats
 - **Throughput Stats**: Track active loops and iterations
@@ -33,9 +34,13 @@ Frontend (Vite + React)     Backend (Express + Socket.io)
          │                            │
          └──── Socket.io + REST ──────┘
                       │
-         ┌────────────┼────────────┐
-         │            │            │
-    TmuxService  RalphWatcher  SystemMonitor
+    ┌─────────────────┼─────────────────┐
+    │         │            │            │
+ContainerMgr TmuxService  RalphWatcher  SystemMonitor
+    │
+Docker Socket (/var/run/docker.sock)
+    │
+    └──→ agent-mobile containers
 ```
 
 ## Project Structure
@@ -48,13 +53,14 @@ rts-manager/
 │   │   ├── layout/         # Dashboard layout
 │   │   ├── tmux/           # Session/pane components
 │   │   ├── ralph/          # Ralph loop components
+│   │   ├── containers/     # Docker container management
 │   │   ├── system/         # Resource monitoring
 │   │   └── factorio/       # Zoom controls, minimap
 │   ├── stores/             # Zustand stores
 │   └── types/              # TypeScript types
 ├── server/                 # Backend
 │   ├── routes/             # REST API routes
-│   ├── services/           # Business logic
+│   ├── services/           # Business logic (TmuxService, RalphWatcher, ContainerManager, etc.)
 │   └── socket/             # Socket.io handlers
 └── package.json
 ```
@@ -63,6 +69,12 @@ rts-manager/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/api/containers` | List agent-mobile containers |
+| GET | `/api/containers/:id` | Get container details |
+| GET | `/api/containers/:id/stats` | Get container resource stats |
+| POST | `/api/containers/:id/start` | Start container |
+| POST | `/api/containers/:id/stop` | Stop container |
+| POST | `/api/containers/:id/restart` | Restart container |
 | GET | `/api/tmux/sessions` | List all tmux sessions |
 | GET | `/api/tmux/sessions/:id` | Get session details |
 | POST | `/api/tmux/sessions/:id/keys` | Send keystrokes |
@@ -74,9 +86,14 @@ rts-manager/
 
 | Event | Direction | Description |
 |-------|-----------|-------------|
+| `containers:update` | Server→Client | Container list changed |
 | `tmux:sessions:update` | Server→Client | Session list changed |
 | `tmux:pane:output` | Server→Client | Terminal output |
 | `ralph:loop:update` | Server→Client | Loop state changed |
+| `ralph:progress:update` | Server→Client | Ralph progress updated |
+| `ralph:steering:pending` | Server→Client | Steering question pending |
+| `ralph:steering:answered` | Server→Client | Steering question answered |
+| `ralph:summary:created` | Server→Client | Loop completion summary |
 | `system:stats` | Server→Client | Resource updates |
 
 ## Configuration
@@ -93,6 +110,8 @@ To run inside agent-mobile container:
 ```yaml
 ports:
   - "9091:9091"
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock  # Required for container management
 ```
 
 2. Add to `entrypoint.sh`:
@@ -100,9 +119,16 @@ ports:
 cd /home/agent/rts-manager && npm run dev:server &
 ```
 
+### Container Detection
+
+The RTS Manager detects containers by:
+- Image name containing "agent-mobile"
+- Container name containing "agent-mobile"
+- Label `com.rts.type=agent`
+
 ## Tech Stack
 
-- **Frontend**: Vite, React 18, TypeScript, TanStack Query, Zustand
-- **Backend**: Express, Socket.io, node-pty
+- **Frontend**: Vite, React 19, TypeScript, TanStack Query, Zustand
+- **Backend**: Express, Socket.io, node-pty, dockerode
 - **Styling**: Tailwind CSS, Framer Motion
 - **Terminal**: xterm.js

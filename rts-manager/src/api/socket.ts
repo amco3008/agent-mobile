@@ -96,6 +96,11 @@ function setupSocketListeners(socket: TypedSocket) {
   socket.on('system:stats', (stats) => {
     store.setSystemStats(stats)
   })
+
+  // Container events
+  socket.on('containers:update', (containers) => {
+    store.setContainers(containers)
+  })
 }
 
 // Initialize socket on module load to start receiving events immediately

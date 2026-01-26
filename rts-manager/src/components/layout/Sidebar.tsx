@@ -1,8 +1,9 @@
 import { memo, ReactNode, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useTmuxSessions } from '../../api/hooks/useTmuxSessions'
+import { useContainers } from '../../api/hooks/useContainers'
 import { MiniMap } from '../factorio/MiniMap'
-import type { TmuxSession } from '../../types'
+import type { TmuxSession, Container } from '../../types'
 
 interface SidebarProps {
   children: ReactNode
@@ -48,8 +49,43 @@ const SessionItem = memo(function SessionItem({ session, index, isSelected, onSe
   )
 })
 
+// Memoized container item component
+interface ContainerItemProps {
+  container: Container
+  index: number
+}
+
+const statusColors: Record<string, string> = {
+  running: 'bg-signal-green',
+  exited: 'bg-gray-500',
+  paused: 'bg-signal-yellow',
+  created: 'bg-blue-500',
+  restarting: 'bg-signal-yellow animate-pulse',
+  removing: 'bg-signal-red animate-pulse',
+  dead: 'bg-signal-red',
+}
+
+const ContainerItem = memo(function ContainerItem({ container, index }: ContainerItemProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="flex items-center gap-2 px-2 py-1.5 rounded border border-transparent hover:bg-factory-highlight"
+    >
+      <span
+        className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[container.status] || 'bg-gray-500'}`}
+        aria-hidden="true"
+      />
+      <span className="text-xs truncate flex-1">{container.name}</span>
+      <span className="text-[10px] text-gray-500">{container.status}</span>
+    </motion.div>
+  )
+})
+
 export const Sidebar = memo(function Sidebar({ children, selectedSession, onSelectSession }: SidebarProps) {
-  const { data: sessions, isLoading, error } = useTmuxSessions()
+  const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = useTmuxSessions()
+  const { data: containers, isLoading: containersLoading, error: containersError } = useContainers()
 
   // Memoize callback creator
   const handleSelectSession = useCallback((sessionId: string) => {
@@ -63,14 +99,38 @@ export const Sidebar = memo(function Sidebar({ children, selectedSession, onSele
         <MiniMap onSelectSession={onSelectSession} />
       </div>
 
+      {/* Containers section */}
+      <div className="p-3 border-b border-factory-border">
+        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+          Containers
+        </h2>
+        {containersError ? (
+          <div className="text-xs text-signal-red">Failed to load</div>
+        ) : containersLoading ? (
+          <div className="text-xs text-signal-yellow animate-pulse">Loading...</div>
+        ) : !containers || containers.length === 0 ? (
+          <div className="text-xs text-gray-500 italic">No containers</div>
+        ) : (
+          <div className="space-y-1">
+            {containers.map((container, i) => (
+              <ContainerItem
+                key={container.id}
+                container={container}
+                index={i}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Sessions section */}
       <div className="p-3 border-b border-factory-border">
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
           Tmux Sessions
         </h2>
-        {error ? (
+        {sessionsError ? (
           <div className="text-xs text-signal-red">Failed to load</div>
-        ) : isLoading ? (
+        ) : sessionsLoading ? (
           <div className="text-xs text-signal-yellow animate-pulse">Loading...</div>
         ) : !sessions || sessions.length === 0 ? (
           <div className="text-xs text-gray-500 italic">No sessions</div>

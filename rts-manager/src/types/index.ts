@@ -1,3 +1,6 @@
+// Re-export container types
+export * from './container'
+
 // Tmux types
 export interface TmuxSession {
   id: string
@@ -115,6 +118,7 @@ export interface ServerToClientEvents {
   'ralph:steering:answered': (data: { taskId: string; steering: SteeringQuestion }) => void
   'ralph:summary:created': (data: { taskId: string; summary: RalphSummary }) => void
   'system:stats': (stats: SystemStats) => void
+  'containers:update': (containers: import('./container').Container[]) => void
 }
 
 export interface ClientToServerEvents {
