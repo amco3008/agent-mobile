@@ -5,6 +5,8 @@ import { RalphWatcher } from '../services/RalphWatcher'
 import { SystemMonitor } from '../services/SystemMonitor'
 import { terminalManager } from '../services/TerminalManager'
 import { containerManager } from '../services/ContainerManager'
+import { remoteTmuxService } from '../services/RemoteTmuxService'
+import { remoteRalphService } from '../services/RemoteRalphService'
 import { config } from '../config'
 import type { ServerToClientEvents, ClientToServerEvents } from '../../src/types'
 
@@ -24,6 +26,13 @@ const socketRateLimiter = new RateLimiterMemory({
 
 // Track if Ralph listeners are registered to prevent duplicates
 let ralphListenersRegistered = false
+
+// Track container subscriptions for cross-container monitoring
+// Map: containerId -> Set of socket IDs subscribed to that container
+const containerSubscriptions = new Map<string, Set<string>>()
+
+// Track which containers each socket is subscribed to (for cleanup)
+const socketContainerSubs = new Map<string, Set<string>>()
 
 // Store listener references for cleanup
 type RalphListeners = {
@@ -45,6 +54,7 @@ export function setupSocketHandlers(io: IOServer) {
   let tmuxInterval: NodeJS.Timeout | null = null
   let systemInterval: NodeJS.Timeout | null = null
   let containerInterval: NodeJS.Timeout | null = null
+  let remotePollingInterval: NodeJS.Timeout | null = null
 
   function startPolling() {
     // Clear any existing intervals to prevent leaks
@@ -87,6 +97,50 @@ export function setupSocketHandlers(io: IOServer) {
         }
       }
     }, config.polling.containers || 5000)
+
+    // Remote container polling (for cross-container monitoring)
+    // Only polls containers that have active subscriptions
+    remotePollingInterval = setInterval(async () => {
+      if (containerSubscriptions.size === 0) return
+
+      for (const [containerId, subscribers] of containerSubscriptions) {
+        if (subscribers.size === 0) {
+          containerSubscriptions.delete(containerId)
+          continue
+        }
+
+        try {
+          // Verify container is still running
+          const container = await containerManager.getContainer(containerId)
+          if (!container || container.status !== 'running') {
+            continue
+          }
+
+          // Fetch remote tmux sessions
+          const sessions = await remoteTmuxService.listSessions(containerId)
+
+          // Fetch remote Ralph loops
+          const loops = await remoteRalphService.listLoops(containerId)
+
+          // Emit to all subscribers of this container
+          const room = `container:${containerId}`
+          io.to(room).emit('container:tmux:update', { containerId, sessions })
+          io.to(room).emit('container:ralph:update', { containerId, loops })
+
+          // Check for pending steering in any loop
+          for (const loop of loops) {
+            if (loop.steeringStatus === 'pending') {
+              const steering = await remoteRalphService.getSteering(containerId, loop.taskId)
+              if (steering) {
+                io.to(room).emit('container:ralph:steering', { containerId, taskId: loop.taskId, steering })
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`Error polling remote container ${containerId}:`, error)
+        }
+      }
+    }, config.polling.remote || 3000)
   }
 
   function stopPolling() {
@@ -101,6 +155,10 @@ export function setupSocketHandlers(io: IOServer) {
     if (containerInterval) {
       clearInterval(containerInterval)
       containerInterval = null
+    }
+    if (remotePollingInterval) {
+      clearInterval(remotePollingInterval)
+      remotePollingInterval = null
     }
   }
 
@@ -260,10 +318,76 @@ export function setupSocketHandlers(io: IOServer) {
       console.log(`Client ${socket.id} unsubscribed from ${room}`)
     })
 
+    // Cross-container subscription - subscribe to a remote container's data
+    socket.on('container:subscribe', async ({ containerId }) => {
+      // Validate container ID format
+      const containerIdRegex = /^[a-f0-9]{12,64}$/i
+      if (!containerIdRegex.test(containerId)) {
+        socket.emit('error', { message: 'Invalid container ID format' })
+        return
+      }
+
+      const room = `container:${containerId}`
+      socket.join(room)
+
+      // Track subscription
+      if (!containerSubscriptions.has(containerId)) {
+        containerSubscriptions.set(containerId, new Set())
+      }
+      containerSubscriptions.get(containerId)!.add(socket.id)
+
+      if (!socketContainerSubs.has(socket.id)) {
+        socketContainerSubs.set(socket.id, new Set())
+      }
+      socketContainerSubs.get(socket.id)!.add(containerId)
+
+      console.log(`Client ${socket.id} subscribed to container ${containerId}`)
+
+      // Send initial data for this container
+      try {
+        const container = await containerManager.getContainer(containerId)
+        if (container && container.status === 'running') {
+          const sessions = await remoteTmuxService.listSessions(containerId)
+          const loops = await remoteRalphService.listLoops(containerId)
+
+          socket.emit('container:tmux:update', { containerId, sessions })
+          socket.emit('container:ralph:update', { containerId, loops })
+        }
+      } catch (error) {
+        console.error(`Error fetching initial data for container ${containerId}:`, error)
+      }
+    })
+
+    socket.on('container:unsubscribe', ({ containerId }) => {
+      const room = `container:${containerId}`
+      socket.leave(room)
+
+      // Remove from tracking
+      containerSubscriptions.get(containerId)?.delete(socket.id)
+      if (containerSubscriptions.get(containerId)?.size === 0) {
+        containerSubscriptions.delete(containerId)
+      }
+      socketContainerSubs.get(socket.id)?.delete(containerId)
+
+      console.log(`Client ${socket.id} unsubscribed from container ${containerId}`)
+    })
+
     socket.on('disconnect', () => {
       console.log(`Client disconnected: ${socket.id}`)
       // Clean up any PTY connections for this socket
       terminalManager.cleanupSocket(socket.id)
+
+      // Clean up container subscriptions
+      const subs = socketContainerSubs.get(socket.id)
+      if (subs) {
+        for (const containerId of subs) {
+          containerSubscriptions.get(containerId)?.delete(socket.id)
+          if (containerSubscriptions.get(containerId)?.size === 0) {
+            containerSubscriptions.delete(containerId)
+          }
+        }
+        socketContainerSubs.delete(socket.id)
+      }
     })
   })
 

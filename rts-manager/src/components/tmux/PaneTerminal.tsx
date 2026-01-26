@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useMemo, memo } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
 import { getSocket, subscribeToTerminal, unsubscribeFromTerminal, sendTerminalInput, sendTerminalResize } from '../../api/socket'
@@ -23,7 +23,7 @@ interface PaneTerminalProps {
   onClose?: () => void
 }
 
-export function PaneTerminal({ sessionId, pane, onClose }: PaneTerminalProps) {
+export const PaneTerminal = memo(function PaneTerminal({ sessionId, pane, onClose }: PaneTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -159,4 +159,4 @@ export function PaneTerminal({ sessionId, pane, onClose }: PaneTerminalProps) {
       />
     </div>
   )
-}
+})

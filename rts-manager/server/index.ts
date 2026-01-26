@@ -10,6 +10,8 @@ import { ralphRouter } from './routes/ralph'
 import { systemRouter } from './routes/system'
 import containersRouter from './routes/containers'
 import ralphLaunchRouter from './routes/ralph-launch'
+import remoteTmuxRouter from './routes/remote-tmux'
+import remoteRalphRouter from './routes/remote-ralph'
 import { setupSocketHandlers } from './socket/handlers'
 import { config } from './config'
 import { optionalApiKey } from './middleware'
@@ -56,6 +58,10 @@ app.use('/api/ralph', ralphRouter)
 app.use('/api/ralph', ralphLaunchRouter)
 app.use('/api/system', systemRouter)
 app.use('/api/containers', containersRouter)
+
+// Cross-container routes (remote tmux/ralph access)
+app.use('/api/containers', remoteTmuxRouter)
+app.use('/api/containers', remoteRalphRouter)
 
 // Health check
 app.get('/api/health', (_req, res) => {

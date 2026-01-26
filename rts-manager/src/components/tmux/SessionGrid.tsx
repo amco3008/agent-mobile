@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react'
 import { useTmuxSessions } from '../../api/hooks/useTmuxSessions'
 import { useContainerSessions, useContainers } from '../../api/hooks/useContainers'
 import { useDashboardStore } from '../../stores/dashboardStore'
+import { useSocketStore } from '../../stores/socketStore'
 import { SessionCard } from './SessionCard'
 import type { TmuxPane, TmuxSession } from '../../types'
 
@@ -19,20 +20,38 @@ export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelect
   // Local sessions (when "All Containers" is selected or as fallback)
   const { data: localSessions, isLoading: localLoading, error: localError } = useTmuxSessions()
 
-  // Container-specific sessions (when a container is selected)
+  // Container-specific sessions from socket store (populated by subscription)
+  const containerTmuxSessions = useSocketStore((state) => state.containerTmuxSessions)
+
+  // Fallback to API-based container sessions if socket data not available
   const { data: containerSessionsData, isLoading: containerLoading, error: containerError } = useContainerSessions(selectedContainerId)
 
   // Determine which sessions to show
   const { sessions, isLoading, error, showContainerBadge } = useMemo(() => {
     if (selectedContainerId) {
-      // Show sessions from selected container
-      // Convert ContainerSession[] to TmuxSession[] format for SessionCard compatibility
+      // Prefer socket store data if available (real-time updates)
+      const socketSessions = containerTmuxSessions.get(selectedContainerId)
+      if (socketSessions && socketSessions.length > 0) {
+        const container = containers?.find(c => c.id === selectedContainerId)
+        return {
+          sessions: socketSessions.map(s => ({
+            ...s,
+            containerId: selectedContainerId,
+            containerName: container?.name || selectedContainerId.substring(0, 12),
+          })),
+          isLoading: false,
+          error: null,
+          showContainerBadge: false,
+        }
+      }
+
+      // Fallback to API-based container sessions
       const containerSessions: TmuxSession[] = (containerSessionsData?.sessions || []).map(cs => ({
         id: cs.id,
         name: cs.name,
         created: new Date(),
         attached: false,
-        windows: [], // Simplified - no window details from remote exec
+        windows: [],
         containerId: cs.containerId,
         containerName: cs.containerName,
       }))
@@ -40,19 +59,34 @@ export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelect
         sessions: containerSessions,
         isLoading: containerLoading,
         error: containerError,
-        showContainerBadge: false, // Already filtered to one container
+        showContainerBadge: false,
       }
     }
 
-    // "All Containers" mode - show local sessions
-    // In a full multi-container setup, this would aggregate sessions from all containers
+    // "All Containers" mode - show local sessions + all subscribed container sessions
+    const allSessions: TmuxSession[] = [...(localSessions || [])]
+
+    // Add sessions from subscribed containers
+    for (const [containerId, sessions] of containerTmuxSessions) {
+      const container = containers?.find(c => c.id === containerId)
+      const containerName = container?.name || containerId.substring(0, 12)
+
+      for (const session of sessions) {
+        allSessions.push({
+          ...session,
+          containerId,
+          containerName,
+        })
+      }
+    }
+
     return {
-      sessions: localSessions || [],
+      sessions: allSessions,
       isLoading: localLoading,
       error: localError,
-      showContainerBadge: (containers?.length ?? 0) > 1, // Show badge if multiple containers
+      showContainerBadge: (containers?.length ?? 0) > 1 || containerTmuxSessions.size > 0,
     }
-  }, [selectedContainerId, containerSessionsData, containerLoading, containerError, localSessions, localLoading, localError, containers])
+  }, [selectedContainerId, containerTmuxSessions, containerSessionsData, containerLoading, containerError, localSessions, localLoading, localError, containers])
 
   // Find container name for display
   const selectedContainerName = useMemo(() => {

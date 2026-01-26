@@ -26,6 +26,7 @@ export const config = {
     tmux: parseInt(process.env.RTS_TMUX_POLL_MS || '2000', 10),
     system: parseInt(process.env.RTS_SYSTEM_POLL_MS || '5000', 10),
     containers: parseInt(process.env.RTS_CONTAINERS_POLL_MS || '5000', 10),
+    remote: parseInt(process.env.RTS_REMOTE_POLL_MS || '3000', 10), // Cross-container polling
   },
 
   // Get default CORS origins if none specified

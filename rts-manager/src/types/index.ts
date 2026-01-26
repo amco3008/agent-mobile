@@ -67,6 +67,9 @@ export interface RalphLoop {
   loopType: 'persistent' | 'fresh'  // Which mode the loop is running in
   spec?: RalphSpec           // Parsed spec if available
   logsDir?: string           // For fresh mode: ralph-logs-{task-id}/
+  // Cross-container info (set when loop is from a remote container)
+  containerId?: string
+  containerName?: string
 }
 
 // Parsed steering question from ralph-steering-{task-id}.md
@@ -139,6 +142,11 @@ export interface ServerToClientEvents {
   'ralph:spec:created': (data: { taskId: string; spec: RalphSpec; projectPath: string }) => void
   'system:stats': (stats: SystemStats) => void
   'containers:update': (containers: import('./container').Container[]) => void
+  // Cross-container events
+  'container:tmux:update': (data: { containerId: string; sessions: TmuxSession[] }) => void
+  'container:ralph:update': (data: { containerId: string; loops: RalphLoop[] }) => void
+  'container:ralph:steering': (data: { containerId: string; taskId: string; steering: SteeringQuestion }) => void
+  'error': (data: { message: string }) => void
 }
 
 export interface ClientToServerEvents {
@@ -148,4 +156,7 @@ export interface ClientToServerEvents {
   'tmux:resize': (data: { sessionId: string; paneId: string; cols: number; rows: number }) => void
   'ralph:subscribe': (data: { taskId: string }) => void
   'ralph:unsubscribe': (data: { taskId: string }) => void
+  // Cross-container events
+  'container:subscribe': (data: { containerId: string }) => void
+  'container:unsubscribe': (data: { containerId: string }) => void
 }

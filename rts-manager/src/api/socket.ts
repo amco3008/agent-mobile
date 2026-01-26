@@ -112,6 +112,23 @@ function setupSocketListeners(socket: TypedSocket) {
   socket.on('containers:update', (containers) => {
     store.setContainers(containers)
   })
+
+  // Cross-container events
+  socket.on('container:tmux:update', ({ containerId, sessions }) => {
+    store.setContainerTmuxSessions(containerId, sessions)
+  })
+
+  socket.on('container:ralph:update', ({ containerId, loops }) => {
+    store.setContainerRalphLoops(containerId, loops)
+  })
+
+  socket.on('container:ralph:steering', ({ containerId, taskId, steering }) => {
+    store.updateContainerSteering(containerId, steering)
+  })
+
+  socket.on('error', ({ message }) => {
+    console.error('Socket error:', message)
+  })
 }
 
 // Initialize socket on module load to start receiving events immediately
@@ -148,4 +165,19 @@ export function subscribeToRalphLoop(taskId: string) {
 export function unsubscribeFromRalphLoop(taskId: string) {
   const s = getSocket()
   s.emit('ralph:unsubscribe', { taskId })
+}
+
+// Cross-container subscriptions
+export function subscribeToContainer(containerId: string) {
+  const s = getSocket()
+  const store = useSocketStore.getState()
+  s.emit('container:subscribe', { containerId })
+  store.addSubscribedContainer(containerId)
+}
+
+export function unsubscribeFromContainer(containerId: string) {
+  const s = getSocket()
+  const store = useSocketStore.getState()
+  s.emit('container:unsubscribe', { containerId })
+  store.removeSubscribedContainer(containerId)
 }

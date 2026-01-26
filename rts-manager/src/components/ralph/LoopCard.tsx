@@ -49,10 +49,17 @@ export const LoopCard = memo(function LoopCard({ loop, onClick }: LoopCardProps)
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-bold truncate flex-1">
-          {loop.taskId}
-        </span>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <span className="text-xs font-bold truncate">
+            {loop.taskId}
+          </span>
+          {loop.containerName && (
+            <span className="text-[9px] text-signal-blue bg-signal-blue/10 px-1 rounded flex-shrink-0">
+              {loop.containerName}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           {loop.loopType === 'fresh' && (
             <span className="text-[9px] text-gray-500 bg-factory-bg px-1 rounded">
               fresh

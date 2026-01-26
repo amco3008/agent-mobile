@@ -1,6 +1,7 @@
+import { memo } from 'react'
 import { useSystemStats, useConnectionStatus } from '../../api/hooks/useSystemStats'
 
-export function ResourceMonitor() {
+export const ResourceMonitor = memo(function ResourceMonitor() {
   const { data: stats, isLoading, error } = useSystemStats()
   const { connected, error: connectionError } = useConnectionStatus()
 
@@ -111,7 +112,7 @@ export function ResourceMonitor() {
       </div>
     </div>
   )
-}
+})
 
 function formatBytes(bytes: number): string {
   const gb = bytes / (1024 * 1024 * 1024)

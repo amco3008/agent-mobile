@@ -4,15 +4,37 @@ A Factorio-style web dashboard for managing tmux sessions, Claude Code Ralph loo
 
 ## Features
 
-- **Container Management**: Detect, start, stop, restart agent-mobile containers via Docker API
+### Container Management
+- **Detect, start, stop, restart** agent-mobile containers via Docker API
+- **Container selector** in sidebar with "All Containers" aggregated view
+- **Status indicators** for running/stopped/paused states
+- **Health monitoring** with CPU/memory stats per container
+
+### Cross-Container Monitoring
+- **Subscribe to remote containers** to monitor their tmux sessions and Ralph loops
+- **Aggregated dashboard** shows sessions/loops from all subscribed containers
+- **Container badges** distinguish remote items from local ones
+- **Real-time updates** via Socket.io subscriptions per container
+
+### Tmux Session Management
 - **Session Grid**: View all tmux sessions with pane previews
 - **Terminal Embedding**: Click any pane to open an interactive terminal
-- **Ralph Loop Monitoring**: Track iteration progress, status, and steering (persistent and fresh modes)
-- **Production Chain**: Visualize the prompt → Claude → output flow
+- **Remote terminal access**: Monitor and interact with sessions in other containers
+
+### Ralph Loop Monitoring
+- **Track iteration progress**, status, and steering (persistent and fresh modes)
+- **Steering panel** for review mode questions with context and options
+- **Progress display** shows real-time Claude work updates
+- **Summary display** on loop completion
+- **Spec preview** in loop cards
+
+### Factorio-Style UI
+- **Production Chain**: Visualize the prompt → Claude → output flow with animations
 - **Resource Monitor**: Real-time CPU, memory, and process stats
-- **Throughput Stats**: Track active loops and iterations
+- **Throughput Stats**: Track active loops, iterations, and averages
 - **Mini-map**: Quick navigation between sessions and loops
-- **Industrial Theme**: Dark Factorio-inspired aesthetic
+- **Zoom Controls**: 3 levels (overview, session, terminal)
+- **Industrial Theme**: Dark Factorio-inspired aesthetic with belt animations
 
 ## Quick Start (Development)
 
@@ -32,17 +54,39 @@ open http://localhost:5173
 ## Architecture
 
 ```
-Frontend (Vite + React)     Backend (Express + Socket.io)
-         │                            │
-         └──── Socket.io + REST ──────┘
-                      │
-    ┌─────────────────┼─────────────────┐
-    │         │            │            │
-ContainerMgr TmuxService  RalphWatcher  SystemMonitor
-    │
-Docker Socket (/var/run/docker.sock)
-    │
-    └──→ agent-mobile containers
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     RTS Manager Dashboard (Browser)                      │
+│  ┌───────────┐ ┌──────────────┐ ┌─────────────┐ ┌───────────────────┐  │
+│  │ Container │ │ SessionGrid  │ │ LoopList    │ │ ResourceMonitor   │  │
+│  │ Selector  │ │ (all/filter) │ │ (all/filter)│ │ + ThroughputStats │  │
+│  └─────┬─────┘ └──────────────┘ └─────────────┘ └───────────────────┘  │
+└────────┼────────────────────────────────────────────────────────────────┘
+         │
+   Socket.io + REST
+         │
+┌────────┼────────────────────────────────────────────────────────────────┐
+│        ▼              RTS Manager Server (Node.js)                       │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │
+│  │ Container   │ │ TmuxService │ │ RalphWatcher│ │ SystemMonitor   │   │
+│  │ Manager     │ │ (local)     │ │ (local)     │ │                 │   │
+│  └──────┬──────┘ └─────────────┘ └─────────────┘ └─────────────────┘   │
+│         │                                                               │
+│  ┌──────┴──────┐ ┌──────────────────────────────────────────────────┐  │
+│  │ Docker API  │ │ Remote Services (cross-container monitoring)     │  │
+│  │ (dockerode) │ │ ┌─────────────────┐ ┌─────────────────────────┐  │  │
+│  └──────┬──────┘ │ │ RemoteTmuxSvc   │ │ RemoteRalphSvc          │  │  │
+│         │        │ │ (docker exec)   │ │ (docker exec)           │  │  │
+│         │        │ └────────┬────────┘ └────────────┬────────────┘  │  │
+└─────────┼────────┴──────────┼───────────────────────┼───────────────────┘
+          │                   │                       │
+          ▼                   ▼                       ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ agent-mobile-1  │  │ agent-mobile-2  │  │ agent-mobile-N  │
+│ (container)     │  │ (container)     │  │ (container)     │
+│ • tmux sessions │  │ • tmux sessions │  │ • tmux sessions │
+│ • Ralph loops   │  │ • Ralph loops   │  │ • Ralph loops   │
+│ • Claude Code   │  │ • Claude Code   │  │ • Claude Code   │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ## Project Structure
@@ -69,6 +113,7 @@ rts-manager/
 
 ## API Endpoints
 
+### Container Management
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/containers` | List agent-mobile containers |
@@ -77,7 +122,28 @@ rts-manager/
 | POST | `/api/containers/:id/start` | Start container |
 | POST | `/api/containers/:id/stop` | Stop container |
 | POST | `/api/containers/:id/restart` | Restart container |
-| GET | `/api/tmux/sessions` | List all tmux sessions |
+
+### Cross-Container Tmux (Remote)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/containers/:id/tmux/sessions` | List tmux sessions in container |
+| GET | `/api/containers/:id/tmux/sessions/:sid` | Get session details |
+| GET | `/api/containers/:id/tmux/sessions/:sid/capture` | Capture pane output |
+| POST | `/api/containers/:id/tmux/sessions/:sid/keys` | Send keystrokes to container |
+
+### Cross-Container Ralph (Remote)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/containers/:id/ralph/loops` | List Ralph loops in container |
+| GET | `/api/containers/:id/ralph/loops/:taskId` | Get loop details |
+| GET | `/api/containers/:id/ralph/loops/:taskId/progress` | Get loop progress |
+| GET | `/api/containers/:id/ralph/loops/:taskId/steering` | Get steering question |
+| POST | `/api/containers/:id/ralph/loops/:taskId/steer` | Answer steering question |
+
+### Local Tmux & Ralph
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/tmux/sessions` | List all local tmux sessions |
 | GET | `/api/tmux/sessions/:id` | Get session details |
 | POST | `/api/tmux/sessions/:id/keys` | Send keystrokes |
 | GET | `/api/ralph/loops` | List active Ralph loops |
@@ -86,6 +152,7 @@ rts-manager/
 
 ## Socket Events
 
+### Local Events
 | Event | Direction | Description |
 |-------|-----------|-------------|
 | `containers:update` | Server→Client | Container list changed |
@@ -96,7 +163,17 @@ rts-manager/
 | `ralph:steering:pending` | Server→Client | Steering question pending |
 | `ralph:steering:answered` | Server→Client | Steering question answered |
 | `ralph:summary:created` | Server→Client | Loop completion summary |
+| `ralph:spec:created` | Server→Client | New spec file detected |
 | `system:stats` | Server→Client | Resource updates |
+
+### Cross-Container Events
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `container:subscribe` | Client→Server | Subscribe to container updates |
+| `container:unsubscribe` | Client→Server | Unsubscribe from container |
+| `container:tmux:update` | Server→Client | Tmux sessions for subscribed container |
+| `container:ralph:update` | Server→Client | Ralph loops for subscribed container |
+| `container:ralph:steering` | Server→Client | Steering question in container |
 
 ## Configuration
 
@@ -112,7 +189,38 @@ Default ports:
 | `RTS_CORS_ORIGINS` | `http://localhost:5173` | Allowed CORS origins (comma-separated) |
 | `RTS_API_KEY` | (none) | API key for authentication (optional, disabled if unset) |
 | `RTS_RATE_LIMIT` | `100` | Max requests per minute per IP |
+| `RTS_REMOTE_POLL_MS` | `3000` | Polling interval for cross-container monitoring |
+| `RTS_CONTAINERS_POLL_MS` | `5000` | Polling interval for container list |
 | `RTS_ALLOWED_IPS` | (none) | IP whitelist (comma-separated, optional) |
+
+## Multi-Container Monitoring
+
+RTS Manager can monitor tmux sessions and Ralph loops across multiple agent-mobile containers.
+
+### How It Works
+
+1. **Container Detection**: RTS Manager detects containers via Docker API (image/name containing "agent-mobile" or label `com.rts.type=agent`)
+
+2. **Subscription Model**: The frontend subscribes to specific containers via Socket.io:
+   - Select a container in the sidebar to subscribe
+   - "All Containers" shows aggregated data from all subscribed containers
+
+3. **Remote Execution**: Commands are executed inside containers via `docker exec`:
+   - `tmux list-sessions` for session discovery
+   - Reading `.claude/` files for Ralph loop state
+   - Sending keystrokes to remote panes
+
+4. **Real-time Updates**: The server polls subscribed containers (configurable interval) and emits updates via Socket.io
+
+### Container Selector
+
+The sidebar shows a container selector:
+- **All Containers**: Aggregated view of local + all subscribed containers
+- **Individual containers**: Filter to show only that container's sessions/loops
+
+### Container Badges
+
+When viewing "All Containers", items from remote containers show a blue badge with the container name.
 
 ## Security
 

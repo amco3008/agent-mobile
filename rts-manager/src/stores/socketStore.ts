@@ -6,7 +6,7 @@ interface SocketState {
   connected: boolean
   connectionError: string | null
 
-  // Server-pushed data
+  // Server-pushed data (local container)
   tmuxSessions: TmuxSession[]
   ralphLoops: Map<string, RalphLoop>
   systemStats: SystemStats | null
@@ -19,6 +19,18 @@ interface SocketState {
 
   // Pending specs for auto-launch notifications
   pendingSpecs: PendingSpec[]
+
+  // Cross-container data (remote containers)
+  // Key format: containerId
+  containerTmuxSessions: Map<string, TmuxSession[]>
+  containerRalphLoops: Map<string, Map<string, RalphLoop>>
+  containerSteering: Map<string, Map<string, SteeringQuestion>>
+
+  // Currently selected container for viewing (null = local/all)
+  selectedContainerId: string | null
+
+  // Set of container IDs we're subscribed to
+  subscribedContainers: Set<string>
 
   // Actions
   setConnected: (connected: boolean) => void
@@ -35,13 +47,26 @@ interface SocketState {
   removePendingSpec: (taskId: string) => void
   clearStaleData: () => void
 
+  // Cross-container actions
+  setContainerTmuxSessions: (containerId: string, sessions: TmuxSession[]) => void
+  setContainerRalphLoops: (containerId: string, loops: RalphLoop[]) => void
+  updateContainerSteering: (containerId: string, steering: SteeringQuestion) => void
+  setSelectedContainer: (containerId: string | null) => void
+  addSubscribedContainer: (containerId: string) => void
+  removeSubscribedContainer: (containerId: string) => void
+
   // Selectors - memoized
   getRalphLoopsArray: () => RalphLoop[]
+  getContainerLoopsArray: (containerId: string) => RalphLoop[]
+  getAllLoopsArray: () => RalphLoop[]
 }
 
 // Memoized selector cache
 let cachedLoopsArray: RalphLoop[] = []
 let cachedLoopsMap: Map<string, RalphLoop> | null = null
+let cachedAllLoopsArray: RalphLoop[] = []
+let cachedAllLoopsVersion = 0
+let currentAllLoopsVersion = 0
 
 export const useSocketStore = create<SocketState>((set, get) => ({
   // Initial state
@@ -55,6 +80,13 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   ralphSteering: new Map(),
   ralphSummaries: new Map(),
   pendingSpecs: [],
+
+  // Cross-container state
+  containerTmuxSessions: new Map(),
+  containerRalphLoops: new Map(),
+  containerSteering: new Map(),
+  selectedContainerId: null,
+  subscribedContainers: new Set(),
 
   // Actions
   setConnected: (connected) => set({ connected, connectionError: connected ? null : get().connectionError }),
@@ -128,6 +160,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   clearStaleData: () => {
     // Invalidate cache
     cachedLoopsMap = null
+    currentAllLoopsVersion++
     set({
       tmuxSessions: [],
       ralphLoops: new Map(),
@@ -137,8 +170,67 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       ralphSteering: new Map(),
       ralphSummaries: new Map(),
       pendingSpecs: [],
+      containerTmuxSessions: new Map(),
+      containerRalphLoops: new Map(),
+      containerSteering: new Map(),
     })
   },
+
+  // Cross-container actions
+  setContainerTmuxSessions: (containerId, sessions) => set((state) => {
+    const newMap = new Map(state.containerTmuxSessions)
+    newMap.set(containerId, sessions)
+    return { containerTmuxSessions: newMap }
+  }),
+
+  setContainerRalphLoops: (containerId, loops) => set((state) => {
+    const newMap = new Map(state.containerRalphLoops)
+    const loopsMap = new Map<string, RalphLoop>()
+    for (const loop of loops) {
+      loopsMap.set(loop.taskId, loop)
+    }
+    newMap.set(containerId, loopsMap)
+    currentAllLoopsVersion++
+    return { containerRalphLoops: newMap }
+  }),
+
+  updateContainerSteering: (containerId, steering) => set((state) => {
+    const newMap = new Map(state.containerSteering)
+    if (!newMap.has(containerId)) {
+      newMap.set(containerId, new Map())
+    }
+    const containerMap = new Map(newMap.get(containerId)!)
+    containerMap.set(steering.taskId, steering)
+    newMap.set(containerId, containerMap)
+    return { containerSteering: newMap }
+  }),
+
+  setSelectedContainer: (containerId) => set({ selectedContainerId: containerId }),
+
+  addSubscribedContainer: (containerId) => set((state) => {
+    const newSet = new Set(state.subscribedContainers)
+    newSet.add(containerId)
+    return { subscribedContainers: newSet }
+  }),
+
+  removeSubscribedContainer: (containerId) => set((state) => {
+    const newSet = new Set(state.subscribedContainers)
+    newSet.delete(containerId)
+    // Also clean up container data
+    const newTmux = new Map(state.containerTmuxSessions)
+    newTmux.delete(containerId)
+    const newLoops = new Map(state.containerRalphLoops)
+    newLoops.delete(containerId)
+    const newSteering = new Map(state.containerSteering)
+    newSteering.delete(containerId)
+    currentAllLoopsVersion++
+    return {
+      subscribedContainers: newSet,
+      containerTmuxSessions: newTmux,
+      containerRalphLoops: newLoops,
+      containerSteering: newSteering,
+    }
+  }),
 
   // Selectors - memoized to avoid new array on each call
   getRalphLoopsArray: () => {
@@ -151,5 +243,38 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     cachedLoopsMap = currentMap
     cachedLoopsArray = Array.from(currentMap.values())
     return cachedLoopsArray
+  },
+
+  getContainerLoopsArray: (containerId: string) => {
+    const containerLoops = get().containerRalphLoops.get(containerId)
+    if (!containerLoops) return []
+    return Array.from(containerLoops.values())
+  },
+
+  getAllLoopsArray: () => {
+    // Return cached if version hasn't changed
+    if (cachedAllLoopsVersion === currentAllLoopsVersion) {
+      return cachedAllLoopsArray
+    }
+
+    const state = get()
+    const allLoops: RalphLoop[] = []
+
+    // Add local loops
+    for (const loop of state.ralphLoops.values()) {
+      allLoops.push(loop)
+    }
+
+    // Add container loops
+    for (const [containerId, loopsMap] of state.containerRalphLoops) {
+      for (const loop of loopsMap.values()) {
+        // Add containerId to loop for identification
+        allLoops.push({ ...loop, containerId })
+      }
+    }
+
+    cachedAllLoopsArray = allLoops
+    cachedAllLoopsVersion = currentAllLoopsVersion
+    return allLoops
   },
 }))
