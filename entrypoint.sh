@@ -762,12 +762,18 @@ start_clawdbot() {
     if [ ! -f "$CLAWDBOT_CONFIG" ]; then
         cat > "$CLAWDBOT_CONFIG" << EOF
 {
-  "agent": {
-    "model": "anthropic/claude-opus-4-5"
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-opus-4-5"
+      }
+    }
   },
-  "telegram": {
-    "enabled": true,
-    "token": "$TELEGRAM_BOT_TOKEN"
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "token": "$TELEGRAM_BOT_TOKEN"
+    }
   }
 }
 EOF
