@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ripgrep \
     python3-pip \
     jq \
+    build-essential \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
