@@ -200,6 +200,7 @@ Select [1]:
 | `RTS_API_KEY` | Optional - API key for RTS Manager authentication (disabled if unset) |
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
+| `BRAVE_API_KEY` | Optional - Brave Search API key for Clawdbot web search ([get one free](https://brave.com/search/api/)) |
 
 ### Clawdbot Config & Soul Sync
 
