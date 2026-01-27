@@ -827,6 +827,10 @@ EOF
     fi
 
     cd - >/dev/null
+
+    # Fix ownership after git operations (git runs as root, clawdbot runs as agent)
+    chown -R agent:agent "$CLAWDBOT_DIR" 2>/dev/null || true
+
     echo "[clawdbot-git] Clawdbot config repo initialized"
 }
 
@@ -944,6 +948,10 @@ EOF
     fi
 
     cd - >/dev/null
+
+    # Fix ownership after git operations (git runs as root, clawd runs as agent)
+    chown -R agent:agent "$CLAWD_DIR" 2>/dev/null || true
+
     echo "[clawd-git] Clawd soul repo initialized"
 }
 
@@ -1113,7 +1121,7 @@ EOF
     fi
 }
 
-start_clawdbot
+# NOTE: start_clawdbot moved to after init_clawdbot_git (needs synced config + correct permissions)
 
 # ==========================================
 # Docker Daemon Setup
@@ -1266,6 +1274,9 @@ init_clawdbot_git
 # Sync clawd soul/memory with GitHub repo
 echo "Syncing clawd soul/memory with GitHub (post-network init)..."
 init_clawd_git
+
+# Start clawdbot gateway AFTER git sync (needs synced config + correct permissions)
+start_clawdbot
 
 # Update Claude Code on startup (after network confirmed ready)
 if [ "${CLAUDE_STARTUP_UPDATE:-true}" = "true" ]; then
