@@ -730,6 +730,66 @@ start_rts_manager() {
 start_rts_manager
 
 # ==========================================
+# Clawdbot Setup (Telegram/Multi-Platform AI)
+# ==========================================
+
+start_clawdbot() {
+    if [ "${CLAWDBOT_ENABLED:-false}" != "true" ]; then
+        echo "Clawdbot disabled (set CLAWDBOT_ENABLED=true to enable)"
+        return
+    fi
+
+    if ! command -v clawdbot &>/dev/null; then
+        echo "Clawdbot not found, skipping..."
+        return
+    fi
+
+    if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+        echo "Warning: CLAWDBOT_ENABLED=true but TELEGRAM_BOT_TOKEN not set"
+        echo "Get a bot token from @BotFather on Telegram"
+        return
+    fi
+
+    echo "Starting Clawdbot gateway on port 18789..."
+
+    # Create clawdbot config if it doesn't exist
+    local CLAWDBOT_DIR="/home/agent/.clawdbot"
+    local CLAWDBOT_CONFIG="$CLAWDBOT_DIR/clawdbot.json"
+
+    mkdir -p "$CLAWDBOT_DIR"
+    chown agent:agent "$CLAWDBOT_DIR"
+
+    if [ ! -f "$CLAWDBOT_CONFIG" ]; then
+        cat > "$CLAWDBOT_CONFIG" << EOF
+{
+  "agent": {
+    "model": "anthropic/claude-opus-4-5"
+  },
+  "telegram": {
+    "enabled": true,
+    "token": "$TELEGRAM_BOT_TOKEN"
+  }
+}
+EOF
+        chown agent:agent "$CLAWDBOT_CONFIG"
+        chmod 600 "$CLAWDBOT_CONFIG"
+    fi
+
+    # Start clawdbot gateway as agent user in background
+    su - agent -c "TELEGRAM_BOT_TOKEN='$TELEGRAM_BOT_TOKEN' nohup clawdbot gateway --port 18789 > /home/agent/clawdbot.log 2>&1 &"
+
+    sleep 2
+    if curl -s "http://localhost:18789/health" > /dev/null 2>&1; then
+        echo "Clawdbot gateway started at http://localhost:18789"
+        echo "  Log file: /home/agent/clawdbot.log"
+    else
+        echo "Clawdbot gateway started (check /home/agent/clawdbot.log for status)"
+    fi
+}
+
+start_clawdbot
+
+# ==========================================
 # Docker Daemon Setup
 # ==========================================
 

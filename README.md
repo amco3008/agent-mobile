@@ -17,6 +17,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Dynamic Skill Learning** - Auto-learns skills from usage patterns with versioning
 - **Global CLAUDE.md** - Auto-generated config with available skills, persisted across restarts
 - **Push Notifications** - Get notified on your phone when Claude needs input (via ntfy.sh)
+- **Clawdbot** - Multi-platform AI assistant with Telegram, Discord, Slack, and more
 - **Tailscale** - Secure mesh networking, access from anywhere
 - **Multi-stage build** - Robust installation even behind restricted networks
 - **Corporate Proxy Support** - Auto-detects and trusts corporate proxies (Cisco/Zscaler)
@@ -81,6 +82,45 @@ A Factorio-style web dashboard for managing tmux sessions, Ralph loops, and Dock
 To disable: Set `RTS_ENABLED=false` in `.env`
 
 See [rts-manager/README.md](./rts-manager/README.md) for full documentation.
+
+### Clawdbot (Telegram/Multi-Platform AI)
+
+Clawdbot connects your Claude agent to messaging platforms like Telegram, Discord, Slack, and more.
+
+**URL:** `http://<tailscale-ip>:18789` (or `http://agent-mobile:18789`)
+
+**Setup:**
+
+1. **Create a Telegram bot**:
+   - Open Telegram and message `@BotFather`
+   - Send `/newbot` and follow the prompts
+   - Copy the bot token (looks like `123456789:ABCdef...`)
+
+2. **Configure in `.env`**:
+   ```bash
+   CLAWDBOT_ENABLED=true
+   TELEGRAM_BOT_TOKEN=your_bot_token_here
+   ```
+
+3. **Restart the container**:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Run onboarding** (first time only):
+   ```bash
+   docker exec -it agent-mobile clawdbot onboard
+   ```
+
+5. **Test**: Send a message to your bot on Telegram
+
+**Features:**
+- Chat with Claude via Telegram from anywhere
+- Uses your Claude Pro/Max subscription
+- Supports voice messages and images
+- DM pairing mode for security (unknown senders get a pairing code)
+
+To disable: Set `CLAWDBOT_ENABLED=false` in `.env`
 
 ### Web Access (webtmux)
 
@@ -157,6 +197,8 @@ Select [1]:
 | `RTS_ENABLED` | Optional - Enable RTS Manager dashboard on port 9091 (default: `true`) |
 | `RTS_PORT` | Optional - RTS Manager server port (default: `9091`) |
 | `RTS_API_KEY` | Optional - API key for RTS Manager authentication (disabled if unset) |
+| `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
+| `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
 
 ## Build Arguments
 

@@ -85,12 +85,16 @@ services:
       - RTS_ENABLED=${RTS_ENABLED:-true}
       - RTS_PORT=${RTS_PORT:-9091}
       - RTS_API_KEY=${RTS_API_KEY:-}
+      # Clawdbot (Telegram/multi-platform AI assistant)
+      - CLAWDBOT_ENABLED=${CLAWDBOT_ENABLED:-false}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
       - "2222:22"
       - "9090:9090"
       - "9091:9091"
+      - "18789:18789"  # Clawdbot gateway
 
     restart: unless-stopped
 

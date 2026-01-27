@@ -46,6 +46,9 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 # Install Gemini CLI (via npm)
 RUN npm install -g @google/gemini-cli && npm cache clean --force
 
+# Install Clawdbot (multi-platform AI assistant with Telegram support)
+RUN npm install -g clawdbot@latest && npm cache clean --force
+
 # Claude Code install method: "native" (recommended) or "npm"
 ARG CLAUDE_INSTALL_METHOD=native
 
