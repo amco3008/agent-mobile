@@ -86,7 +86,7 @@ RUN cd /opt/rts-manager-src \
     && npm ci --omit=dev \
     && rm -rf /opt/rts-manager-src \
     && chown -R agent:agent /opt/rts-manager
-# Note: npm run build compiles both frontend (to dist/) and server (to dist/server/)
+# Note: npm run build compiles frontend (to dist/) and server (to dist/server/server/)
 
 # Allow agent user to run sudo without password
 RUN echo "agent ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/agent && \

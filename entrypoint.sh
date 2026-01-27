@@ -1022,7 +1022,7 @@ start_rts_manager() {
     # Start as agent user in background
     # Uses nohup to ensure it stays running
     # Server is compiled to dist/server/ by npm run build
-    su - agent -c "cd $RTS_DIR && PORT=$RTS_PORT CLAUDE_DIR=/home/agent/.claude nohup node dist/server/index.js > /home/agent/rts-manager.log 2>&1 &"
+    su - agent -c "cd $RTS_DIR && PORT=$RTS_PORT CLAUDE_DIR=/home/agent/.claude nohup node dist/server/server/index.js > /home/agent/rts-manager.log 2>&1 &"
 
     # Wait briefly and check if it started
     sleep 2
@@ -1081,6 +1081,9 @@ start_clawdbot() {
     "telegram": {
       "enabled": true
     }
+  },
+  "gateway": {
+    "mode": "local"
   }
 }
 EOF
@@ -1088,8 +1091,18 @@ EOF
         chmod 600 "$CLAWDBOT_CONFIG"
     fi
 
+    # Ensure gateway.mode is set in existing config (may be missing after git sync)
+    if [ -f "$CLAWDBOT_CONFIG" ] && ! grep -q '"gateway"' "$CLAWDBOT_CONFIG"; then
+        echo "[clawdbot] Adding gateway.mode to config..."
+        # Use jq if available, otherwise sed
+        if command -v jq &>/dev/null; then
+            jq '. + {gateway: {mode: "local"}}' "$CLAWDBOT_CONFIG" > "$CLAWDBOT_CONFIG.tmp" && mv "$CLAWDBOT_CONFIG.tmp" "$CLAWDBOT_CONFIG"
+        fi
+    fi
+
     # Start clawdbot gateway as agent user in background
-    su - agent -c "TELEGRAM_BOT_TOKEN='$TELEGRAM_BOT_TOKEN' nohup clawdbot gateway --port 18789 --verbose > /home/agent/clawdbot.log 2>&1 &"
+    # --allow-unconfigured allows startup even if gateway.mode not set in config
+    su - agent -c "TELEGRAM_BOT_TOKEN='$TELEGRAM_BOT_TOKEN' nohup clawdbot gateway --port 18789 --verbose --allow-unconfigured > /home/agent/clawdbot.log 2>&1 &"
 
     sleep 2
     if curl -s "http://localhost:18789/health" > /dev/null 2>&1; then
