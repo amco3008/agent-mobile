@@ -200,16 +200,19 @@ Select [1]:
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
 
-### Clawdbot Config Sync
+### Clawdbot Config & Soul Sync
 
-When `GITHUB_TOKEN` is set, clawdbot config (`~/.clawdbot/`) is automatically synced to GitHub:
+When `GITHUB_TOKEN` is set, clawdbot data is automatically synced to GitHub:
 
-- **Repo**: `agent-mobile-clawdbot-config` (private, created on your GitHub account)
-- **Auto-commit on shutdown**: When container receives SIGTERM, config changes are committed and pushed
-- **Auto-pull on startup**: Config is pulled from GitHub when container starts
-- **Synced data**: `clawdbot.json`, memory, channel settings, etc.
+| Directory | Repo | Contents |
+|-----------|------|----------|
+| `~/.clawdbot/` | `agent-mobile-clawdbot-config` | Config, channel settings |
+| `~/clawd/` | `agent-mobile-clawd-soul` | Soul, memory, personality |
 
-This ensures your clawdbot configuration is synced across all agent-mobile instances.
+- **Auto-commit on shutdown**: When container receives SIGTERM, changes are committed and pushed
+- **Auto-pull on startup**: Data is pulled from GitHub when container starts
+
+This ensures your clawdbot configuration and memory persist across all agent-mobile instances.
 
 ## Build Arguments
 
