@@ -119,6 +119,7 @@ Clawdbot connects your Claude agent to messaging platforms like Telegram, Discor
 - Uses your Claude Pro/Max subscription
 - Supports voice messages and images
 - DM pairing mode for security (unknown senders get a pairing code)
+- **Auto-restart on crash** - Supervisor monitors clawdbot and restarts it automatically (handles config-change restarts too)
 
 To disable: Set `CLAWDBOT_ENABLED=false` in `.env`
 
@@ -199,6 +200,7 @@ Select [1]:
 | `RTS_API_KEY` | Optional - API key for RTS Manager authentication (disabled if unset) |
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
+| `BRAVE_API_KEY` | Optional - Brave Search API key for Clawdbot web search ([get one free](https://brave.com/search/api/)) |
 
 ### Clawdbot Config & Soul Sync
 

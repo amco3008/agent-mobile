@@ -1134,9 +1134,50 @@ EOF
         fi
     fi
 
-    # Start clawdbot gateway as agent user in background
+    # Start clawdbot gateway with supervisor loop (restarts on crash or config-change restart)
     # --allow-unconfigured allows startup even if gateway.mode not set in config
-    su - agent -c "TELEGRAM_BOT_TOKEN='$TELEGRAM_BOT_TOKEN' nohup clawdbot gateway --port 18789 --verbose --allow-unconfigured > /home/agent/clawdbot.log 2>&1 &"
+    cat > /home/agent/clawdbot-supervisor.sh << 'SUPERVISOR_EOF'
+#!/bin/bash
+export TELEGRAM_BOT_TOKEN="$1"
+LOG_FILE="/home/agent/clawdbot.log"
+RESTART_DELAY=3
+MAX_RAPID_RESTARTS=5
+RAPID_RESTART_WINDOW=60  # seconds
+
+rapid_restart_count=0
+last_restart_time=0
+
+while true; do
+    current_time=$(date +%s)
+
+    # Reset rapid restart counter if enough time has passed
+    if [ $((current_time - last_restart_time)) -gt $RAPID_RESTART_WINDOW ]; then
+        rapid_restart_count=0
+    fi
+
+    # Check for rapid restart loop (crash loop protection)
+    if [ $rapid_restart_count -ge $MAX_RAPID_RESTARTS ]; then
+        echo "[clawdbot-supervisor] Too many rapid restarts ($rapid_restart_count in ${RAPID_RESTART_WINDOW}s), waiting 60s..." >> "$LOG_FILE"
+        sleep 60
+        rapid_restart_count=0
+    fi
+
+    echo "[clawdbot-supervisor] Starting clawdbot gateway..." >> "$LOG_FILE"
+    clawdbot gateway --port 18789 --verbose --allow-unconfigured >> "$LOG_FILE" 2>&1
+    exit_code=$?
+
+    last_restart_time=$(date +%s)
+    rapid_restart_count=$((rapid_restart_count + 1))
+
+    echo "[clawdbot-supervisor] Clawdbot exited with code $exit_code, restarting in ${RESTART_DELAY}s..." >> "$LOG_FILE"
+    sleep $RESTART_DELAY
+done
+SUPERVISOR_EOF
+    chmod +x /home/agent/clawdbot-supervisor.sh
+    chown agent:agent /home/agent/clawdbot-supervisor.sh
+
+    # Start supervisor as agent user in background
+    su - agent -c "nohup /home/agent/clawdbot-supervisor.sh '$TELEGRAM_BOT_TOKEN' > /dev/null 2>&1 &"
 
     sleep 2
     if curl -s "http://localhost:18789/health" > /dev/null 2>&1; then
