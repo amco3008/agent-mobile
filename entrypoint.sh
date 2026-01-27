@@ -97,6 +97,10 @@ commit_clawdbot_repo() {
 
     cd "$CLAWDBOT_DIR" || return 1
 
+    # Set git identity for commits (use env vars or defaults)
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
+
     # Commit any uncommitted changes
     if [ -n "$(git status --porcelain)" ]; then
         echo "[clawdbot-git] Committing clawdbot config changes..."
@@ -130,6 +134,10 @@ commit_clawd_repo() {
     fi
 
     cd "$CLAWD_DIR" || return 1
+
+    # Set git identity for commits (use env vars or defaults)
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
 
     # Commit any uncommitted changes
     if [ -n "$(git status --porcelain)" ]; then
