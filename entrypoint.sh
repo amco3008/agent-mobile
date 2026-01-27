@@ -779,12 +779,6 @@ EOF
         git remote add origin "$REMOTE_URL"
     fi
 
-    # Create repo if doesn't exist
-    if ! git ls-remote origin &>/dev/null; then
-        echo "[clawdbot-git] Creating private repo ${REPO_NAME}..."
-        gh repo create "$REPO_NAME" --private --source=. --push 2>/dev/null || true
-    fi
-
     # Commit local changes FIRST to preserve them before pulling remote
     if [ -n "$(git status --porcelain)" ]; then
         echo "[clawdbot-git] Committing local changes first..."
@@ -792,22 +786,36 @@ EOF
         git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [local changes]" || true
     fi
 
-    # Pull remote with merge
-    echo "[clawdbot-git] Pulling from remote (merge strategy)..."
-    git fetch origin master 2>/dev/null || true
-
-    # Check if branches have diverged
-    LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
-    REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
-
-    if [ "$REMOTE_COMMITS" = "0" ]; then
-        echo "[clawdbot-git] Already up to date with remote"
-    elif [ "$LOCAL_COMMITS" = "0" ]; then
-        echo "[clawdbot-git] Fast-forward merge possible"
-        git merge origin/master --no-edit 2>/dev/null || true
+    # Create repo if doesn't exist (check via gh api, not git ls-remote which needs the repo to exist)
+    if ! gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
+        echo "[clawdbot-git] Creating private repo ${REPO_NAME}..."
+        if gh repo create "$REPO_NAME" --private 2>&1; then
+            echo "[clawdbot-git] Repo created successfully"
+        else
+            echo "[clawdbot-git] Repo creation failed (may already exist or permission issue)"
+        fi
     else
-        echo "[clawdbot-git] Branches diverged - merging..."
-        git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+        echo "[clawdbot-git] Repo ${REPO_NAME} already exists"
+    fi
+
+    # Pull remote with merge (if remote has commits)
+    echo "[clawdbot-git] Fetching from remote..."
+    if git fetch origin master 2>/dev/null; then
+        # Check if branches have diverged
+        LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
+        REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
+
+        if [ "$REMOTE_COMMITS" = "0" ]; then
+            echo "[clawdbot-git] Already up to date with remote"
+        elif [ "$LOCAL_COMMITS" = "0" ]; then
+            echo "[clawdbot-git] Fast-forward merge possible"
+            git merge origin/master --no-edit 2>/dev/null || true
+        else
+            echo "[clawdbot-git] Branches diverged - merging..."
+            git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+        fi
+    else
+        echo "[clawdbot-git] Remote is empty or fetch failed, will push to initialize"
     fi
 
     # Push
@@ -888,12 +896,6 @@ EOF
         git remote add origin "$REMOTE_URL"
     fi
 
-    # Create repo if doesn't exist
-    if ! git ls-remote origin &>/dev/null; then
-        echo "[clawd-git] Creating private repo ${REPO_NAME}..."
-        gh repo create "$REPO_NAME" --private --source=. --push 2>/dev/null || true
-    fi
-
     # Commit local changes FIRST to preserve them before pulling remote
     if [ -n "$(git status --porcelain)" ]; then
         echo "[clawd-git] Committing local changes first..."
@@ -901,22 +903,36 @@ EOF
         git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [local changes]" || true
     fi
 
-    # Pull remote with merge
-    echo "[clawd-git] Pulling from remote (merge strategy)..."
-    git fetch origin master 2>/dev/null || true
-
-    # Check if branches have diverged
-    LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
-    REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
-
-    if [ "$REMOTE_COMMITS" = "0" ]; then
-        echo "[clawd-git] Already up to date with remote"
-    elif [ "$LOCAL_COMMITS" = "0" ]; then
-        echo "[clawd-git] Fast-forward merge possible"
-        git merge origin/master --no-edit 2>/dev/null || true
+    # Create repo if doesn't exist (check via gh api, not git ls-remote which needs the repo to exist)
+    if ! gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
+        echo "[clawd-git] Creating private repo ${REPO_NAME}..."
+        if gh repo create "$REPO_NAME" --private 2>&1; then
+            echo "[clawd-git] Repo created successfully"
+        else
+            echo "[clawd-git] Repo creation failed (may already exist or permission issue)"
+        fi
     else
-        echo "[clawd-git] Branches diverged - merging..."
-        git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+        echo "[clawd-git] Repo ${REPO_NAME} already exists"
+    fi
+
+    # Pull remote with merge (if remote has commits)
+    echo "[clawd-git] Fetching from remote..."
+    if git fetch origin master 2>/dev/null; then
+        # Check if branches have diverged
+        LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
+        REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
+
+        if [ "$REMOTE_COMMITS" = "0" ]; then
+            echo "[clawd-git] Already up to date with remote"
+        elif [ "$LOCAL_COMMITS" = "0" ]; then
+            echo "[clawd-git] Fast-forward merge possible"
+            git merge origin/master --no-edit 2>/dev/null || true
+        else
+            echo "[clawd-git] Branches diverged - merging..."
+            git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+        fi
+    else
+        echo "[clawd-git] Remote is empty or fetch failed, will push to initialize"
     fi
 
     # Push
