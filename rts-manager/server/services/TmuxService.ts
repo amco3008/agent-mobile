@@ -103,7 +103,7 @@ export class TmuxService {
         if (!line) continue
 
         const [id, name, active, layout] = line.split('|')
-        const panes = await this.listPanes(sessionName, parseInt(id.replace('@', '')))
+        const panes = await this.listPanes(sessionName, id)
 
         windows.push({
           id: parseInt(id.replace('@', '')),
@@ -123,11 +123,11 @@ export class TmuxService {
   /**
    * List panes for a window
    */
-  async listPanes(sessionName: string, windowId: number): Promise<TmuxPane[]> {
+  async listPanes(sessionName: string, windowId: string): Promise<TmuxPane[]> {
     this.validateSessionId(sessionName)
 
-    // windowId is a number, so it's safe from injection
-    if (!Number.isInteger(windowId) || windowId < 0) {
+    // Validate window ID format (@N or just a number/name)
+    if (!windowId || !/^[@]?\w+$/.test(windowId)) {
       throw new Error(`Invalid window ID: ${windowId}`)
     }
 
