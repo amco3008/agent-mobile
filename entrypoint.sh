@@ -726,12 +726,6 @@ init_clawdbot_git() {
         return 0
     fi
 
-    # Skip if clawdbot dir doesn't exist yet
-    if [ ! -d "$CLAWDBOT_DIR" ]; then
-        echo "[clawdbot-git] Clawdbot directory doesn't exist yet, skipping"
-        return 0
-    fi
-
     local REPO_NAME="agent-mobile-clawdbot-config"
     local GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
 
@@ -741,6 +735,21 @@ init_clawdbot_git() {
     fi
 
     local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
+
+    # If directory doesn't exist, try to clone from GitHub
+    if [ ! -d "$CLAWDBOT_DIR" ]; then
+        echo "[clawdbot-git] Directory doesn't exist, checking for remote repo..."
+        if gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
+            echo "[clawdbot-git] Found remote repo, cloning..."
+            git clone "$REMOTE_URL" "$CLAWDBOT_DIR"
+            chown -R agent:agent "$CLAWDBOT_DIR" 2>/dev/null || true
+            echo "[clawdbot-git] Cloned from GitHub"
+            return 0
+        else
+            echo "[clawdbot-git] No remote repo found, will be created on first run"
+            return 0
+        fi
+    fi
 
     cd "$CLAWDBOT_DIR" || return 1
 
@@ -847,12 +856,6 @@ init_clawd_git() {
         return 0
     fi
 
-    # Skip if clawd dir doesn't exist yet
-    if [ ! -d "$CLAWD_DIR" ]; then
-        echo "[clawd-git] Clawd directory doesn't exist yet, skipping"
-        return 0
-    fi
-
     local REPO_NAME="agent-mobile-clawd-soul"
     local GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
 
@@ -862,6 +865,21 @@ init_clawd_git() {
     fi
 
     local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
+
+    # If directory doesn't exist, try to clone from GitHub
+    if [ ! -d "$CLAWD_DIR" ]; then
+        echo "[clawd-git] Directory doesn't exist, checking for remote repo..."
+        if gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
+            echo "[clawd-git] Found remote repo, cloning..."
+            git clone "$REMOTE_URL" "$CLAWD_DIR"
+            chown -R agent:agent "$CLAWD_DIR" 2>/dev/null || true
+            echo "[clawd-git] Cloned from GitHub"
+            return 0
+        else
+            echo "[clawd-git] No remote repo found, will be created on first run"
+            return 0
+        fi
+    fi
 
     cd "$CLAWD_DIR" || return 1
 
