@@ -81,6 +81,40 @@ commit_skills_repo() {
     cd - >/dev/null
 }
 
+# Commit clawdbot config to GitHub (called on shutdown)
+commit_clawdbot_repo() {
+    # Skip if no GITHUB_TOKEN
+    if [ -z "$GITHUB_TOKEN" ]; then
+        return 0
+    fi
+
+    local CLAWDBOT_DIR="/home/agent/.clawdbot"
+
+    if [ ! -d "$CLAWDBOT_DIR/.git" ]; then
+        echo "[clawdbot-git] Clawdbot directory not a git repo, skipping"
+        return 0
+    fi
+
+    cd "$CLAWDBOT_DIR" || return 1
+
+    # Commit any uncommitted changes
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "[clawdbot-git] Committing clawdbot config changes..."
+        git add -A
+        git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [shutdown]" || true
+    fi
+
+    # Always try to push (in case startup push failed)
+    echo "[clawdbot-git] Pushing to remote..."
+    if git push origin master 2>&1; then
+        echo "[clawdbot-git] Push successful"
+    else
+        echo "[clawdbot-git] Push failed (network issue or remote doesn't exist)"
+    fi
+
+    cd - >/dev/null
+}
+
 # Trap shutdown signals to gracefully stop Claude and backup data
 cleanup_and_backup() {
     echo ""
@@ -116,6 +150,9 @@ cleanup_and_backup() {
 
     # Commit skills repo before shutdown
     commit_skills_repo
+
+    # Commit clawdbot config before shutdown
+    commit_clawdbot_repo
 
     # Backup credentials
     echo "[shutdown] Backing up data..."
@@ -639,6 +676,115 @@ init_skills_git() {
     echo "[skills-git] Skills repo initialized"
 }
 
+# Initialize clawdbot config git repo and sync with GitHub (called on startup)
+init_clawdbot_git() {
+    local CLAWDBOT_DIR="/home/agent/.clawdbot"
+
+    # Mark clawdbot directory as safe (fixes ownership issues with mounted volumes)
+    git config --global --add safe.directory "$CLAWDBOT_DIR" 2>/dev/null || true
+
+    # Skip if no GITHUB_TOKEN
+    if [ -z "$GITHUB_TOKEN" ]; then
+        echo "[clawdbot-git] GITHUB_TOKEN not set, skipping clawdbot config sync"
+        return 0
+    fi
+
+    # Skip if clawdbot dir doesn't exist yet
+    if [ ! -d "$CLAWDBOT_DIR" ]; then
+        echo "[clawdbot-git] Clawdbot directory doesn't exist yet, skipping"
+        return 0
+    fi
+
+    local REPO_NAME="agent-mobile-clawdbot-config"
+    local GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
+
+    if [ -z "$GITHUB_USER" ]; then
+        echo "[clawdbot-git] Could not get GitHub username, skipping"
+        return 0
+    fi
+
+    local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
+
+    cd "$CLAWDBOT_DIR" || return 1
+
+    # Remove stale git lock files from previous crash/unclean shutdown
+    if [ -f ".git/index.lock" ]; then
+        echo "[clawdbot-git] Removing stale index.lock from previous crash"
+        rm -f ".git/index.lock"
+    fi
+
+    # Initialize git if needed
+    if [ ! -d ".git" ]; then
+        echo "[clawdbot-git] Initializing git repository..."
+        git init
+        git branch -M master
+
+        # Create .gitignore for sensitive files
+        cat > .gitignore << EOF
+# Ignore logs
+*.log
+
+# Ignore temp files
+*.tmp
+*.bak
+EOF
+        chown agent:agent .gitignore
+    fi
+
+    # Set git identity for commits (use env vars or defaults)
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
+
+    # Set/update remote origin
+    if git remote get-url origin &>/dev/null; then
+        git remote set-url origin "$REMOTE_URL"
+    else
+        git remote add origin "$REMOTE_URL"
+    fi
+
+    # Create repo if doesn't exist
+    if ! git ls-remote origin &>/dev/null; then
+        echo "[clawdbot-git] Creating private repo ${REPO_NAME}..."
+        gh repo create "$REPO_NAME" --private --source=. --push 2>/dev/null || true
+    fi
+
+    # Commit local changes FIRST to preserve them before pulling remote
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "[clawdbot-git] Committing local changes first..."
+        git add -A
+        git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [local changes]" || true
+    fi
+
+    # Pull remote with merge
+    echo "[clawdbot-git] Pulling from remote (merge strategy)..."
+    git fetch origin master 2>/dev/null || true
+
+    # Check if branches have diverged
+    LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
+    REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
+
+    if [ "$REMOTE_COMMITS" = "0" ]; then
+        echo "[clawdbot-git] Already up to date with remote"
+    elif [ "$LOCAL_COMMITS" = "0" ]; then
+        echo "[clawdbot-git] Fast-forward merge possible"
+        git merge origin/master --no-edit 2>/dev/null || true
+    else
+        echo "[clawdbot-git] Branches diverged - merging..."
+        git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+    fi
+
+    # Push
+    echo "[clawdbot-git] Pushing to remote..."
+    if git push -u origin master 2>&1; then
+        echo "[clawdbot-git] Push successful"
+    else
+        echo "[clawdbot-git] Push failed, will retry on shutdown"
+    fi
+
+    cd - >/dev/null
+    echo "[clawdbot-git] Clawdbot config repo initialized"
+}
+
 echo "Initializing skill system (local only - remote sync happens after network setup)..."
 # Mark skills directory as safe early (fixes ownership issues with mounted volumes)
 git config --global --add safe.directory /home/agent/.claude/skills 2>/dev/null || true
@@ -781,7 +927,7 @@ EOF
     fi
 
     # Start clawdbot gateway as agent user in background
-    su - agent -c "TELEGRAM_BOT_TOKEN='$TELEGRAM_BOT_TOKEN' nohup clawdbot gateway --port 18789 > /home/agent/clawdbot.log 2>&1 &"
+    su - agent -c "TELEGRAM_BOT_TOKEN='$TELEGRAM_BOT_TOKEN' nohup clawdbot gateway --port 18789 --verbose > /home/agent/clawdbot.log 2>&1 &"
 
     sleep 2
     if curl -s "http://localhost:18789/health" > /dev/null 2>&1; then
@@ -937,6 +1083,10 @@ echo "Syncing skills with GitHub (post-network init)..."
 init_skills_git
 # Re-discover skills in case remote sync brought new ones
 update_claude_md
+
+# Sync clawdbot config with GitHub repo
+echo "Syncing clawdbot config with GitHub (post-network init)..."
+init_clawdbot_git
 
 # Update Claude Code on startup (after network confirmed ready)
 if [ "${CLAUDE_STARTUP_UPDATE:-true}" = "true" ]; then
