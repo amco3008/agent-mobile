@@ -771,8 +771,7 @@ start_clawdbot() {
   },
   "channels": {
     "telegram": {
-      "enabled": true,
-      "token": "$TELEGRAM_BOT_TOKEN"
+      "enabled": true
     }
   }
 }
