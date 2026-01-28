@@ -89,6 +89,7 @@ services:
       - CLAWDBOT_ENABLED=${CLAWDBOT_ENABLED:-false}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - BRAVE_API_KEY=${BRAVE_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
