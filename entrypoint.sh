@@ -1141,6 +1141,7 @@ EOF
 export TELEGRAM_BOT_TOKEN="$1"
 export GEMINI_API_KEY="$2"
 export BRAVE_API_KEY="$3"
+export NODE_OPTIONS="--max-old-space-size=512"
 LOG_FILE="/home/agent/clawdbot.log"
 RESTART_DELAY=3
 MAX_RAPID_RESTARTS=5
