@@ -30,37 +30,40 @@ export const SessionGrid = memo(function SessionGrid({ selectedSession, onSelect
   // Determine which sessions to show
   const { sessions, isLoading, error, showContainerBadge } = useMemo(() => {
     if (selectedContainerId) {
+      // Always include local sessions (host tmux)
+      const allSessions: TmuxSession[] = [...(localSessions || [])]
+
       // Prefer socket store data if available (real-time updates)
       const socketSessions = containerTmuxSessions.get(selectedContainerId)
       if (socketSessions && socketSessions.length > 0) {
         const container = containers?.find(c => c.id === selectedContainerId)
-        return {
-          sessions: socketSessions.map(s => ({
-            ...s,
+        for (const session of socketSessions) {
+          allSessions.push({
+            ...session,
             containerId: selectedContainerId,
             containerName: container?.name || selectedContainerId.substring(0, 12),
-          })),
-          isLoading: false,
-          error: null,
-          showContainerBadge: false,
+          })
+        }
+      } else if (containerSessionsData?.sessions) {
+        // Fallback to API-based container sessions
+        for (const cs of containerSessionsData.sessions) {
+          allSessions.push({
+            id: cs.id,
+            name: cs.name,
+            created: new Date(),
+            attached: false,
+            windows: [],
+            containerId: cs.containerId,
+            containerName: cs.containerName,
+          })
         }
       }
 
-      // Fallback to API-based container sessions
-      const containerSessions: TmuxSession[] = (containerSessionsData?.sessions || []).map(cs => ({
-        id: cs.id,
-        name: cs.name,
-        created: new Date(),
-        attached: false,
-        windows: [],
-        containerId: cs.containerId,
-        containerName: cs.containerName,
-      }))
       return {
-        sessions: containerSessions,
+        sessions: allSessions,
         isLoading: containerLoading,
         error: containerError,
-        showContainerBadge: false,
+        showContainerBadge: true,
       }
     }
 

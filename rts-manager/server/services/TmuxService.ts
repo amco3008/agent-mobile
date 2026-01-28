@@ -70,7 +70,7 @@ export class TmuxService {
         const windows = await this.listWindows(name)
 
         sessions.push({
-          id,
+          id: id.replace('$', ''),
           name,
           created: new Date(parseInt(created) * 1000),
           attached: attached === '1',
