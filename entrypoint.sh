@@ -1111,12 +1111,7 @@ start_clawdbot() {
       },
       "memorySearch": {
         "provider": "gemini",
-        "model": "gemini-embedding-001",
-        "remote": {
-          "batch": {
-            "enabled": false
-          }
-        }
+        "model": "gemini-embedding-001"
       }
     }
   },
