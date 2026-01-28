@@ -9,7 +9,6 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Claude SDK** - Anthropic Python SDK for sub-agents and API access
 - **Ralph Loops** - Custom fork with multi-ralph support (no plugin required)
 - **GitHub CLI (gh)** - Create PRs, manage issues, etc.
-- **Platform CLIs** - Vercel, Supabase, and Railway CLIs for deployment management
 - **ripgrep (rg)** - Fast text search, auto-allowed for Claude
 - **Passwordless sudo** - Agent can install missing packages without prompts
 - **Docker access** - Spin up Redis, PostgreSQL, or other containers from within the agent
