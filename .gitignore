@@ -17,3 +17,4 @@ skills/*
 # Home folder - keep structure, ignore contents
 home/*
 !home/.gitkeep
+tmpclaude-*
