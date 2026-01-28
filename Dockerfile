@@ -54,7 +54,7 @@ RUN npm install -g clawdbot@latest && npm cache clean --force
 # Vercel - frontend deployments (Myria)
 # Supabase - database/auth (Myria, Polymarket bot)
 # Railway - container hosting (Polymarket bot)
-RUN npm install -g vercel @supabase/cli @railway/cli && npm cache clean --force
+RUN npm install -g vercel supabase @railway/cli && npm cache clean --force
 
 # Claude Code install method: "native" (recommended) or "npm"
 ARG CLAUDE_INSTALL_METHOD=native
