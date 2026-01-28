@@ -54,7 +54,13 @@ RUN npm install -g clawdbot@latest && npm cache clean --force
 # Vercel - frontend deployments (Myria)
 # Supabase - database/auth (Myria, Polymarket bot)
 # Railway - container hosting (Polymarket bot)
-RUN npm install -g vercel supabase @railway/cli && npm cache clean --force
+RUN npm install -g vercel @railway/cli && npm cache clean --force
+
+# Install Supabase CLI (global npm install is not supported)
+RUN SUPABASE_VERSION=$(curl -s https://api.github.com/repos/supabase/cli/releases/latest | jq -r .tag_name | sed 's/v//') \
+    && curl -L -o supabase.deb "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_${SUPABASE_VERSION}_linux_amd64.deb" \
+    && dpkg -i supabase.deb \
+    && rm supabase.deb
 
 # Claude Code install method: "native" (recommended) or "npm"
 ARG CLAUDE_INSTALL_METHOD=native
