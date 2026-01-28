@@ -5,9 +5,9 @@
 certs/
 # Skills folder - keep structure, ignore cloned repos
 skills/*
-!skills/_skill-manager
+# !skills/_skill-manager
 !skills/ralph-invoke
-!skills/ralph-loop
+# !skills/ralph-loop
 !skills/claude-sdk
 !skills/system-health
 !skills/.gitkeep
