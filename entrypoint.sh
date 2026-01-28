@@ -1139,6 +1139,8 @@ EOF
     cat > /home/agent/clawdbot-supervisor.sh << 'SUPERVISOR_EOF'
 #!/bin/bash
 export TELEGRAM_BOT_TOKEN="$1"
+export GEMINI_API_KEY="$2"
+export BRAVE_API_KEY="$3"
 LOG_FILE="/home/agent/clawdbot.log"
 RESTART_DELAY=3
 MAX_RAPID_RESTARTS=5
@@ -1177,7 +1179,7 @@ SUPERVISOR_EOF
     chown agent:agent /home/agent/clawdbot-supervisor.sh
 
     # Start supervisor as agent user in background
-    su - agent -c "nohup /home/agent/clawdbot-supervisor.sh '$TELEGRAM_BOT_TOKEN' > /dev/null 2>&1 &"
+    su - agent -c "nohup /home/agent/clawdbot-supervisor.sh '$TELEGRAM_BOT_TOKEN' '$GEMINI_API_KEY' '$BRAVE_API_KEY' > /dev/null 2>&1 &"
 
     sleep 2
     if curl -s "http://localhost:18789/health" > /dev/null 2>&1; then
