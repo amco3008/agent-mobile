@@ -1349,9 +1349,9 @@ start_clawdbot
 if [ "${CLAUDE_STARTUP_UPDATE:-true}" = "true" ]; then
     echo "Checking for Claude Code updates (method: $CLAUDE_INSTALL_METHOD)..."
     if [ "$CLAUDE_INSTALL_METHOD" = "npm" ]; then
-        npm install -g @anthropic-ai/claude-code@latest 2>/dev/null || echo "Update check failed (run 'update-claude' manually)"
+        timeout 60s npm install -g @anthropic-ai/claude-code@latest 2>/dev/null || echo "Update check failed (run 'update-claude' manually)"
     else
-        su - agent -c "claude update" || echo "Update check failed (run 'update-claude' manually)"
+        timeout 60s su - agent -c "claude update" || echo "Update check failed (run 'update-claude' manually)"
     fi
 fi
 
