@@ -202,6 +202,7 @@ Select [1]:
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
 | `BRAVE_API_KEY` | Optional - Brave Search API key for Clawdbot web search ([get one free](https://brave.com/search/api/)) |
+| `GEMINI_API_KEY` | Optional - Gemini API key for Clawdbot AI features (memory, skills like nano-banana-pro image generation) |
 
 ### Clawdbot Config & Soul Sync
 
