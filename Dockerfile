@@ -50,6 +50,9 @@ RUN npm install -g @google/gemini-cli && npm cache clean --force
 # Install Clawdbot (multi-platform AI assistant with Telegram support)
 RUN npm install -g clawdbot@latest && npm cache clean --force
 
+# Install uv (Python package manager - required for nano-banana-pro image generation)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && ln -sf /root/.local/bin/uv /usr/local/bin/uv && ln -sf /root/.local/bin/uvx /usr/local/bin/uvx
+
 # Install platform CLIs for deployment management
 # Vercel - frontend deployments (Myria)
 # Supabase - database/auth (Myria, Polymarket bot)
