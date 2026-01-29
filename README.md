@@ -204,6 +204,7 @@ Select [1]:
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
 | `BRAVE_API_KEY` | Optional - Brave Search API key for Clawdbot web search ([get one free](https://brave.com/search/api/)) |
 | `GEMINI_API_KEY` | Optional - Gemini API key for Clawdbot AI features (memory, skills like nano-banana-pro image generation) |
+| `VERCEL_TOKEN` | Optional - Vercel CLI token ([get one here](https://vercel.com/account/tokens)) |
 | `SUPABASE_ACCESS_TOKEN` | Optional - Supabase CLI access token ([get one here](https://supabase.com/dashboard/account/tokens)) |
 | `RAILWAY_TOKEN` | Optional - Railway CLI token ([get one here](https://railway.app/account/tokens)) |
 

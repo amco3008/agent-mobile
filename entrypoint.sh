@@ -1420,6 +1420,13 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
+# Verify Vercel CLI auth
+if [ -n "$VERCEL_TOKEN" ]; then
+    echo "Vercel CLI configured (token set)"
+else
+    echo "Vercel CLI: no token set (set VERCEL_TOKEN in .env)"
+fi
+
 # Verify Supabase CLI auth
 if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
     echo "Supabase CLI configured (token set)"

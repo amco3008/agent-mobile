@@ -93,6 +93,8 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - BRAVE_API_KEY=${BRAVE_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Vercel CLI auth
+      - VERCEL_TOKEN=${VERCEL_TOKEN:-}
       # Supabase CLI auth
       - SUPABASE_ACCESS_TOKEN=${SUPABASE_ACCESS_TOKEN:-}
       # Railway CLI auth
