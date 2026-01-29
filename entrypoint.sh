@@ -1420,6 +1420,20 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
+# Verify Supabase CLI auth
+if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+    echo "Supabase CLI configured (token set)"
+else
+    echo "Supabase CLI: no token set (set SUPABASE_ACCESS_TOKEN in .env)"
+fi
+
+# Verify Railway CLI auth
+if [ -n "$RAILWAY_TOKEN" ]; then
+    echo "Railway CLI configured (token set)"
+else
+    echo "Railway CLI: no token set (set RAILWAY_TOKEN in .env)"
+fi
+
 # Pre-fetch GitHub username once (avoids 3 redundant API calls during parallel sync)
 export _CACHED_GITHUB_USER=""
 if [ -n "$GITHUB_TOKEN" ]; then
