@@ -1109,6 +1109,7 @@ start_clawdbot() {
       "model": {
         "primary": "anthropic/claude-opus-4-5"
       },
+      "thinkingDefault": "high",
       "memorySearch": {
         "provider": "gemini",
         "model": "gemini-embedding-001"
