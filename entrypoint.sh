@@ -1625,6 +1625,9 @@ PYTHON_SCRIPT
 echo "Setting up skill system hooks..."
 setup_skill_hooks
 
+# Fix ownership of skill system files (entrypoint runs as root but hooks run as agent)
+chown -R agent:agent /home/agent/.claude/skills 2>/dev/null || true
+
 # Pre-configure workspace trust for common working directories
 # Trust is stored in ~/.claude.json with projects object keyed by absolute path
 # This MERGES with existing config to preserve user's custom folder trust
