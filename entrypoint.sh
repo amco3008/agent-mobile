@@ -1420,22 +1420,29 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
-# Verify Vercel CLI auth
+# Export platform CLI tokens for SSH sessions (same pattern as GITHUB_TOKEN above)
 if [ -n "$VERCEL_TOKEN" ]; then
+    if ! grep -q "VERCEL_TOKEN" /home/agent/.bashrc 2>/dev/null; then
+        echo "export VERCEL_TOKEN='${VERCEL_TOKEN}'" >> /home/agent/.bashrc
+    fi
     echo "Vercel CLI configured (token set)"
 else
     echo "Vercel CLI: no token set (set VERCEL_TOKEN in .env)"
 fi
 
-# Verify Supabase CLI auth
 if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+    if ! grep -q "SUPABASE_ACCESS_TOKEN" /home/agent/.bashrc 2>/dev/null; then
+        echo "export SUPABASE_ACCESS_TOKEN='${SUPABASE_ACCESS_TOKEN}'" >> /home/agent/.bashrc
+    fi
     echo "Supabase CLI configured (token set)"
 else
     echo "Supabase CLI: no token set (set SUPABASE_ACCESS_TOKEN in .env)"
 fi
 
-# Verify Railway CLI auth
 if [ -n "$RAILWAY_TOKEN" ]; then
+    if ! grep -q "RAILWAY_TOKEN" /home/agent/.bashrc 2>/dev/null; then
+        echo "export RAILWAY_TOKEN='${RAILWAY_TOKEN}'" >> /home/agent/.bashrc
+    fi
     echo "Railway CLI configured (token set)"
 else
     echo "Railway CLI: no token set (set RAILWAY_TOKEN in .env)"
