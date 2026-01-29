@@ -93,6 +93,10 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - BRAVE_API_KEY=${BRAVE_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # CLI tools (Vercel, Supabase, Railway)
+      - VERCEL_TOKEN=${VERCEL_TOKEN:-}
+      - SUPABASE_ACCESS_TOKEN=${SUPABASE_ACCESS_TOKEN:-}
+      - RAILWAY_TOKEN=${RAILWAY_TOKEN:-}
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
