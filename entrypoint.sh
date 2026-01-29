@@ -630,7 +630,7 @@ init_skills_git() {
     fi
 
     local REPO_NAME="agent-mobile-claude-skills"
-    local GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
+    local GITHUB_USER="${_CACHED_GITHUB_USER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
 
     if [ -z "$GITHUB_USER" ]; then
         echo "[skills-git] Could not get GitHub username, skipping"
@@ -735,7 +735,7 @@ init_clawdbot_git() {
     fi
 
     local REPO_NAME="agent-mobile-clawdbot-config"
-    local GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
+    local GITHUB_USER="${_CACHED_GITHUB_USER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
 
     if [ -z "$GITHUB_USER" ]; then
         echo "[clawdbot-git] Could not get GitHub username, skipping"
@@ -865,7 +865,7 @@ init_clawd_git() {
     fi
 
     local REPO_NAME="agent-mobile-clawd-soul"
-    local GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
+    local GITHUB_USER="${_CACHED_GITHUB_USER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
 
     if [ -z "$GITHUB_USER" ]; then
         echo "[clawd-git] Could not get GitHub username, skipping"
@@ -1412,19 +1412,38 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
-# Now that network and GitHub auth are ready, sync skills with GitHub repo
-echo "Syncing skills with GitHub (post-network init)..."
-init_skills_git
+# Pre-fetch GitHub username once (avoids 3 redundant API calls during parallel sync)
+export _CACHED_GITHUB_USER=""
+if [ -n "$GITHUB_TOKEN" ]; then
+    _CACHED_GITHUB_USER=$(gh api user --jq '.login' 2>/dev/null || echo "")
+    if [ -n "$_CACHED_GITHUB_USER" ]; then
+        echo "GitHub user: $_CACHED_GITHUB_USER (cached for parallel sync)"
+    fi
+fi
+
+# Sync all 3 git repos in parallel for faster startup
+echo "Syncing git repos in parallel (post-network init)..."
+_git_sync_start=$(date +%s)
+
+init_skills_git &
+_pid_skills=$!
+
+init_clawdbot_git &
+_pid_clawdbot=$!
+
+init_clawd_git &
+_pid_clawd=$!
+
+# Wait for all syncs to complete
+wait $_pid_skills  || echo "[parallel-sync] skills sync exited with error (non-fatal)"
+wait $_pid_clawdbot || echo "[parallel-sync] clawdbot sync exited with error (non-fatal)"
+wait $_pid_clawd   || echo "[parallel-sync] clawd sync exited with error (non-fatal)"
+
+_git_sync_end=$(date +%s)
+echo "All git repos synced in $((_git_sync_end - _git_sync_start))s (parallel)"
+
 # Re-discover skills in case remote sync brought new ones
 update_claude_md
-
-# Sync clawdbot config with GitHub repo
-echo "Syncing clawdbot config with GitHub (post-network init)..."
-init_clawdbot_git
-
-# Sync clawd soul/memory with GitHub repo
-echo "Syncing clawd soul/memory with GitHub (post-network init)..."
-init_clawd_git
 
 # Start clawdbot gateway AFTER git sync (needs synced config + correct permissions)
 start_clawdbot
