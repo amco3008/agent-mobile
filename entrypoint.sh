@@ -1094,6 +1094,14 @@ start_clawdbot() {
 
     echo "Starting Clawdbot gateway on port 18789..."
 
+    # Install fetch guard script (prevents crash on transient Telegram API failures)
+    # Guard script lives in projects/ bind mount, persisted across container rebuilds
+    local GUARD_SRC="/home/agent/projects/clawdbot-fetch-guard.js"
+    if [ -f "$GUARD_SRC" ]; then
+        cp "$GUARD_SRC" /home/agent/clawdbot-fetch-guard.js
+        chown agent:agent /home/agent/clawdbot-fetch-guard.js
+    fi
+
     # Create clawdbot config if it doesn't exist
     local CLAWDBOT_DIR="/home/agent/.clawdbot"
     local CLAWDBOT_CONFIG="$CLAWDBOT_DIR/clawdbot.json"
@@ -1171,7 +1179,9 @@ while true; do
     fi
 
     echo "[clawdbot-supervisor] Starting clawdbot gateway..." >> "$LOG_FILE"
-    clawdbot gateway --port 18789 --verbose --allow-unconfigured >> "$LOG_FILE" 2>&1
+    GUARD_REQUIRE=""
+    [ -f /home/agent/clawdbot-fetch-guard.js ] && GUARD_REQUIRE="--require /home/agent/clawdbot-fetch-guard.js"
+    NODE_OPTIONS="--max-old-space-size=1024 $GUARD_REQUIRE" clawdbot gateway --port 18789 --verbose --allow-unconfigured >> "$LOG_FILE" 2>&1
     exit_code=$?
 
     last_restart_time=$(date +%s)
@@ -1308,6 +1318,17 @@ fi
 # Show Tailscale status
 echo "Tailscale status:"
 tailscale status || echo "Tailscale not yet authenticated"
+
+# Add fallback DNS resolver (Tailscale DNS can be intermittent)
+add_fallback_dns() {
+    if grep -q "100.100.100.100" /etc/resolv.conf 2>/dev/null; then
+        if ! grep -q "8.8.8.8" /etc/resolv.conf 2>/dev/null; then
+            echo "nameserver 8.8.8.8" >> /etc/resolv.conf
+            echo "[dns] Added fallback DNS resolver (8.8.8.8)"
+        fi
+    fi
+}
+add_fallback_dns
 
 # Setup git credentials and export GITHUB_TOKEN for Claude
 if [ -n "$GITHUB_TOKEN" ]; then
