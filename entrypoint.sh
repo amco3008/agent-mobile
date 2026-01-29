@@ -1330,6 +1330,61 @@ add_fallback_dns() {
 }
 add_fallback_dns
 
+# Configure exit node to only route specific domains (opt-in)
+# When TAILSCALE_EXIT_NODE_ONLY is set, bypass exit node for all traffic
+# except the listed domains. Default: route everything through exit node.
+configure_exit_node_bypass() {
+    if [ -z "$TAILSCALE_EXIT_NODE" ] || [ -z "$TAILSCALE_EXIT_NODE_ONLY" ]; then
+        return
+    fi
+
+    echo "[exit-node-bypass] Configuring selective exit node routing..."
+
+    # Get the default gateway (Docker bridge)
+    local GATEWAY=$(ip route show default | awk '{print $3}')
+    local IFACE=$(ip route show default | awk '{print $5}')
+
+    if [ -z "$GATEWAY" ]; then
+        echo "[exit-node-bypass] WARNING: Could not determine default gateway"
+        return
+    fi
+
+    # Add throw routes to bypass exit node for all traffic
+    # 0.0.0.0/1 + 128.0.0.0/1 covers all IPv4 without overriding default
+    ip route add throw 0.0.0.0/1 table 52 2>/dev/null || true
+    ip route add throw 128.0.0.0/1 table 52 2>/dev/null || true
+
+    # For each whitelisted domain, resolve and add explicit routes through tailscale
+    IFS=',' read -ra DOMAINS <<< "$TAILSCALE_EXIT_NODE_ONLY"
+    for domain in "${DOMAINS[@]}"; do
+        domain=$(echo "$domain" | xargs)  # trim whitespace
+        [ -z "$domain" ] && continue
+
+        # Resolve domain to IPs
+        local ips=$(python3 -c "
+import socket
+try:
+    addrs = socket.getaddrinfo('$domain', 443, socket.AF_INET)
+    seen = set()
+    for a in addrs:
+        ip = a[4][0]
+        if ip not in seen:
+            print(ip)
+            seen.add(ip)
+except Exception as e:
+    pass
+" 2>/dev/null)
+
+        for ip in $ips; do
+            ip route add "$ip/32" dev tailscale0 table 52 2>/dev/null && \
+                echo "[exit-node-bypass] Route $domain ($ip) -> exit node" || true
+        done
+    done
+
+    echo "[exit-node-bypass] All other traffic -> direct ($GATEWAY via $IFACE)"
+}
+configure_exit_node_bypass
+
 # Setup git credentials and export GITHUB_TOKEN for Claude
 if [ -n "$GITHUB_TOKEN" ]; then
     echo "Configuring git with GITHUB_TOKEN..."
@@ -1569,6 +1624,9 @@ PYTHON_SCRIPT
 
 echo "Setting up skill system hooks..."
 setup_skill_hooks
+
+# Fix ownership of skill system files (entrypoint runs as root but hooks run as agent)
+chown -R agent:agent /home/agent/.claude/skills 2>/dev/null || true
 
 # Pre-configure workspace trust for common working directories
 # Trust is stored in ~/.claude.json with projects object keyed by absolute path

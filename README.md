@@ -185,6 +185,7 @@ Select [1]:
 | `HTTPS_PROXY` | Optional - Corporate proxy URL for secure traffic |
 | `NO_PROXY` | Optional - Domains to bypass proxy (default: `localhost,127.0.0.1`) |
 | `TAILSCALE_EXIT_NODE` | Optional - Tailscale IP of a node to use as a gateway (bypass firewalls) |
+| `TAILSCALE_EXIT_NODE_ONLY` | Optional - Comma-separated domains to route through exit node (e.g. `api.anthropic.com,claude.ai`). All other traffic bypasses the exit node. If not set, all traffic goes through exit node. |
 | `AGENT_CPUS` | Optional - Max CPU cores (default: `2.0`, recommended: `8.0` for deploys) |
 | `AGENT_MEMORY` | Optional - Max RAM limit (default: `3G`) |
 | `AGENT_RESERVATION_CPUS` | Optional - Guaranteed CPU cores (default: `0.5`, recommended: `1.0`) |
