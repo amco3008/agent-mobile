@@ -61,6 +61,9 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY:-}
       - NO_PROXY=${NO_PROXY:-}
       - TAILSCALE_EXIT_NODE=${TAILSCALE_EXIT_NODE:-}
+      # Comma-separated domains to route through exit node (all other traffic bypasses it)
+      # If not set, all traffic goes through exit node (default Tailscale behavior)
+      - TAILSCALE_EXIT_NODE_ONLY=${TAILSCALE_EXIT_NODE_ONLY:-}
       # Node.js performance tuning
       - NODE_OPTIONS=--max-old-space-size=${AGENT_NODE_MEMORY:-2048}
       - UV_THREADPOOL_SIZE=8
