@@ -1072,6 +1072,14 @@ start_rts_manager() {
 start_rts_manager
 
 # ==========================================
+# Health Server (HTTP health endpoint)
+# ==========================================
+
+echo "Starting health server on port ${HEALTH_PORT:-18790}..."
+nohup /opt/agent-mobile/health-server.sh > /dev/null 2>&1 &
+echo "Health server started — curl http://localhost:${HEALTH_PORT:-18790}"
+
+# ==========================================
 # Clawdbot Setup (Telegram/Multi-Platform AI)
 # ==========================================
 

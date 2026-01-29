@@ -140,13 +140,19 @@ RUN mkdir -p /home/agent/.config/git && \
 COPY --chown=agent:agent .tmux.conf /home/agent/.tmux.conf
 COPY --chown=agent:agent tmux-picker.sh /home/agent/.tmux-picker.sh   
 
-# Copy entrypoint script
+# Copy entrypoint and healthcheck scripts
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY healthcheck.sh /opt/agent-mobile/healthcheck.sh
+COPY health-server.sh /opt/agent-mobile/health-server.sh
+RUN chmod +x /entrypoint.sh /opt/agent-mobile/healthcheck.sh /opt/agent-mobile/health-server.sh
 
 # Node.js performance defaults
 ENV NODE_OPTIONS="--max-old-space-size=2048"
 ENV UV_THREADPOOL_SIZE=8
+
+# Docker healthcheck — reports container health to Docker daemon
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD /opt/agent-mobile/healthcheck.sh > /dev/null 2>&1 || exit 1
 
 # Expose SSH port (optional, Tailscale handles networking)
 EXPOSE 22
