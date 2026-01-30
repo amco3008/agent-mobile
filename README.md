@@ -263,27 +263,27 @@ Multiple instances can collaborate through a shared Telegram group (the "Collect
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│              Vroth Collective (Group Chat)            │
+│              Moltbot Collective (Group Chat)            │
 │                                                      │
 │  [Core]     General assistant, coordinator           │
 │  [Markets]  24/7 trading monitor, risk alerts        │
 │  [Dev]      Code review, PRs, feature shipping       │
 │  [Research] Deep analysis, competitive intel         │
-│  [Matthew]  Human in the loop                        │
+│  [You]  Human in the loop                        │
 └──────────────────────────────────────────────────────┘
 ```
 
 **How it works:**
 - Each instance runs its own Telegram bot (separate tokens from @BotFather)
 - All bots + the human join a shared Telegram group
-- Instances tag each other for handoffs: `@VrothDev fix this`, `@VrothMarkets check exposure`
+- Instances tag each other for handoffs: `@MoltbotDev fix this`, `@MoltbotMarkets check exposure`
 - Each instance specializes but can request help from others
 - The human sees everything and can intervene at any point
 
 **Example collaboration:**
 ```
 [Markets]  🚨 Arb bot error: position stuck, can't exit market
-[Core]     @VrothDev can you check the exit logic?
+[Core]     @MoltbotDev can you check the exit logic?
 [Dev]      On it. Found the bug — missing liquidity fallback
 [Dev]      ✅ PR #42 ready: https://github.com/user/repo/pull/42
 [Core]     @Matthew PR ready for review
