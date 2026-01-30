@@ -19,6 +19,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Global CLAUDE.md** - Auto-generated config with available skills, persisted across restarts
 - **Push Notifications** - Get notified on your phone when Claude needs input (via ntfy.sh)
 - **Clawdbot** - Multi-platform AI assistant with Telegram, Discord, Slack, and more
+- **Soul Branching** - Run multiple specialized instances from one soul repo using `CLAWD_SOUL_BRANCH`
 - **Tailscale** - Secure mesh networking, access from anywhere
 - **Multi-stage build** - Robust installation even behind restricted networks
 - **Corporate Proxy Support** - Auto-detects and trusts corporate proxies (Cisco/Zscaler)
@@ -200,6 +201,7 @@ Select [1]:
 | `RTS_ENABLED` | Optional - Enable RTS Manager dashboard on port 9091 (default: `true`) |
 | `RTS_PORT` | Optional - RTS Manager server port (default: `9091`) |
 | `RTS_API_KEY` | Optional - API key for RTS Manager authentication (disabled if unset) |
+| `CLAWD_SOUL_BRANCH` | Optional - Soul repo branch to checkout (default: `master`). Use for specialized instances (e.g. `markets`) |
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
 | `BRAVE_API_KEY` | Optional - Brave Search API key for Clawdbot web search ([get one free](https://brave.com/search/api/)) |
@@ -222,6 +224,78 @@ When `GITHUB_TOKEN` is set, clawdbot data is automatically synced to GitHub:
 - **Auto-pull on startup**: Data is pulled from GitHub when container starts
 
 This ensures your clawdbot configuration and memory persist across all agent-mobile instances.
+
+### Multi-Instance / Soul Branching
+
+Run multiple specialized instances of agent-mobile from a single soul repo using branches.
+
+**How it works:**
+- Your soul repo (`agent-mobile-clawd-soul`) can have multiple branches
+- Each branch contains a different personality/specialization (SOUL.md, AGENTS.md, etc.)
+- Set `CLAWD_SOUL_BRANCH` in `.env` to control which branch loads on startup
+- The container auto-clones the correct branch and syncs on shutdown
+
+**Example setup — two instances:**
+
+```bash
+# Instance 1: General assistant (default)
+# .env
+CLAWD_SOUL_BRANCH=master
+
+# Instance 2: Trading monitor
+# .env
+CLAWD_SOUL_BRANCH=markets
+```
+
+**Steps:**
+1. Create branches on your soul repo with specialized soul files
+2. Clone agent-mobile for each instance
+3. Set `CLAWD_SOUL_BRANCH` in each instance's `.env`
+4. Each instance gets its own Telegram bot token (create via @BotFather)
+5. Use different port mappings to avoid conflicts (e.g. `2223:22`, `18790:18789`)
+6. Optionally add all bots to a shared Telegram group for collaboration
+
+Each instance runs independently with its own personality, memory, and heartbeat cycle — but they share the same codebase and can collaborate through shared channels.
+
+### The Collective — Group Chat Collaboration
+
+Multiple instances can collaborate through a shared Telegram group (the "Collective"):
+
+```
+┌──────────────────────────────────────────────────────┐
+│              Vroth Collective (Group Chat)            │
+│                                                      │
+│  [Core]     General assistant, coordinator           │
+│  [Markets]  24/7 trading monitor, risk alerts        │
+│  [Dev]      Code review, PRs, feature shipping       │
+│  [Research] Deep analysis, competitive intel         │
+│  [Matthew]  Human in the loop                        │
+└──────────────────────────────────────────────────────┘
+```
+
+**How it works:**
+- Each instance runs its own Telegram bot (separate tokens from @BotFather)
+- All bots + the human join a shared Telegram group
+- Instances tag each other for handoffs: `@VrothDev fix this`, `@VrothMarkets check exposure`
+- Each instance specializes but can request help from others
+- The human sees everything and can intervene at any point
+
+**Example collaboration:**
+```
+[Markets]  🚨 Arb bot error: position stuck, can't exit market
+[Core]     @VrothDev can you check the exit logic?
+[Dev]      On it. Found the bug — missing liquidity fallback
+[Dev]      ✅ PR #42 ready: https://github.com/user/repo/pull/42
+[Core]     @Matthew PR ready for review
+```
+
+**Why this works:**
+- **Parallel execution** — all instances work simultaneously, not sequentially
+- **Specialization** — each instance builds deep expertise in its domain
+- **Transparency** — the human sees all coordination and can redirect anytime
+- **Resilience** — if one instance goes down, others pick up critical tasks
+
+See [`docs/multi-instance-setup.md`](./docs/multi-instance-setup.md) for the full deployment guide.
 
 ## Build Arguments
 

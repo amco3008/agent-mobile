@@ -147,8 +147,9 @@ commit_clawd_repo() {
     fi
 
     # Always try to push (in case startup push failed)
-    echo "[clawd-git] Pushing to remote..."
-    if git push origin master 2>&1; then
+    local BRANCH="${CLAWD_SOUL_BRANCH:-master}"
+    echo "[clawd-git] Pushing to remote (branch: $BRANCH)..."
+    if git push origin "$BRANCH" 2>&1; then
         echo "[clawd-git] Push successful"
     else
         echo "[clawd-git] Push failed (network issue or remote doesn't exist)"
@@ -874,14 +875,18 @@ init_clawd_git() {
 
     local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
 
+    local BRANCH="${CLAWD_SOUL_BRANCH:-master}"
+    echo "[clawd-git] Soul branch: $BRANCH"
+
     # If directory doesn't exist, try to clone from GitHub
     if [ ! -d "$CLAWD_DIR" ]; then
         echo "[clawd-git] Directory doesn't exist, checking for remote repo..."
         if gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
             echo "[clawd-git] Found remote repo, cloning..."
-            git clone "$REMOTE_URL" "$CLAWD_DIR"
+            git clone -b "$BRANCH" "$REMOTE_URL" "$CLAWD_DIR" 2>/dev/null || \
+                git clone "$REMOTE_URL" "$CLAWD_DIR"
             chown -R agent:agent "$CLAWD_DIR" 2>/dev/null || true
-            echo "[clawd-git] Cloned from GitHub"
+            echo "[clawd-git] Cloned from GitHub (branch: $BRANCH)"
             return 0
         else
             echo "[clawd-git] No remote repo found, will be created on first run"
@@ -945,21 +950,35 @@ EOF
         echo "[clawd-git] Repo ${REPO_NAME} already exists"
     fi
 
+    # Checkout the right branch if not already on it
+    local CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+    if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+        echo "[clawd-git] Switching from $CURRENT_BRANCH to $BRANCH..."
+        if git checkout "$BRANCH" 2>/dev/null; then
+            echo "[clawd-git] Switched to $BRANCH"
+        elif git checkout -b "$BRANCH" "origin/$BRANCH" 2>/dev/null; then
+            echo "[clawd-git] Created local $BRANCH from remote"
+        else
+            echo "[clawd-git] Branch $BRANCH not found locally or remotely, staying on $CURRENT_BRANCH"
+            BRANCH="$CURRENT_BRANCH"
+        fi
+    fi
+
     # Pull remote with merge (if remote has commits)
     echo "[clawd-git] Fetching from remote..."
-    if git fetch origin master 2>/dev/null; then
+    if git fetch origin "$BRANCH" 2>/dev/null; then
         # Check if branches have diverged
-        LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
-        REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
+        LOCAL_COMMITS=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo "0")
+        REMOTE_COMMITS=$(git rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || echo "0")
 
         if [ "$REMOTE_COMMITS" = "0" ]; then
             echo "[clawd-git] Already up to date with remote"
         elif [ "$LOCAL_COMMITS" = "0" ]; then
             echo "[clawd-git] Fast-forward merge possible"
-            git merge origin/master --no-edit 2>/dev/null || true
+            git merge "origin/$BRANCH" --no-edit 2>/dev/null || true
         else
             echo "[clawd-git] Branches diverged - merging..."
-            git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+            git merge "origin/$BRANCH" --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
         fi
     else
         echo "[clawd-git] Remote is empty or fetch failed, will push to initialize"
@@ -967,7 +986,7 @@ EOF
 
     # Push
     echo "[clawd-git] Pushing to remote..."
-    if git push -u origin master 2>&1; then
+    if git push -u origin "$BRANCH" 2>&1; then
         echo "[clawd-git] Push successful"
     else
         echo "[clawd-git] Push failed, will retry on shutdown"

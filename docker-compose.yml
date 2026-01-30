@@ -94,6 +94,8 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - BRAVE_API_KEY=${BRAVE_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Clawd soul branch (default: master, set to switch personality/specialization)
+      - CLAWD_SOUL_BRANCH=${CLAWD_SOUL_BRANCH:-master}
       # Vercel CLI auth
       - VERCEL_TOKEN=${VERCEL_TOKEN:-}
       # Supabase CLI auth
