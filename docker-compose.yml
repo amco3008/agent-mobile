@@ -1,8 +1,8 @@
 services:
   agent-mobile:
     build: .
-    container_name: agent-mobile
-    hostname: agent-mobile
+    container_name: ${AGENT_NAME:-agent-mobile}
+    hostname: ${AGENT_NAME:-agent-mobile}
     env_file: .env
 
     # Required for Tailscale
@@ -105,10 +105,10 @@ services:
 
     # Not strictly needed with Tailscale, but useful for local testing
     ports:
-      - "2222:22"
-      - "9090:9090"
-      - "9091:9091"
-      - "18789:18789"  # Clawdbot gateway
+      - "${AGENT_SSH_PORT:-2222}:22"
+      - "${AGENT_WEB_PORT:-9090}:9090"
+      - "${AGENT_RTS_PORT:-9091}:9091"
+      - "${AGENT_CLAWDBOT_PORT:-18789}:18789"  # Clawdbot gateway
 
     restart: unless-stopped
 
