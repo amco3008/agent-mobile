@@ -1006,6 +1006,122 @@ EOF
     fi
 }
 
+# Initialize agent-mobile repo and sync with GitHub (called on startup)
+init_agent_mobile_git() {
+    local AGENT_MOBILE_DIR="/home/agent/projects/agent-mobile"
+
+    # Mark agent-mobile directory as safe (fixes ownership issues with mounted volumes)
+    git config --global --add safe.directory "$AGENT_MOBILE_DIR" 2>/dev/null || true
+
+    # Skip if no GITHUB_TOKEN
+    if [ -z "$GITHUB_TOKEN" ]; then
+        echo "[agent-mobile-git] GITHUB_TOKEN not set, skipping agent-mobile repo sync"
+        return 0
+    fi
+
+    local REPO_NAME="agent-mobile"
+    local GITHUB_USER="${_CACHED_GITHUB_USER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
+
+    if [ -z "$GITHUB_USER" ]; then
+        echo "[agent-mobile-git] Could not get GitHub username, skipping"
+        return 0
+    fi
+
+    local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
+    local BRANCH="vroth"
+    echo "[agent-mobile-git] Target branch: $BRANCH"
+
+    # If directory doesn't exist, try to clone from GitHub
+    if [ ! -d "$AGENT_MOBILE_DIR" ]; then
+        echo "[agent-mobile-git] Directory doesn't exist, checking for remote repo..."
+        if gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
+            echo "[agent-mobile-git] Found remote repo, cloning..."
+            mkdir -p /home/agent/projects
+            git clone -b "$BRANCH" "$REMOTE_URL" "$AGENT_MOBILE_DIR" 2>/dev/null || \
+                git clone "$REMOTE_URL" "$AGENT_MOBILE_DIR"
+            chown -R agent:agent "$AGENT_MOBILE_DIR" 2>/dev/null || true
+            echo "[agent-mobile-git] Cloned from GitHub (branch: $BRANCH)"
+            
+            # Install vroth-bridge to PATH
+            if [ -f "$AGENT_MOBILE_DIR/scripts/vroth-bridge.sh" ]; then
+                ln -sf "$AGENT_MOBILE_DIR/scripts/vroth-bridge.sh" /usr/local/bin/vroth-bridge
+                echo "[agent-mobile-git] vroth-bridge installed to PATH"
+            fi
+            
+            return 0
+        else
+            echo "[agent-mobile-git] No remote repo found, will be created on first run"
+            return 0
+        fi
+    fi
+
+    cd "$AGENT_MOBILE_DIR" || return 1
+
+    # Remove stale git lock files from previous crash/unclean shutdown
+    if [ -f ".git/index.lock" ]; then
+        echo "[agent-mobile-git] Removing stale index.lock from previous crash"
+        rm -f ".git/index.lock"
+    fi
+
+    # Set git identity for commits (use env vars or defaults)
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
+
+    # Set/update remote origin
+    if git remote get-url origin &>/dev/null; then
+        git remote set-url origin "$REMOTE_URL"
+    else
+        git remote add origin "$REMOTE_URL"
+    fi
+
+    # Checkout the vroth branch if not already on it
+    local CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")
+    if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
+        echo "[agent-mobile-git] Switching from $CURRENT_BRANCH to $BRANCH..."
+        if git checkout "$BRANCH" 2>/dev/null; then
+            echo "[agent-mobile-git] Switched to $BRANCH"
+        elif git checkout -b "$BRANCH" "origin/$BRANCH" 2>/dev/null; then
+            echo "[agent-mobile-git] Created local $BRANCH from remote"
+        else
+            echo "[agent-mobile-git] Branch $BRANCH not found, staying on $CURRENT_BRANCH"
+            BRANCH="$CURRENT_BRANCH"
+        fi
+    fi
+
+    # Pull remote with merge (if remote has commits)
+    echo "[agent-mobile-git] Fetching from remote..."
+    if git fetch origin "$BRANCH" 2>/dev/null; then
+        # Check if branches have diverged
+        LOCAL_COMMITS=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo "0")
+        REMOTE_COMMITS=$(git rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || echo "0")
+
+        if [ "$REMOTE_COMMITS" = "0" ]; then
+            echo "[agent-mobile-git] Already up to date with remote"
+        elif [ "$LOCAL_COMMITS" = "0" ]; then
+            echo "[agent-mobile-git] Fast-forward merge possible"
+            git merge "origin/$BRANCH" --no-edit 2>/dev/null || true
+        else
+            echo "[agent-mobile-git] Branches diverged - merging..."
+            git merge "origin/$BRANCH" --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+        fi
+    else
+        echo "[agent-mobile-git] Remote is empty or fetch failed, will push to initialize"
+    fi
+
+    cd - >/dev/null
+
+    # Fix ownership after git operations
+    chown -R agent:agent "$AGENT_MOBILE_DIR" 2>/dev/null || true
+
+    echo "[agent-mobile-git] Agent-mobile repo initialized"
+
+    # Install vroth-bridge to PATH
+    if [ -f "$AGENT_MOBILE_DIR/scripts/vroth-bridge.sh" ]; then
+        ln -sf "$AGENT_MOBILE_DIR/scripts/vroth-bridge.sh" /usr/local/bin/vroth-bridge
+        echo "[agent-mobile-git] vroth-bridge installed to PATH"
+    fi
+}
+
 echo "Initializing skill system (local only - remote sync happens after network setup)..."
 # Mark skills directory as safe early (fixes ownership issues with mounted volumes)
 git config --global --add safe.directory /home/agent/.claude/skills 2>/dev/null || true
@@ -1498,7 +1614,7 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
-# Sync all 3 git repos in parallel for faster startup
+# Sync all 4 git repos in parallel for faster startup
 echo "Syncing git repos in parallel (post-network init)..."
 _git_sync_start=$(date +%s)
 
@@ -1511,10 +1627,14 @@ _pid_clawdbot=$!
 init_clawd_git &
 _pid_clawd=$!
 
+init_agent_mobile_git &
+_pid_agent_mobile=$!
+
 # Wait for all syncs to complete
 wait $_pid_skills  || echo "[parallel-sync] skills sync exited with error (non-fatal)"
 wait $_pid_clawdbot || echo "[parallel-sync] clawdbot sync exited with error (non-fatal)"
 wait $_pid_clawd   || echo "[parallel-sync] clawd sync exited with error (non-fatal)"
+wait $_pid_agent_mobile || echo "[parallel-sync] agent-mobile sync exited with error (non-fatal)"
 
 _git_sync_end=$(date +%s)
 echo "All git repos synced in $((_git_sync_end - _git_sync_start))s (parallel)"
