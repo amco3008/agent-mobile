@@ -3,6 +3,7 @@ services:
     build: .
     container_name: agent-mobile
     hostname: agent-mobile
+    env_file: .env
 
     # Required for Tailscale
     privileged: true

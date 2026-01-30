@@ -207,6 +207,7 @@ Select [1]:
 | `VERCEL_TOKEN` | Optional - Vercel CLI token ([get one here](https://vercel.com/account/tokens)) |
 | `SUPABASE_ACCESS_TOKEN` | Optional - Supabase CLI access token ([get one here](https://supabase.com/dashboard/account/tokens)) |
 | `RAILWAY_TOKEN` | Optional - Railway CLI token ([get one here](https://railway.app/account/tokens)) |
+| `SUPABASE_SERVICE_ROLE_KEY_*` | Optional - Per-project Supabase service role keys (e.g. `SUPABASE_SERVICE_ROLE_KEY_MYAPP`) |
 
 ### Clawdbot Config & Soul Sync
 

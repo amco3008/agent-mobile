@@ -1159,6 +1159,8 @@ EOF
     # --allow-unconfigured allows startup even if gateway.mode not set in config
     cat > /home/agent/clawdbot-supervisor.sh << 'SUPERVISOR_EOF'
 #!/bin/bash
+# Source all platform credentials from /etc/environment
+set -a; . /etc/environment 2>/dev/null; set +a
 export TELEGRAM_BOT_TOKEN="$1"
 export GEMINI_API_KEY="$2"
 export BRAVE_API_KEY="$3"
@@ -1401,11 +1403,6 @@ if [ -n "$GITHUB_TOKEN" ]; then
     chown agent:agent /home/agent/.git-credentials
     chmod 600 /home/agent/.git-credentials
 
-    # Export GITHUB_TOKEN for SSH sessions (Claude needs this)
-    if ! grep -q "GITHUB_TOKEN" /home/agent/.bashrc 2>/dev/null; then
-        echo "export GITHUB_TOKEN='${GITHUB_TOKEN}'" >> /home/agent/.bashrc
-    fi
-
     # Auth gh CLI with GITHUB_TOKEN (requires read:org scope)
     # Skip if already authenticated (persisted in volume)
     if su - agent -c "gh auth status" &>/dev/null; then
@@ -1420,33 +1417,25 @@ if [ -n "$GITHUB_TOKEN" ]; then
     fi
 fi
 
-# Export platform CLI tokens for SSH sessions (same pattern as GITHUB_TOKEN above)
-if [ -n "$VERCEL_TOKEN" ]; then
-    if ! grep -q "VERCEL_TOKEN" /home/agent/.bashrc 2>/dev/null; then
-        echo "export VERCEL_TOKEN='${VERCEL_TOKEN}'" >> /home/agent/.bashrc
+# Export credentials to /etc/environment (visible to all sessions including su - agent -c)
+for var in GITHUB_TOKEN VERCEL_TOKEN SUPABASE_ACCESS_TOKEN RAILWAY_TOKEN; do
+    val="${!var}"
+    if [ -n "$val" ]; then
+        sed -i "/^${var}=/d" /etc/environment 2>/dev/null || true
+        echo "${var}=${val}" >> /etc/environment
+        echo "$var configured (token set)"
+    else
+        echo "$var: not set"
     fi
-    echo "Vercel CLI configured (token set)"
-else
-    echo "Vercel CLI: no token set (set VERCEL_TOKEN in .env)"
-fi
+done
 
-if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
-    if ! grep -q "SUPABASE_ACCESS_TOKEN" /home/agent/.bashrc 2>/dev/null; then
-        echo "export SUPABASE_ACCESS_TOKEN='${SUPABASE_ACCESS_TOKEN}'" >> /home/agent/.bashrc
-    fi
-    echo "Supabase CLI configured (token set)"
-else
-    echo "Supabase CLI: no token set (set SUPABASE_ACCESS_TOKEN in .env)"
-fi
-
-if [ -n "$RAILWAY_TOKEN" ]; then
-    if ! grep -q "RAILWAY_TOKEN" /home/agent/.bashrc 2>/dev/null; then
-        echo "export RAILWAY_TOKEN='${RAILWAY_TOKEN}'" >> /home/agent/.bashrc
-    fi
-    echo "Railway CLI configured (token set)"
-else
-    echo "Railway CLI: no token set (set RAILWAY_TOKEN in .env)"
-fi
+# Forward all SUPABASE_SERVICE_ROLE_KEY_* env vars dynamically
+env | grep '^SUPABASE_SERVICE_ROLE_KEY_' | while IFS= read -r line; do
+    varname="${line%%=*}"
+    sed -i "/^${varname}=/d" /etc/environment 2>/dev/null || true
+    echo "$line" >> /etc/environment
+    echo "$varname configured"
+done
 
 # Pre-fetch GitHub username once (avoids 3 redundant API calls during parallel sync)
 export _CACHED_GITHUB_USER=""
