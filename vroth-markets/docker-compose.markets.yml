@@ -1,0 +1,41 @@
+# Vroth-Markets - Trading specialist instance
+# Usage: docker compose -f docker-compose.yml -f vroth-markets/docker-compose.markets.yml up -d
+#
+# Or standalone:
+# Copy .env to vroth-markets/.env and update:
+#   - TELEGRAM_BOT_TOKEN=<new bot token from BotFather>
+#   - Container name/hostname already overridden below
+
+services:
+  agent-mobile:
+    container_name: agent-mobile-markets
+    hostname: agent-mobile-markets
+    
+    # Override port mappings to avoid conflicts with main instance
+    ports:
+      - "2223:22"           # SSH (main uses 2222)
+      - "9092:9090"         # webtmux (main uses 9090)
+      - "9093:9091"         # RTS Manager (main uses 9091)
+      - "18790:18789"       # Clawdbot gateway (main uses 18789)
+    
+    # Add shared volume for cross-instance communication
+    volumes:
+      - agent-home-markets:/home/agent
+      - tailscale-state-markets:/var/lib/tailscale
+      - claude-config-markets:/home/agent/.claude
+      - ./vroth-markets/skills:/home/agent/.claude/skills
+      - ./home:/home/agent/projects          # Same projects folder (shared!)
+      - config-markets:/home/agent/.config
+      - ssh-keys-markets:/etc/ssh/ssh_host_keys
+      - /dev/net/tun:/dev/net/tun
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Shared cross-instance folder
+      - shared-data:/home/agent/projects/shared
+
+volumes:
+  tailscale-state-markets:
+  claude-config-markets:
+  config-markets:
+  ssh-keys-markets:
+  agent-home-markets:
+  shared-data:  # Shared between all Vroth instances
