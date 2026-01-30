@@ -998,6 +998,12 @@ EOF
     chown -R agent:agent "$CLAWD_DIR" 2>/dev/null || true
 
     echo "[clawd-git] Clawd soul repo initialized"
+
+    # Set up vroth-bridge if agent-mobile repo exists
+    if [ -f "/home/agent/projects/agent-mobile/scripts/vroth-bridge.sh" ]; then
+        ln -sf /home/agent/projects/agent-mobile/scripts/vroth-bridge.sh /usr/local/bin/vroth-bridge
+        echo "[clawd-git] vroth-bridge installed to PATH"
+    fi
 }
 
 echo "Initializing skill system (local only - remote sync happens after network setup)..."
