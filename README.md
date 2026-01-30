@@ -19,6 +19,7 @@ Docker container for running Claude Code and Gemini CLI from your phone via Tail
 - **Global CLAUDE.md** - Auto-generated config with available skills, persisted across restarts
 - **Push Notifications** - Get notified on your phone when Claude needs input (via ntfy.sh)
 - **Clawdbot** - Multi-platform AI assistant with Telegram, Discord, Slack, and more
+- **Soul Branching** - Run multiple specialized instances from one soul repo using `CLAWD_SOUL_BRANCH`
 - **Tailscale** - Secure mesh networking, access from anywhere
 - **Multi-stage build** - Robust installation even behind restricted networks
 - **Corporate Proxy Support** - Auto-detects and trusts corporate proxies (Cisco/Zscaler)
@@ -200,6 +201,7 @@ Select [1]:
 | `RTS_ENABLED` | Optional - Enable RTS Manager dashboard on port 9091 (default: `true`) |
 | `RTS_PORT` | Optional - RTS Manager server port (default: `9091`) |
 | `RTS_API_KEY` | Optional - API key for RTS Manager authentication (disabled if unset) |
+| `CLAWD_SOUL_BRANCH` | Optional - Soul repo branch to checkout (default: `master`). Use for specialized instances (e.g. `markets`) |
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
 | `BRAVE_API_KEY` | Optional - Brave Search API key for Clawdbot web search ([get one free](https://brave.com/search/api/)) |
@@ -222,6 +224,38 @@ When `GITHUB_TOKEN` is set, clawdbot data is automatically synced to GitHub:
 - **Auto-pull on startup**: Data is pulled from GitHub when container starts
 
 This ensures your clawdbot configuration and memory persist across all agent-mobile instances.
+
+### Multi-Instance / Soul Branching
+
+Run multiple specialized instances of agent-mobile from a single soul repo using branches.
+
+**How it works:**
+- Your soul repo (`agent-mobile-clawd-soul`) can have multiple branches
+- Each branch contains a different personality/specialization (SOUL.md, AGENTS.md, etc.)
+- Set `CLAWD_SOUL_BRANCH` in `.env` to control which branch loads on startup
+- The container auto-clones the correct branch and syncs on shutdown
+
+**Example setup — two instances:**
+
+```bash
+# Instance 1: General assistant (default)
+# .env
+CLAWD_SOUL_BRANCH=master
+
+# Instance 2: Trading monitor
+# .env
+CLAWD_SOUL_BRANCH=markets
+```
+
+**Steps:**
+1. Create branches on your soul repo with specialized soul files
+2. Clone agent-mobile for each instance
+3. Set `CLAWD_SOUL_BRANCH` in each instance's `.env`
+4. Each instance gets its own Telegram bot token (create via @BotFather)
+5. Use different port mappings to avoid conflicts (e.g. `2223:22`, `18790:18789`)
+6. Optionally add all bots to a shared Telegram group for collaboration
+
+Each instance runs independently with its own personality, memory, and heartbeat cycle — but they share the same codebase and can collaborate through shared channels.
 
 ## Build Arguments
 
