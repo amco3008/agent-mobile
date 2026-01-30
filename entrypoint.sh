@@ -1184,6 +1184,23 @@ EOF
         chown agent:agent "$CLAWDBOT_CONFIG"
     fi
 
+    # Inject TELEGRAM_GROUP_IDS from env into config (comma-separated group chat IDs)
+    # Example: TELEGRAM_GROUP_IDS="-5159563342,-1001234567890"
+    if [ -f "$CLAWDBOT_CONFIG" ] && [ -n "$TELEGRAM_GROUP_IDS" ] && command -v jq &>/dev/null; then
+        echo "[clawdbot] Injecting TELEGRAM_GROUP_IDS from environment into config..."
+        # Build groups object from comma-separated IDs
+        GROUPS_JSON="{}"
+        IFS=',' read -ra GROUP_ARRAY <<< "$TELEGRAM_GROUP_IDS"
+        for gid in "${GROUP_ARRAY[@]}"; do
+            gid=$(echo "$gid" | xargs)  # trim whitespace
+            [ -n "$gid" ] && GROUPS_JSON=$(echo "$GROUPS_JSON" | jq --arg id "$gid" '. + {($id): {"enabled": true}}')
+        done
+        jq --argjson groups "$GROUPS_JSON" \
+           '.channels.telegram.groups = $groups | .channels.telegram.groupPolicy = "allowlist"' \
+           "$CLAWDBOT_CONFIG" > "$CLAWDBOT_CONFIG.tmp" && mv "$CLAWDBOT_CONFIG.tmp" "$CLAWDBOT_CONFIG"
+        chown agent:agent "$CLAWDBOT_CONFIG"
+    fi
+
     # Start clawdbot gateway with supervisor loop (restarts on crash or config-change restart)
     # --allow-unconfigured allows startup even if gateway.mode not set in config
     cat > /home/agent/clawdbot-supervisor.sh << 'SUPERVISOR_EOF'

@@ -206,6 +206,7 @@ Select [1]:
 | `AGENT_WEB_PORT` | Optional - Webtmux port mapping (default: `9090`) |
 | `AGENT_RTS_PORT` | Optional - RTS Manager port mapping (default: `9091`) |
 | `AGENT_CLAWDBOT_PORT` | Optional - Clawdbot gateway port mapping (default: `18789`) |
+| `TELEGRAM_GROUP_IDS` | Optional - Comma-separated Telegram group chat IDs to allowlist (e.g. `-5159563342,-1001234567890`) |
 | `CLAWD_SOUL_BRANCH` | Optional - Soul repo branch to checkout (default: `master`). Use for specialized instances (e.g. `markets`) |
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
@@ -266,6 +267,7 @@ AGENT_RTS_PORT=9093
 AGENT_CLAWDBOT_PORT=18790
 CLAWD_SOUL_BRANCH=markets
 TELEGRAM_BOT_TOKEN=<new bot token from @BotFather>
+TELEGRAM_GROUP_IDS=-5159563342
 CLAWDBOT_ENABLED=true
 ```
 
