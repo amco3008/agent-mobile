@@ -1174,6 +1174,16 @@ EOF
         fi
     fi
 
+    # Inject TELEGRAM_BOT_TOKEN from env into config (overrides git-synced token)
+    # This ensures each instance uses its own bot token from .env
+    if [ -f "$CLAWDBOT_CONFIG" ] && [ -n "$TELEGRAM_BOT_TOKEN" ] && command -v jq &>/dev/null; then
+        echo "[clawdbot] Injecting TELEGRAM_BOT_TOKEN from environment into config..."
+        jq --arg token "$TELEGRAM_BOT_TOKEN" \
+           '.channels.telegram.botToken = $token' \
+           "$CLAWDBOT_CONFIG" > "$CLAWDBOT_CONFIG.tmp" && mv "$CLAWDBOT_CONFIG.tmp" "$CLAWDBOT_CONFIG"
+        chown agent:agent "$CLAWDBOT_CONFIG"
+    fi
+
     # Start clawdbot gateway with supervisor loop (restarts on crash or config-change restart)
     # --allow-unconfigured allows startup even if gateway.mode not set in config
     cat > /home/agent/clawdbot-supervisor.sh << 'SUPERVISOR_EOF'
