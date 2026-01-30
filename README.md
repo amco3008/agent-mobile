@@ -257,6 +257,46 @@ CLAWD_SOUL_BRANCH=markets
 
 Each instance runs independently with its own personality, memory, and heartbeat cycle — but they share the same codebase and can collaborate through shared channels.
 
+### The Collective — Group Chat Collaboration
+
+Multiple instances can collaborate through a shared Telegram group (the "Collective"):
+
+```
+┌──────────────────────────────────────────────────────┐
+│              Vroth Collective (Group Chat)            │
+│                                                      │
+│  [Core]     General assistant, coordinator           │
+│  [Markets]  24/7 trading monitor, risk alerts        │
+│  [Dev]      Code review, PRs, feature shipping       │
+│  [Research] Deep analysis, competitive intel         │
+│  [Matthew]  Human in the loop                        │
+└──────────────────────────────────────────────────────┘
+```
+
+**How it works:**
+- Each instance runs its own Telegram bot (separate tokens from @BotFather)
+- All bots + the human join a shared Telegram group
+- Instances tag each other for handoffs: `@VrothDev fix this`, `@VrothMarkets check exposure`
+- Each instance specializes but can request help from others
+- The human sees everything and can intervene at any point
+
+**Example collaboration:**
+```
+[Markets]  🚨 Arb bot error: position stuck, can't exit market
+[Core]     @VrothDev can you check the exit logic?
+[Dev]      On it. Found the bug — missing liquidity fallback
+[Dev]      ✅ PR #42 ready: https://github.com/user/repo/pull/42
+[Core]     @Matthew PR ready for review
+```
+
+**Why this works:**
+- **Parallel execution** — all instances work simultaneously, not sequentially
+- **Specialization** — each instance builds deep expertise in its domain
+- **Transparency** — the human sees all coordination and can redirect anytime
+- **Resilience** — if one instance goes down, others pick up critical tasks
+
+See [`docs/multi-instance-setup.md`](./docs/multi-instance-setup.md) for the full deployment guide.
+
 ## Build Arguments
 
 | Argument | Description |
