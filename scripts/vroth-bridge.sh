@@ -32,16 +32,24 @@ send_to() {
   local name="$1"
   local msg="$2"
   
+  local hostname=$(jq -r ".instances.${name}.hostname // empty" "$TARGETS_FILE")
   local host=$(jq -r ".instances.${name}.host // empty" "$TARGETS_FILE")
   local port=$(jq -r ".instances.${name}.port // 18789" "$TARGETS_FILE")
   local token=$(jq -r ".instances.${name}.token // empty" "$TARGETS_FILE")
 
-  if [[ -z "$host" || -z "$token" ]]; then
-    echo "❌ Target '$name' not found or missing host/token"
+  if [[ -z "$token" ]]; then
+    echo "❌ Target '$name' not found or missing token"
     return 1
   fi
 
-  local url="http://${host}:${port}/v1/chat/completions"
+  # Try hostname first (Tailscale MagicDNS), fall back to IP
+  local target="${hostname:-$host}"
+  if [[ -z "$target" ]]; then
+    echo "❌ Target '$name' has no hostname or host configured"
+    return 1
+  fi
+
+  local url="http://${target}:${port}/v1/chat/completions"
   local payload=$(jq -n \
     --arg msg "$msg" \
     '{model:"anthropic/claude-sonnet-4-5",messages:[{role:"user",content:$msg}],max_tokens:500}')
@@ -58,8 +66,27 @@ send_to() {
   if [[ -n "$reply" ]]; then
     echo "✅ → ${name}: ${reply}"
   else
-    echo "❌ → ${name}: ${response}"
-    return 1
+    # If hostname failed, try IP fallback
+    if [[ -n "$hostname" && -n "$host" && "$target" == "$hostname" ]]; then
+      echo "⚠️  Hostname '$hostname' failed, trying IP fallback..."
+      url="http://${host}:${port}/v1/chat/completions"
+      response=$(curl -s --connect-timeout 5 --max-time 30 \
+        -X POST \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        -d "$payload" \
+        "$url" 2>&1)
+      reply=$(echo "$response" | jq -r '.choices[0].message.content // empty' 2>/dev/null)
+      if [[ -n "$reply" ]]; then
+        echo "✅ → ${name} (via IP): ${reply}"
+      else
+        echo "❌ → ${name}: ${response}"
+        return 1
+      fi
+    else
+      echo "❌ → ${name}: ${response}"
+      return 1
+    fi
   fi
 }
 
