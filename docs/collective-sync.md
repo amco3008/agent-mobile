@@ -10,27 +10,41 @@ When running multiple specialized instances:
 - But full memory dumps = information overload
 - Need to share **signal** without the **noise**
 
-## The Solution: Bulletin Board + Digests
+## The Solution: Git-Based Digests
 
 Each instance periodically:
-1. **Writes** a short digest (3-5 bullet points of recent work/findings)
-2. **Reads** other instances' digests (only if updated recently)
+1. **Writes** a short digest (3-5 bullet points of recent work/findings) to their branch
+2. **Fetches** from origin and **reads** other instances' digests from remote branches
 3. **Acts** on handoffs or relevant info
 
 ## Architecture
 
+Uses the existing clawd git repo (already syncing) — **no Docker volumes needed**:
+
 ```
-/home/agent/projects/shared/
-├── bulletin.md              ← Aggregated view of all digests
-├── digests/
-│   ├── master-digest.md     ← Core's latest status
-│   ├── markets-digest.md    ← Markets' latest status
-│   ├── dev-digest.md        ← Dev's latest status
-│   └── research-digest.md   ← Research's latest status
-└── handoffs/
-    ├── to-dev.md           ← "Hey @VrothDev, look at this"
-    └── to-markets.md       ← "Hey @VrothMarkets, check exposure"
+agent-mobile-clawd-soul (git repo)
+├── [master branch]
+│   └── collective/
+│       ├── master-digest.md     ← Core writes here
+│       └── handoffs/
+│           └── to-dev.md        ← Core creates handoff for Dev
+│
+├── [markets branch]
+│   └── collective/
+│       ├── markets-digest.md    ← Markets writes here
+│       └── handoffs/
+│           └── to-core.md       ← Markets creates handoff for Core
+│
+└── [dev branch]
+    └── collective/
+        └── dev-digest.md        ← Dev writes here
 ```
+
+**How it works:**
+- Each instance commits to `collective/[branch]-digest.md` on their own branch
+- To read others: `git fetch origin` then `git show origin/markets:collective/markets-digest.md`
+- **Zero merge conflicts** — each branch owns its own files
+- Handoffs work the same way (write to your branch, others read via `git show`)
 
 ## Digest Format
 
@@ -72,25 +86,24 @@ AFTER completing work, do a 30-second health check:
 
 Or call it directly in soul scripts.
 
-### Docker Volume Setup
+### Git Setup (Already Done!)
 
-Both containers need access to the shared directory:
+The clawd git repo is already syncing for each instance — **no extra setup needed**.
 
-```yaml
-# docker-compose.yml (both instances)
-volumes:
-  - shared-collective:/home/agent/projects/shared
-
-volumes:
-  shared-collective:  # Shared between all Vroth instances
-```
+Each instance:
+- Runs on its own branch (`master`, `markets`, `dev`, etc.)
+- Commits digest to `collective/[branch]-digest.md`
+- Fetches from origin to read other branches' digests
+- No merge conflicts (each branch owns its own files)
 
 ## Creating Handoffs
 
-When one instance needs another to do something:
+When one instance needs another to do something, write a handoff file on your branch:
 
 ```bash
-# From any instance
+# From Markets instance (on 'markets' branch)
+mkdir -p /home/agent/clawd/collective/handoffs
+
 echo "## Task: Fix exit logic bug
 
 Found issue in \`exit_position()\` - missing liquidity fallback for market 1269693.
@@ -107,12 +120,16 @@ Found issue in \`exit_position()\` - missing liquidity fallback for market 12696
 
 **Context:**
 Markets digest from 2026-01-30 20:15 shows position stuck.
-" > /home/agent/projects/shared/handoffs/to-dev.md
+" > /home/agent/clawd/collective/handoffs/to-dev.md
+
+git add collective/handoffs/to-dev.md
+git commit -m "collective: Handoff to Dev - exit logic bug"
+git push origin markets
 ```
 
-The Dev instance will see this on its next sync and can address it.
+The Dev instance will see this via `git show origin/markets:collective/handoffs/to-dev.md` on its next sync.
 
-After addressing, Dev deletes the handoff file.
+After addressing, Dev can delete it or Markets can remove it once resolved.
 
 ## Customizing Digests
 
@@ -224,9 +241,10 @@ The aggregated bulletin shows all instances' status in one place:
 ### Other instances not seeing my updates
 
 **Check:**
-1. Shared volume configured in both docker-compose.yml files
-2. Both containers using same volume name (e.g., `shared-collective`)
-3. File timestamps: `ls -lh /home/agent/projects/shared/digests/`
+1. Did you commit and push? `git log -1 collective/`
+2. Did push succeed? `git status` (should say "up to date")
+3. Can others fetch? Run `git fetch origin` on other instance
+4. Check remote: `git show origin/your-branch:collective/your-digest.md`
 
 ### Too much noise / irrelevant updates
 

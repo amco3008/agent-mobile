@@ -359,15 +359,7 @@ Each instance periodically (during heartbeats):
 
 ### Setup
 
-1. **Configure shared volume** in both instances' `docker-compose.yml`:
-
-```yaml
-volumes:
-  - shared-collective:/home/agent/projects/shared
-
-volumes:
-  shared-collective:  # Shared between all instances
-```
+1. **No extra setup needed!** The clawd git repo already syncs between instances.
 
 2. **Run sync during heartbeats** — add to each instance's workflow:
 
@@ -378,7 +370,7 @@ bash /home/agent/clawd/scripts/collective-sync.sh
 3. **Check the bulletin board** to see all instances' status:
 
 ```bash
-cat /home/agent/projects/shared/bulletin.md
+cat /home/agent/clawd/collective/bulletin.md
 ```
 
 ### Example Digest (Markets)
@@ -395,14 +387,18 @@ cat /home/agent/projects/shared/bulletin.md
 
 ### Creating Handoffs
 
-When one instance needs another's help:
+When one instance needs another's help, write to your branch:
 
 ```bash
+mkdir -p /home/agent/clawd/collective/handoffs
 echo "Task for @VrothDev: Fix exit logic bug in position_manager.py" \
-  > /home/agent/projects/shared/handoffs/to-dev.md
+  > /home/agent/clawd/collective/handoffs/to-dev.md
+git add collective/handoffs/to-dev.md
+git commit -m "collective: Handoff to Dev"
+git push
 ```
 
-The Dev instance will see this on its next sync.
+The Dev instance will see this via git on its next sync.
 
 **Full documentation:** [`docs/collective-sync.md`](./collective-sync.md)
 
