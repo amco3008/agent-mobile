@@ -201,6 +201,11 @@ Select [1]:
 | `RTS_ENABLED` | Optional - Enable RTS Manager dashboard on port 9091 (default: `true`) |
 | `RTS_PORT` | Optional - RTS Manager server port (default: `9091`) |
 | `RTS_API_KEY` | Optional - API key for RTS Manager authentication (disabled if unset) |
+| `AGENT_NAME` | Optional - Container name and hostname (default: `agent-mobile`). Set for multi-instance (e.g. `agent-mobile-markets`) |
+| `AGENT_SSH_PORT` | Optional - SSH port mapping (default: `2222`). Change to avoid conflicts in multi-instance |
+| `AGENT_WEB_PORT` | Optional - Webtmux port mapping (default: `9090`) |
+| `AGENT_RTS_PORT` | Optional - RTS Manager port mapping (default: `9091`) |
+| `AGENT_CLAWDBOT_PORT` | Optional - Clawdbot gateway port mapping (default: `18789`) |
 | `CLAWD_SOUL_BRANCH` | Optional - Soul repo branch to checkout (default: `master`). Use for specialized instances (e.g. `markets`) |
 | `CLAWDBOT_ENABLED` | Optional - Enable Clawdbot Telegram gateway on port 18789 (default: `false`) |
 | `TELEGRAM_BOT_TOKEN` | Optional - Telegram bot token from @BotFather (required if Clawdbot enabled) |
@@ -250,10 +255,22 @@ CLAWD_SOUL_BRANCH=markets
 **Steps:**
 1. Create branches on your soul repo with specialized soul files
 2. Clone agent-mobile for each instance
-3. Set `CLAWD_SOUL_BRANCH` in each instance's `.env`
-4. Each instance gets its own Telegram bot token (create via @BotFather)
-5. Use different port mappings to avoid conflicts (e.g. `2223:22`, `18790:18789`)
-6. Optionally add all bots to a shared Telegram group for collaboration
+3. Configure `.env` — everything is driven from env vars, **zero edits to docker-compose.yml**:
+
+```env
+# Instance 2 (.env)
+AGENT_NAME=agent-mobile-markets
+AGENT_SSH_PORT=2223
+AGENT_WEB_PORT=9092
+AGENT_RTS_PORT=9093
+AGENT_CLAWDBOT_PORT=18790
+CLAWD_SOUL_BRANCH=markets
+TELEGRAM_BOT_TOKEN=<new bot token from @BotFather>
+CLAWDBOT_ENABLED=true
+```
+
+4. `docker compose up -d --build` — that's it
+5. Optionally add all bots to a shared Telegram group for collaboration
 
 Each instance runs independently with its own personality, memory, and heartbeat cycle — but they share the same codebase and can collaborate through shared channels.
 
