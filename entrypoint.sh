@@ -1605,6 +1605,17 @@ env | grep '^SUPABASE_SERVICE_ROLE_KEY_' | while IFS= read -r line; do
     echo "$varname configured"
 done
 
+# ─── Auto-configure CLI auth (Vercel, Supabase) ───
+# Vercel CLI doesn't auto-detect VERCEL_TOKEN env var — persist to config
+if [ -n "${VERCEL_TOKEN:-}" ]; then
+    for VERCEL_AUTH_DIR in "/home/agent/.local/share/com.vercel.cli" "/home/agent/.config/vercel"; do
+        mkdir -p "$VERCEL_AUTH_DIR"
+        echo "{\"token\":\"$VERCEL_TOKEN\"}" > "$VERCEL_AUTH_DIR/auth.json"
+        chown -R agent:agent "$VERCEL_AUTH_DIR" 2>/dev/null || true
+    done
+    echo "Vercel CLI auth persisted (no --token flag needed)"
+fi
+
 # Pre-fetch GitHub username once (avoids 3 redundant API calls during parallel sync)
 export _CACHED_GITHUB_USER=""
 if [ -n "$GITHUB_TOKEN" ]; then
