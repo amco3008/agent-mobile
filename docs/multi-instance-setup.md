@@ -346,6 +346,66 @@ If it shows `master`, check `CLAWD_SOUL_BRANCH` in `.env`
 - Increase heartbeat interval for non-critical tasks
 - Set `thinkingDefault: "low"` for monitoring instances
 
+## Collective Sync — Knowledge Sharing
+
+To avoid information overload while keeping instances informed, use the collective sync system.
+
+### How It Works
+
+Each instance periodically (during heartbeats):
+1. **Writes** a short digest (3-5 bullet points of recent work)
+2. **Reads** other instances' digests (only if updated recently)
+3. **Acts** on handoffs or relevant information
+
+### Setup
+
+1. **Configure shared volume** in both instances' `docker-compose.yml`:
+
+```yaml
+volumes:
+  - shared-collective:/home/agent/projects/shared
+
+volumes:
+  shared-collective:  # Shared between all instances
+```
+
+2. **Run sync during heartbeats** — add to each instance's workflow:
+
+```bash
+bash /home/agent/clawd/scripts/collective-sync.sh
+```
+
+3. **Check the bulletin board** to see all instances' status:
+
+```bash
+cat /home/agent/projects/shared/bulletin.md
+```
+
+### Example Digest (Markets)
+
+```markdown
+# Markets Digest
+**Updated:** 2026-01-30 20:15 UTC
+
+- 💰 LIVE WALLET: $559 | Open: 1/30 | Unrealized: +$8
+- 📝 PAPER: $17k (+70%) | Win rate: 49%
+- ⚠️  BTC exit cooldown active on pos_1269693
+- ✅ No new high-edge opportunities in last 4h
+```
+
+### Creating Handoffs
+
+When one instance needs another's help:
+
+```bash
+echo "Task for @VrothDev: Fix exit logic bug in position_manager.py" \
+  > /home/agent/projects/shared/handoffs/to-dev.md
+```
+
+The Dev instance will see this on its next sync.
+
+**Full documentation:** [`docs/collective-sync.md`](./collective-sync.md)
+
 ## Advanced: Four-Instance Collective
 
 For maximum parallel execution:
