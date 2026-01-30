@@ -1193,7 +1193,7 @@ EOF
         IFS=',' read -ra GROUP_ARRAY <<< "$TELEGRAM_GROUP_IDS"
         for gid in "${GROUP_ARRAY[@]}"; do
             gid=$(echo "$gid" | xargs)  # trim whitespace
-            [ -n "$gid" ] && GROUPS_JSON=$(echo "$GROUPS_JSON" | jq --arg id "$gid" '. + {($id): {"enabled": true}}')
+            [ -n "$gid" ] && GROUPS_JSON=$(echo "$GROUPS_JSON" | jq --arg id "$gid" '. + {($id): {"enabled": true, "requireMention": false}}')
         done
         jq --argjson groups "$GROUPS_JSON" \
            '.channels.telegram.groups = $groups | .channels.telegram.groupPolicy = "allowlist"' \
