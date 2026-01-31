@@ -158,6 +158,35 @@ commit_clawd_repo() {
     cd - >/dev/null
 }
 
+# Commit shared notes to GitHub (called on shutdown)
+commit_shared_notes() {
+    if [ -z "$GITHUB_TOKEN" ]; then
+        return 0
+    fi
+
+    local SHARED_DIR="/home/agent/projects/shared"
+
+    if [ ! -d "$SHARED_DIR/.git" ]; then
+        return 0
+    fi
+
+    cd "$SHARED_DIR" || return 1
+
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
+
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "[shared-notes] Committing shared notes changes..."
+        git add -A
+        git commit -m "Auto-commit from $(hostname): $(date '+%Y-%m-%d %H:%M:%S') [shutdown]" || true
+    fi
+
+    echo "[shared-notes] Pushing to remote..."
+    git push origin main 2>/dev/null || git push origin master 2>/dev/null || echo "[shared-notes] Push failed"
+
+    cd - >/dev/null
+}
+
 # Trap shutdown signals to gracefully stop Claude and backup data
 cleanup_and_backup() {
     echo ""
@@ -199,6 +228,9 @@ cleanup_and_backup() {
 
     # Commit clawd soul/memory before shutdown
     commit_clawd_repo
+
+    # Commit shared notes before shutdown
+    commit_shared_notes
 
     # Backup credentials
     echo "[shutdown] Backing up data..."
@@ -998,11 +1030,78 @@ EOF
     chown -R agent:agent "$CLAWD_DIR" 2>/dev/null || true
 
     echo "[clawd-git] Clawd soul repo initialized"
+}
+
+# Initialize shared notes repo (vroth-shared-notes)
+init_shared_notes() {
+    local SHARED_DIR="/home/agent/projects/shared"
+
+    git config --global --add safe.directory "$SHARED_DIR" 2>/dev/null || true
+
+    if [ -z "$GITHUB_TOKEN" ]; then
+        echo "[shared-notes] GITHUB_TOKEN not set, skipping"
+        return 0
+    fi
+
+    local GITHUB_USER="${_CACHED_GITHUB_USER:-$(gh api user --jq '.login' 2>/dev/null || echo "")}"
+    if [ -z "$GITHUB_USER" ]; then
+        echo "[shared-notes] Could not get GitHub username, skipping"
+        return 0
+    fi
+
+    local REPO_NAME="vroth-shared-notes"
+    local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
+
+    if [ ! -d "$SHARED_DIR" ]; then
+        echo "[shared-notes] Cloning shared notes repo..."
+        if gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
+            git clone "$REMOTE_URL" "$SHARED_DIR" 2>/dev/null
+            chown -R agent:agent "$SHARED_DIR" 2>/dev/null || true
+            echo "[shared-notes] Cloned from GitHub"
+        else
+            echo "[shared-notes] Repo not found, creating..."
+            mkdir -p "$SHARED_DIR"
+            cd "$SHARED_DIR"
+            git init
+            git branch -M main
+            echo "# Vroth Shared Notes" > README.md
+            git add README.md
+            git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+            git config user.name "${GIT_NAME:-Agent Mobile}"
+            git commit -m "Initial commit"
+            gh repo create "$REPO_NAME" --private --source=. --push 2>/dev/null || true
+            chown -R agent:agent "$SHARED_DIR" 2>/dev/null || true
+            echo "[shared-notes] Created new repo"
+        fi
+        return 0
+    fi
+
+    cd "$SHARED_DIR" || return 1
+
+    # Remove stale lock
+    [ -f ".git/index.lock" ] && rm -f ".git/index.lock"
+
+    # Set git identity
+    git config user.email "${GIT_EMAIL:-agent@mobile.local}"
+    git config user.name "${GIT_NAME:-Agent Mobile}"
+
+    # Set/update remote
+    if git remote get-url origin &>/dev/null; then
+        git remote set-url origin "$REMOTE_URL"
+    else
+        git remote add origin "$REMOTE_URL"
+    fi
+
+    # Pull latest
+    echo "[shared-notes] Pulling latest..."
+    git pull origin main --rebase 2>/dev/null || git pull origin master --rebase 2>/dev/null || true
+
+    echo "[shared-notes] Shared notes repo initialized"
 
     # Set up vroth-bridge if agent-mobile repo exists
     if [ -f "/home/agent/projects/agent-mobile/scripts/vroth-bridge.sh" ]; then
         ln -sf /home/agent/projects/agent-mobile/scripts/vroth-bridge.sh /usr/local/bin/vroth-bridge
-        echo "[clawd-git] vroth-bridge installed to PATH"
+        echo "[shared-notes] vroth-bridge installed to PATH"
     fi
 }
 
@@ -1641,11 +1740,15 @@ _pid_clawd=$!
 init_agent_mobile_git &
 _pid_agent_mobile=$!
 
+init_shared_notes &
+_pid_shared=$!
+
 # Wait for all syncs to complete
 wait $_pid_skills  || echo "[parallel-sync] skills sync exited with error (non-fatal)"
 wait $_pid_clawdbot || echo "[parallel-sync] clawdbot sync exited with error (non-fatal)"
 wait $_pid_clawd   || echo "[parallel-sync] clawd sync exited with error (non-fatal)"
 wait $_pid_agent_mobile || echo "[parallel-sync] agent-mobile sync exited with error (non-fatal)"
+wait $_pid_shared || echo "[parallel-sync] shared notes sync exited with error (non-fatal)"
 
 _git_sync_end=$(date +%s)
 echo "All git repos synced in $((_git_sync_end - _git_sync_start))s (parallel)"
