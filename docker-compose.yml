@@ -95,7 +95,10 @@ services:
       - BRAVE_API_KEY=${BRAVE_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       # Clawd soul branch (default: master, set to switch personality/specialization)
+      # Also controls clawdbot-config branch to isolate per-instance config
       - CLAWD_SOUL_BRANCH=${CLAWD_SOUL_BRANCH:-master}
+      # Shared notes periodic sync interval in seconds (default: 300 = 5 min)
+      - SHARED_NOTES_SYNC_INTERVAL=${SHARED_NOTES_SYNC_INTERVAL:-300}
       # Vercel CLI auth
       - VERCEL_TOKEN=${VERCEL_TOKEN:-}
       # Supabase CLI auth

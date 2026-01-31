@@ -109,8 +109,9 @@ commit_clawdbot_repo() {
     fi
 
     # Always try to push (in case startup push failed)
-    echo "[clawdbot-git] Pushing to remote..."
-    if git push origin master 2>&1; then
+    local BRANCH="${CLAWD_SOUL_BRANCH:-master}"
+    echo "[clawdbot-git] Pushing to remote (branch: $BRANCH)..."
+    if git push origin "$BRANCH" 2>&1; then
         echo "[clawdbot-git] Push successful"
     else
         echo "[clawdbot-git] Push failed (network issue or remote doesn't exist)"
@@ -777,14 +778,18 @@ init_clawdbot_git() {
 
     local REMOTE_URL="https://${GITHUB_TOKEN}@github.com/${GITHUB_USER}/${REPO_NAME}.git"
 
+    local BRANCH="${CLAWD_SOUL_BRANCH:-master}"
+    echo "[clawdbot-git] Config branch: $BRANCH"
+
     # If directory doesn't exist, try to clone from GitHub
     if [ ! -d "$CLAWDBOT_DIR" ]; then
         echo "[clawdbot-git] Directory doesn't exist, checking for remote repo..."
         if gh repo view "${GITHUB_USER}/${REPO_NAME}" &>/dev/null; then
             echo "[clawdbot-git] Found remote repo, cloning..."
-            git clone "$REMOTE_URL" "$CLAWDBOT_DIR"
+            git clone -b "$BRANCH" "$REMOTE_URL" "$CLAWDBOT_DIR" 2>/dev/null || \
+                git clone "$REMOTE_URL" "$CLAWDBOT_DIR"
             chown -R agent:agent "$CLAWDBOT_DIR" 2>/dev/null || true
-            echo "[clawdbot-git] Cloned from GitHub"
+            echo "[clawdbot-git] Cloned from GitHub (branch: $BRANCH)"
             return 0
         else
             echo "[clawdbot-git] No remote repo found, will be created on first run"
@@ -804,7 +809,7 @@ init_clawdbot_git() {
     if [ ! -d ".git" ]; then
         echo "[clawdbot-git] Initializing git repository..."
         git init
-        git branch -M master
+        git branch -M "$BRANCH"
 
         # Create .gitignore for sensitive files
         cat > .gitignore << EOF
@@ -850,19 +855,25 @@ EOF
 
     # Pull remote with merge (if remote has commits)
     echo "[clawdbot-git] Fetching from remote..."
-    if git fetch origin master 2>/dev/null; then
+    if git fetch origin "$BRANCH" 2>/dev/null; then
         # Check if branches have diverged
-        LOCAL_COMMITS=$(git rev-list --count origin/master..HEAD 2>/dev/null || echo "0")
-        REMOTE_COMMITS=$(git rev-list --count HEAD..origin/master 2>/dev/null || echo "0")
+        LOCAL_COMMITS=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo "0")
+        REMOTE_COMMITS=$(git rev-list --count "HEAD..origin/$BRANCH" 2>/dev/null || echo "0")
 
         if [ "$REMOTE_COMMITS" = "0" ]; then
             echo "[clawdbot-git] Already up to date with remote"
         elif [ "$LOCAL_COMMITS" = "0" ]; then
             echo "[clawdbot-git] Fast-forward merge possible"
-            git merge origin/master --no-edit 2>/dev/null || true
+            git merge "origin/$BRANCH" --no-edit 2>/dev/null || true
         else
             echo "[clawdbot-git] Branches diverged - merging..."
-            git merge origin/master --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+            git merge "origin/$BRANCH" --no-edit -X theirs --allow-unrelated-histories 2>/dev/null || true
+        fi
+    elif [ "$BRANCH" != "master" ]; then
+        # Branch doesn't exist on remote yet, create from master
+        echo "[clawdbot-git] Branch '$BRANCH' not found on remote, creating from master..."
+        if git fetch origin master 2>/dev/null; then
+            git checkout -b "$BRANCH" origin/master 2>/dev/null || git checkout -b "$BRANCH" 2>/dev/null || true
         fi
     else
         echo "[clawdbot-git] Remote is empty or fetch failed, will push to initialize"
@@ -870,7 +881,7 @@ EOF
 
     # Push
     echo "[clawdbot-git] Pushing to remote..."
-    if git push -u origin master 2>&1; then
+    if git push -u origin "$BRANCH" 2>&1; then
         echo "[clawdbot-git] Push successful"
     else
         echo "[clawdbot-git] Push failed, will retry on shutdown"
@@ -1103,6 +1114,42 @@ init_shared_notes() {
         ln -sf /home/agent/projects/agent-mobile/scripts/vroth-bridge.sh /usr/local/bin/vroth-bridge
         echo "[shared-notes] vroth-bridge installed to PATH"
     fi
+}
+
+# Periodic shared notes sync daemon (runs in background)
+start_shared_notes_sync() {
+    local INTERVAL="${SHARED_NOTES_SYNC_INTERVAL:-300}"
+    local SHARED_DIR="/home/agent/projects/shared"
+
+    echo "[shared-notes-sync] Background sync daemon started (interval: ${INTERVAL}s)"
+
+    while true; do
+        sleep "$INTERVAL"
+        if [ -d "$SHARED_DIR/.git" ]; then
+            cd "$SHARED_DIR" || continue
+
+            # Set git identity (needed for merge commits)
+            git config user.email "${GIT_EMAIL:-agent@mobile.local}" 2>/dev/null
+            git config user.name "${GIT_NAME:-Agent Mobile}" 2>/dev/null
+
+            # Remove stale lock if present
+            [ -f ".git/index.lock" ] && rm -f ".git/index.lock"
+
+            # Pull remote changes
+            git fetch origin 2>/dev/null
+            git merge origin/main --no-edit -X theirs 2>/dev/null || \
+                git merge origin/master --no-edit -X theirs 2>/dev/null || true
+
+            # Commit & push local changes
+            if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+                git add -A
+                git commit -m "Auto-sync from $(hostname): $(date '+%Y-%m-%d %H:%M:%S')" 2>/dev/null || true
+                git push origin main 2>/dev/null || git push origin master 2>/dev/null || true
+            fi
+
+            cd - >/dev/null
+        fi
+    done
 }
 
 # Initialize agent-mobile repo and sync with GitHub (called on startup)
@@ -1752,6 +1799,9 @@ wait $_pid_shared || echo "[parallel-sync] shared notes sync exited with error (
 
 _git_sync_end=$(date +%s)
 echo "All git repos synced in $((_git_sync_end - _git_sync_start))s (parallel)"
+
+# Start periodic shared notes sync daemon
+start_shared_notes_sync &
 
 # Re-discover skills in case remote sync brought new ones
 update_claude_md
